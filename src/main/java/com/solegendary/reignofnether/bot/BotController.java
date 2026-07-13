@@ -24,9 +24,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Rotation;
 
+import java.util.Comparator;
 import java.util.List;
 
 public final class BotController {
+    private static final int REPAIR_THREAT_DISTANCE_SQR = 64 * 64;
+
     private final String ownerName;
     private final BotSelf self;
     private final BotWorldView worldView;
@@ -34,6 +37,8 @@ public final class BotController {
     private BotGoal currentGoal = BotGoal.WAIT_FOR_CAPITOL;
     private int nextDecisionTick;
     private int nextWorkerReconcileTick;
+    private int repairWoodReserve;
+    private boolean repairAssigned;
 
     public BotController(String ownerName) {
         this.ownerName = ownerName;
@@ -58,6 +63,8 @@ public final class BotController {
         int tick = level.getServer().getTickCount();
         BotDifficulty difficulty = player.aiDifficulty;
         BotPersonality personality = player.aiPersonality;
+        if (repairAssigned && stopRepairsAtWoodReserve())
+            nextWorkerReconcileTick = 0;
         if (tick < nextDecisionTick)
             return;
         nextDecisionTick = tick + difficulty.decisionIntervalTicks();
@@ -69,14 +76,22 @@ public final class BotController {
             maintainPortalTransforms(strategy, difficulty);
 
         BotDecisionContext context = createDecisionContext(strategy);
+        BotGoal nextGoal = BotDecisionMaker.chooseGoal(difficulty, personality, context);
+        repairWoodReserve = repairWoodReserve(strategy);
+        List<LivingEntity> workers = self.workers();
+        boolean orphanedConstruction = hasOrphanedConstruction(workers);
+        if (orphanedConstruction)
+            nextWorkerReconcileTick = 0;
+        if (maintainRepairs(player, workers,
+                isConstructionGoal(nextGoal) || orphanedConstruction))
+            nextWorkerReconcileTick = 0;
         if (tick >= nextWorkerReconcileTick) {
             boolean economyComplete = context.workersAndQueued()
                     >= BotDecisionMaker.targetWorkers(difficulty, personality);
-            assignWorkerJobs(strategy, difficulty, economyComplete);
+            assignWorkerJobs(strategy, difficulty, economyComplete, workers);
             nextWorkerReconcileTick = tick + difficulty.workerReconcileTicks();
         }
 
-        BotGoal nextGoal = BotDecisionMaker.chooseGoal(difficulty, personality, context);
         if (nextGoal != currentGoal) {
             currentGoal = nextGoal;
             ReignOfNether.LOGGER.info("[Bot] {} goal={}", ownerName, currentGoal);
@@ -171,11 +186,7 @@ public final class BotController {
             return false;
 
         LivingEntity builder = self.workers().stream()
-                .filter(entity -> {
-                    WorkerUnit worker = (WorkerUnit) entity;
-                    return worker.getBuildRepairGoal().getBuildingTarget() == null
-                            && ((Unit) entity).getReturnResourcesGoal().getBuildingTarget() == null;
-                })
+                .filter(BotController::isAvailableBuilder)
                 .findFirst()
                 .orElse(null);
         if (builder == null)
@@ -282,12 +293,12 @@ public final class BotController {
             startProduction(portal, strategy.supplyTransform(), "civilian portal", difficulty);
     }
 
-    private void assignWorkerJobs(BotStrategy strategy, BotDifficulty difficulty, boolean economyComplete) {
+    private void assignWorkerJobs(BotStrategy strategy, BotDifficulty difficulty,
+                                  boolean economyComplete, List<LivingEntity> workers) {
         BuildingPlacement farm = self.building(strategy.farm());
         if (farm != null && (!farm.isBuilt || !hasHarvestableFood(farm)))
             farm = null;
 
-        List<LivingEntity> workers = self.workers();
         reassignOrphanedBuilders(workers);
         int foodWorkers = BotDecisionMaker.foodWorkerCount(difficulty, workers.size(), economyComplete);
         int workerIndex = 0;
@@ -296,6 +307,7 @@ public final class BotController {
             Unit unit = (Unit) entity;
             ResourceName resource = workerIndex++ < foodWorkers ? ResourceName.FOOD : ResourceName.WOOD;
             if (worker.getBuildRepairGoal().getBuildingTarget() != null
+                    || !worker.getBuildRepairGoal().queuedBuildings.isEmpty()
                     || unit.getReturnResourcesGoal().getBuildingTarget() != null)
                 continue;
 
@@ -307,6 +319,177 @@ public final class BotController {
                 gather.setTargetFarm(targetFarm);
             }
         }
+    }
+
+    private boolean maintainRepairs(RTSPlayer player, List<LivingEntity> workers,
+                                    boolean constructionPending) {
+        Resources resources = self.resources();
+        if (resources == null)
+            return false;
+
+        boolean wasRepairAssigned = repairAssigned;
+        boolean hasQueuedBuildingOrder = workers.stream()
+                .map(entity -> (WorkerUnit) entity)
+                .anyMatch(worker -> !worker.getBuildRepairGoal().queuedBuildings.isEmpty());
+        if (hasQueuedBuildingOrder) {
+            boolean stoppedRepair = wasRepairAssigned;
+            for (LivingEntity entity : workers) {
+                WorkerUnit worker = (WorkerUnit) entity;
+                BuildingPlacement target = worker.getBuildRepairGoal().getBuildingTarget();
+                if (target != null && target.isBuilt
+                        && worker.getBuildRepairGoal().queuedBuildings.isEmpty()) {
+                    worker.getBuildRepairGoal().stopBuilding();
+                    stoppedRepair = true;
+                }
+            }
+            repairAssigned = false;
+            return stoppedRepair;
+        }
+
+        List<LivingEntity> repairers = workers.stream()
+                .filter(entity -> {
+                    BuildingPlacement target = ((WorkerUnit) entity).getBuildRepairGoal().getBuildingTarget();
+                    return target != null && target.isBuilt;
+                })
+                .toList();
+        boolean stoppedRepair = false;
+        for (int i = 1; i < repairers.size(); i++) {
+            ((WorkerUnit) repairers.get(i)).getBuildRepairGoal().stopBuilding();
+            stoppedRepair = true;
+        }
+        stoppedRepair |= wasRepairAssigned && repairers.isEmpty();
+        repairAssigned = !repairers.isEmpty();
+        LivingEntity currentRepairer = repairers.isEmpty() ? null : repairers.get(0);
+        boolean hasWoodSurplus = BotDecisionMaker.shouldRepairBuilding(
+                false, resources.wood, repairWoodReserve);
+
+        if (currentRepairer != null && (constructionPending || !hasWoodSurplus)) {
+            ((WorkerUnit) currentRepairer).getBuildRepairGoal().stopBuilding();
+            currentRepairer = null;
+            repairAssigned = false;
+            stoppedRepair = true;
+        }
+        if (constructionPending || !hasWoodSurplus)
+            return stoppedRepair;
+
+        List<BuildingPlacement> repairCandidates = BuildingServerEvents.getBuildings().stream()
+                .filter(this::isDamagedRepairableBuilding)
+                .sorted(Comparator
+                        .comparingInt((BuildingPlacement building) -> BotDecisionMaker.repairTargetPriority(
+                                building.isCapitol, building instanceof ProductionPlacement))
+                        .thenComparingDouble(building -> (double) building.getBlocksPlaced()
+                                / Math.max(1, building.getBlocksTotal()))
+                        .thenComparingInt(building -> building.originPos.getX())
+                        .thenComparingInt(building -> building.originPos.getY())
+                        .thenComparingInt(building -> building.originPos.getZ()))
+                .toList();
+        if (currentRepairer == null && repairCandidates.isEmpty())
+            return stoppedRepair;
+
+        List<LivingEntity> visibleEnemies = worldView.visibleEnemyCombatants(player);
+        if (currentRepairer != null) {
+            BuildingPlacement target = ((WorkerUnit) currentRepairer)
+                    .getBuildRepairGoal().getBuildingTarget();
+            if (repairCandidates.contains(target) && !hasVisibleThreatNear(target, visibleEnemies))
+                return stoppedRepair;
+            ((WorkerUnit) currentRepairer).getBuildRepairGoal().stopBuilding();
+            repairAssigned = false;
+            stoppedRepair = true;
+        }
+
+        BuildingPlacement target = repairCandidates.stream()
+                .filter(building -> !hasVisibleThreatNear(building, visibleEnemies))
+                .findFirst()
+                .orElse(null);
+        if (target == null)
+            return stoppedRepair;
+
+        LivingEntity repairer = workers.stream()
+                .filter(BotController::isAvailableBuilder)
+                .min(Comparator.comparingDouble(entity -> entity.blockPosition().distSqr(target.centrePos)))
+                .orElse(null);
+        if (repairer == null)
+            return stoppedRepair;
+
+        Unit.fullResetBehaviours((Unit) repairer);
+        ((WorkerUnit) repairer).getBuildRepairGoal().setBuildingTarget(target);
+        repairAssigned = true;
+        ReignOfNether.LOGGER.info("[Bot] {} assigned one worker to repair {} at {}",
+                ownerName, target.getBuilding().name, target.originPos);
+        return stoppedRepair;
+    }
+
+    private boolean isDamagedRepairableBuilding(BuildingPlacement building) {
+        return building != null
+                && building.ownerName.equals(ownerName)
+                && building.isBuilt
+                && building.getBuilding().repairable
+                && !building.hasPendingBlockPlacements()
+                && building.getBlocksPlaced() < building.getBlocksTotal();
+    }
+
+    private static boolean hasVisibleThreatNear(BuildingPlacement building, List<LivingEntity> visibleEnemies) {
+        return visibleEnemies.stream().anyMatch(enemy ->
+                enemy.blockPosition().distSqr(building.centrePos) <= REPAIR_THREAT_DISTANCE_SQR);
+    }
+
+    private boolean stopRepairsAtWoodReserve() {
+        Resources resources = self.resources();
+        if (resources != null && resources.wood > repairWoodReserve)
+            return false;
+
+        boolean stopped = false;
+        for (LivingEntity entity : self.workers()) {
+            WorkerUnit worker = (WorkerUnit) entity;
+            BuildingPlacement target = worker.getBuildRepairGoal().getBuildingTarget();
+            if (target != null && target.isBuilt) {
+                worker.getBuildRepairGoal().stopBuilding();
+                stopped = true;
+            }
+        }
+        if (stopped)
+            repairAssigned = false;
+        return stopped;
+    }
+
+    private static boolean isConstructionGoal(BotGoal goal) {
+        return goal == BotGoal.BUILD_SUPPLY
+                || goal == BotGoal.BUILD_FARM
+                || goal == BotGoal.BUILD_MILITARY;
+    }
+
+    private boolean hasOrphanedConstruction(List<LivingEntity> workers) {
+        return BuildingServerEvents.getBuildings().stream()
+                .filter(building -> building.ownerName.equals(ownerName) && !building.isBuilt)
+                .anyMatch(building -> workers.stream()
+                        .map(entity -> (WorkerUnit) entity)
+                        .noneMatch(worker -> isAssignedTo(worker, building)));
+    }
+
+    private int repairWoodReserve(BotStrategy strategy) {
+        int supplyTransformWood = strategy.supplyTransform() == null
+                ? 0 : strategy.supplyTransform().getCost(false, ownerName).wood;
+        int militaryTransformWood = strategy.militaryTransform() == null
+                ? 0 : strategy.militaryTransform().getCost(false, ownerName).wood;
+        return BotDecisionMaker.repairWoodReserve(
+                strategy.supply().cost.wood,
+                supplyTransformWood,
+                strategy.farm().cost.wood,
+                strategy.military().cost.wood,
+                militaryTransformWood
+        );
+    }
+
+    private static boolean isAvailableBuilder(LivingEntity entity) {
+        WorkerUnit worker = (WorkerUnit) entity;
+        return worker.getBuildRepairGoal().getBuildingTarget() == null
+                && worker.getBuildRepairGoal().queuedBuildings.isEmpty()
+                && ((Unit) entity).getReturnResourcesGoal().getBuildingTarget() == null;
+    }
+
+    private static boolean isAssignedTo(WorkerUnit worker, BuildingPlacement building) {
+        return worker.getBuildRepairGoal().getBuildingTarget() == building
+                || worker.getBuildRepairGoal().queuedBuildings.contains(building);
     }
 
     private static boolean hasHarvestableFood(BuildingPlacement farm) {
@@ -326,16 +509,12 @@ public final class BotController {
                 continue;
             boolean hasAssignedBuilder = workers.stream()
                     .map(entity -> (WorkerUnit) entity)
-                    .anyMatch(worker -> worker.getBuildRepairGoal().getBuildingTarget() == building);
+                    .anyMatch(worker -> isAssignedTo(worker, building));
             if (hasAssignedBuilder)
                 continue;
 
             LivingEntity replacement = workers.stream()
-                    .filter(entity -> {
-                        WorkerUnit worker = (WorkerUnit) entity;
-                        return worker.getBuildRepairGoal().getBuildingTarget() == null
-                                && ((Unit) entity).getReturnResourcesGoal().getBuildingTarget() == null;
-                    })
+                    .filter(BotController::isAvailableBuilder)
                     .findFirst()
                     .orElse(null);
             if (replacement == null)

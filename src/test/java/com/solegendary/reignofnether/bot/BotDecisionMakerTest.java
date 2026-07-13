@@ -298,6 +298,22 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void repairsUseOnlySurplusWoodAndPrioritizeCriticalBuildings() {
+        assertAll(
+                () -> assertFalse(BotDecisionMaker.shouldRepairBuilding(true, 500, 200)),
+                () -> assertFalse(BotDecisionMaker.shouldRepairBuilding(false, 200, 200)),
+                () -> assertTrue(BotDecisionMaker.shouldRepairBuilding(false, 201, 200)),
+                () -> assertTrue(BotDecisionMaker.repairTargetPriority(true, false)
+                        < BotDecisionMaker.repairTargetPriority(false, true)),
+                () -> assertTrue(BotDecisionMaker.repairTargetPriority(false, true)
+                        < BotDecisionMaker.repairTargetPriority(false, false)),
+                () -> assertEquals(150, BotDecisionMaker.repairWoodReserve(100, 0, 150, 150, 0)),
+                () -> assertEquals(200, BotDecisionMaker.repairWoodReserve(100, 0, 200, 150, 0)),
+                () -> assertEquals(175, BotDecisionMaker.repairWoodReserve(75, 75, 150, 75, 100))
+        );
+    }
+
+    @Test
     void progressingScoutDoesNotRotateAtTheOldAbsoluteTimeout() {
         assertAll(
                 () -> assertEquals(BotDecisionMaker.ScoutWaypointDecision.PROGRESS,

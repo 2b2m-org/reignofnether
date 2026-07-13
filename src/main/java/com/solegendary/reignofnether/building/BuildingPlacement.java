@@ -325,6 +325,10 @@ public class BuildingPlacement {
             this.blockPlaceQueue.add(block);
     }
 
+    public boolean hasPendingBlockPlacements() {
+        return !blockPlaceQueue.isEmpty();
+    }
+
     public ArrayList<WorkerUnit> getBuilders() {
         ArrayList<WorkerUnit> builders = new ArrayList<>();
         for (LivingEntity entity : UnitServerEvents.getAllUnits()) {

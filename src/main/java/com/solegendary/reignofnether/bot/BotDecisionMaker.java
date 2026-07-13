@@ -144,6 +144,21 @@ public final class BotDecisionMaker {
         return (flying ? 0 : 2) + (threatensHome ? 0 : 1);
     }
 
+    static boolean shouldRepairBuilding(boolean underThreat, int currentWood, int reservedWood) {
+        return !underThreat && currentWood > reservedWood;
+    }
+
+    static int repairTargetPriority(boolean capitol, boolean productionBuilding) {
+        return capitol ? 0 : productionBuilding ? 1 : 2;
+    }
+
+    static int repairWoodReserve(int supplyBuildingWood, int supplyTransformWood, int farmWood,
+                                 int militaryBuildingWood, int militaryTransformWood) {
+        int supplyPackage = supplyBuildingWood + supplyTransformWood;
+        int militaryPackage = militaryBuildingWood + militaryTransformWood;
+        return Math.max(farmWood, Math.max(supplyPackage, militaryPackage));
+    }
+
     public static ScoutWaypointDecision evaluateScoutWaypoint(boolean reached, double bestDistance,
                                                                double currentDistance, int ticksSinceProgress) {
         if (reached)
