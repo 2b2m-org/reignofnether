@@ -78,6 +78,7 @@ public class RTSPlayer {
     }
 
     private RTSPlayer(String name, int id, int ticksWithoutCapitol, Faction faction, int beaconOwnerTicks,
+                      int startPosColorId,
                       int[] scores, int scenarioRoleIndex, Map<TradeAction, Integer> tradeRates,
                       boolean aiControlled, BlockPos aiHomePos, BotDifficulty aiDifficulty,
                       BotPersonality aiPersonality, BlockPos aiMilitaryPortalOrigin,
@@ -87,6 +88,7 @@ public class RTSPlayer {
         this.ticksWithoutCapitol = ticksWithoutCapitol;
         this.faction = faction;
         this.beaconOwnerTicks = beaconOwnerTicks;
+        this.startPosColorId = startPosColorId;
         this.scores.setScoreListFromArray(scores);
         this.scenarioRoleIndex = scenarioRoleIndex;
         this.tradeRates = tradeRates;
@@ -99,12 +101,13 @@ public class RTSPlayer {
     }
 
     public static RTSPlayer getFromSave(String name, int id, int ticksWithoutCapitol, Faction faction, int beaconOwnerTicks,
+                                        int startPosColorId,
                                         int[] scores, int scenarioRoleIndex, Map<TradeAction, Integer> tradeRates,
                                         boolean aiControlled, BlockPos aiHomePos, BotDifficulty aiDifficulty,
                                         BotPersonality aiPersonality, BlockPos aiMilitaryPortalOrigin,
                                         BlockPos aiSupplyPortalOrigin) {
-        return new RTSPlayer(name, id, ticksWithoutCapitol, faction, beaconOwnerTicks, scores, scenarioRoleIndex,
-                tradeRates, aiControlled, aiHomePos, aiDifficulty, aiPersonality, aiMilitaryPortalOrigin,
+        return new RTSPlayer(name, id, ticksWithoutCapitol, faction, beaconOwnerTicks, startPosColorId, scores,
+                scenarioRoleIndex, tradeRates, aiControlled, aiHomePos, aiDifficulty, aiPersonality, aiMilitaryPortalOrigin,
                 aiSupplyPortalOrigin);
     }
 

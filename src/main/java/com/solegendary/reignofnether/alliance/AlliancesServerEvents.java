@@ -2,13 +2,18 @@ package com.solegendary.reignofnether.alliance;
 
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
+import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.scenario.ScenarioRole;
 import com.solegendary.reignofnether.scenario.ScenarioServerEvents;
 import com.solegendary.reignofnether.scenario.ScenarioUtils;
+import com.solegendary.reignofnether.survival.SurvivalServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.LivingEntity;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
 import java.util.*;
 
@@ -84,7 +89,6 @@ public class AlliancesServerEvents {
     }
 
     public static void applyScenarioAlliances() {
-        alliances.clear();
         Map<String, Integer> nameAndTeam = new HashMap<>();
         for (ScenarioRole role : ScenarioServerEvents.scenarioRoles) {
             nameAndTeam.put(role.name, role.teamNumber);
@@ -94,41 +98,54 @@ public class AlliancesServerEvents {
             if (role != null)
                 nameAndTeam.put(rtsPlayer.name, role.teamNumber);
         }
-
-        for (String name1 : nameAndTeam.keySet()) {
-            int team1 = nameAndTeam.get(name1);
-
-            for (String name2 : nameAndTeam.keySet()) {
-                int team2 = nameAndTeam.get(name2);
-
-                if (!name1.equals(name2)) {
-                    if (team1 == team2 &&
-                        !AlliancesServerEvents.isAllied(name1, name2)) {
-                        addAlliance(name1, name2);
-                    } else if (team1 != team2 &&
-                        AlliancesServerEvents.isAllied(name1, name2)) {
-                        removeAlliance(name1, name2);
-                    }
-                }
-            }
-        }
+        replaceTeamAlliances(nameAndTeam);
     }
 
     // ally all RTS players, unless they have an NPC scenario role
     public static void applyCoopAlliances() {
-        alliances.clear();
-
-        List<String> eligiblePlayers = new ArrayList<>();
+        Map<String, Integer> nameAndTeam = new HashMap<>();
 
         for (RTSPlayer rtsPlayer : PlayerServerEvents.rtsPlayers) {
             ScenarioRole role = ScenarioUtils.getScenarioRole(false, rtsPlayer.scenarioRoleIndex);
             if (role == null || !role.isNpc)
-                eligiblePlayers.add(rtsPlayer.name);
+                nameAndTeam.put(rtsPlayer.name, 1);
         }
-        for (String player1 : eligiblePlayers)
-            for (String player2 : eligiblePlayers)
-                if (!player1.equals(player2))
-                    addAlliance(player1, player2);
+        replaceTeamAlliances(nameAndTeam);
+    }
+
+    private static void applyClassicAlliances() {
+        Map<String, Integer> nameAndTeam = new HashMap<>();
+        for (RTSPlayer rtsPlayer : PlayerServerEvents.rtsPlayers) {
+            nameAndTeam.put(rtsPlayer.name, rtsPlayer.startPosColorId);
+        }
+        replaceTeamAlliances(nameAndTeam);
+    }
+
+    public static void applyConfiguredAlliances(MinecraftServer server) {
+        if (SurvivalServerEvents.isEnabled() ||
+                server.getGameRules().getRule(GameRuleRegistrar.COOP_MODE).get()) {
+            applyCoopAlliances();
+        } else if (server.getGameRules().getRule(GameRuleRegistrar.SCENARIO_MODE).get()) {
+            applyScenarioAlliances();
+        } else {
+            applyClassicAlliances();
+        }
+    }
+
+    private static void replaceTeamAlliances(Map<String, Integer> nameAndTeam) {
+        resetAllAlliances();
+        List<String> names = new ArrayList<>(nameAndTeam.keySet());
+        Collections.sort(names);
+        for (int i = 0; i < names.size(); i++) {
+            String name1 = names.get(i);
+            int team1 = nameAndTeam.get(name1);
+            for (int j = i + 1; j < names.size(); j++) {
+                String name2 = names.get(j);
+                if (team1 != 0 && team1 == nameAndTeam.get(name2)) {
+                    addAlliance(name1, name2);
+                }
+            }
+        }
     }
 
     public static void resetAllAlliances() {
@@ -140,6 +157,11 @@ public class AlliancesServerEvents {
         for (String player1 : alliances.keySet())
             for (String player2 : alliances.get(player1))
                 AllianceClientboundPacket.addAlliance(player1, player2);
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onServerStarted(ServerStartedEvent evt) {
+        applyConfiguredAlliances(evt.getServer());
     }
 
     @SubscribeEvent

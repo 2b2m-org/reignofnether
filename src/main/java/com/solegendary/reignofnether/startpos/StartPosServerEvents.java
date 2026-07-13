@@ -5,7 +5,6 @@ import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.blocks.RTSStartBlock;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
-import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.rtsmap.RTSMapInfo;
 import com.solegendary.reignofnether.rtsmap.RTSMapInfoServerEvents;
 import com.solegendary.reignofnether.sounds.SoundAction;
@@ -196,16 +195,7 @@ if (startingGame) {
                             }
                         }
                     }
-                    // ally all players who start at the same color of start block
-                    for (int i = 0; i < PlayerServerEvents.rtsPlayers.size(); i++) {
-                        RTSPlayer p1 = PlayerServerEvents.rtsPlayers.get(i);
-                        for (int j = i + 1; j < PlayerServerEvents.rtsPlayers.size(); j++) {
-                            RTSPlayer p2 = PlayerServerEvents.rtsPlayers.get(j);
-                            if (p1.startPosColorId == p2.startPosColorId) {
-                                AlliancesServerEvents.addAlliance(p1.name, p2.name);
-                            }
-                        }
-                    }
+                    AlliancesServerEvents.applyConfiguredAlliances(evt.getServer());
                     PlayerServerEvents.setRTSLock(true, true);
                     StartPosServerEvents.reset(evt.getServer().getLevel(Level.OVERWORLD));
                     StartPosClientboundPacket.reset();

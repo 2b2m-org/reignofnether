@@ -1,12 +1,10 @@
 package com.solegendary.reignofnether.scenario;
 
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
-import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -67,10 +65,6 @@ public class ScenarioServerEvents {
             if (!scenarioRoleSaveData.scenarioRoleSaves.isEmpty()) {
                 scenarioRoles.clear();
                 scenarioRoles.addAll(scenarioRoleSaveData.scenarioRoleSaves);
-                if (evt.getServer().getGameRules().getRule(GameRuleRegistrar.SCENARIO_MODE).get())
-                    AlliancesServerEvents.applyScenarioAlliances();
-                if (evt.getServer().getGameRules().getRule(GameRuleRegistrar.COOP_MODE).get())
-                    AlliancesServerEvents.applyCoopAlliances();
             }
             ReignOfNether.LOGGER.info("loaded scenario roles in serverevents");
         }
@@ -134,4 +128,3 @@ public class ScenarioServerEvents {
         return count;
     }
 }
-

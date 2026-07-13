@@ -54,6 +54,7 @@ public class RTSPlayerSaveData extends SavedData {
                 int id = ptag.getInt("id");
                 int ticksWithoutCapitol = ptag.getInt("ticksWithoutCapitol");
                 int beaconOwnerTicks = ptag.getInt("beaconOwnerTicks");
+                int startPosColorId = ptag.getInt("startPosColorId");
                 Faction faction = Faction.valueOf(ptag.getString("faction"));
                 int[] scores = ptag.contains("sources") ? ptag.getIntArray("scores") : new RTSPlayerScores().getScoreListAsArray();
                 int scenarioRoleIndex = ptag.getInt("scenarioRoleIndex");
@@ -80,7 +81,7 @@ public class RTSPlayerSaveData extends SavedData {
                         ? BlockPos.of(ptag.getLong("aiSupplyPortalOrigin")) : null;
 
                 data.rtsPlayers.add(RTSPlayer.getFromSave(name, id, ticksWithoutCapitol, faction, beaconOwnerTicks,
-                        scores, scenarioRoleIndex, tradeRates, aiControlled, aiHomePos, aiDifficulty,
+                        startPosColorId, scores, scenarioRoleIndex, tradeRates, aiControlled, aiHomePos, aiDifficulty,
                         aiPersonality, aiMilitaryPortalOrigin, aiSupplyPortalOrigin));
 
                 ReignOfNether.LOGGER.info("RTSPlayerSaveData.load: " + name + "|" + id + "|" + faction);
@@ -100,6 +101,7 @@ public class RTSPlayerSaveData extends SavedData {
             cTag.putInt("id", p.id);
             cTag.putInt("ticksWithoutCapitol", p.ticksWithoutCapitol);
             cTag.putInt("beaconOwnerTicks", p.beaconOwnerTicks);
+            cTag.putInt("startPosColorId", p.startPosColorId);
             cTag.putString("faction", p.faction.name());
             cTag.putIntArray("scores", p.scores.getScoreListAsArray());
             cTag.putInt("scenarioRoleIndex", p.scenarioRoleIndex);

@@ -515,13 +515,6 @@ public class PlayerServerEvents {
                     BuildingServerEvents.placeBuilding(building, bp, Rotation.NONE, playerName, workerIds, false, false);
                     PlayerClientboundPacket.teleport(playerName, BlockPos.containing(pos));
                 }
-                for (RTSPlayer rtsPlayer : rtsPlayers) {
-                    String playerName1 = rtsPlayer.name;
-                    String playerName2 = serverPlayer.getName().getString();
-                    if (!playerName1.equals(playerName2) && rtsPlayer.startPosColorId == startPosColorId) {
-                        AlliancesServerEvents.addAlliance(playerName1, playerName2);
-                    }
-                }
             }
 
             boolean coopMode = serverLevel.getGameRules().getRule(GameRuleRegistrar.COOP_MODE).get();
@@ -536,7 +529,7 @@ public class PlayerServerEvents {
                     sendMessageToAllPlayers("server.reignofnether.started", true, playerName);
                 sendMessageToAllPlayers("server.reignofnether.total_players", false, rtsPlayers.size());
             }
-            if (coopMode)
+            if (coopMode && !readiedStart)
                 AlliancesServerEvents.applyCoopAlliances();
 
             PlayerClientboundPacket.syncRtsGameTime(rtsGameTicks);
