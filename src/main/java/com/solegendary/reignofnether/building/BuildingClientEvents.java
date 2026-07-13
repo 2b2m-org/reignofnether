@@ -47,6 +47,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Vec3i;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
@@ -651,7 +652,7 @@ public class BuildingClientEvents {
             boolean isInBrightChunk = FogOfWarClientEvents.isBuildingInBrightChunk(building);
             boolean inWorldBorderOrInSandbox = SandboxClientEvents.isSandboxPlayer() || !building.isOutsideWorldBorder();
 
-            AABB aabb = new AABB(building.minCorner, building.maxCorner.offset(1, 1, 1));
+            AABB aabb = AABB.encapsulatingFullBlocks(building.minCorner, building.maxCorner);
 
             var colorHex = new Color(PlayerColors.getPlayerDisplayColorHex(building.ownerName));
             float r = colorHex.getRed() / 255.0f;
@@ -1205,7 +1206,7 @@ if (!SandboxClientEvents.isSandboxPlayer())
             return;
 
         if (activate) {
-            MobEffect effect = BeaconPlacement.getMobEffectForAction(action);
+            Holder<MobEffect> effect = BeaconPlacement.getMobEffectForAction(action);
             if (effect != null)
                 beacon.activate(effect);
         } else {

@@ -18,6 +18,7 @@ import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
 import com.solegendary.reignofnether.util.EnchantmentUtil;
 import com.solegendary.reignofnether.faction.Faction;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.*;
@@ -168,7 +169,10 @@ public class IllagerWaveSpawner {
                     Entity entityPassenger = UnitServerEvents.spawnMob(EntityRegistrar.PILLAGER_UNIT.get(),
                             level, bp.above(), ENEMY_OWNER_NAME);
                     if (entityPassenger instanceof Unit unit) {
-                        entityPassenger.setItemSlot(EquipmentSlot.HEAD, Raid.getLeaderBannerInstance());
+                        entityPassenger.setItemSlot(
+                                EquipmentSlot.HEAD,
+                                Raid.getLeaderBannerInstance(level.registryAccess().lookupOrThrow(Registries.BANNER_PATTERN))
+                        );
                         entityPassenger.startRiding(ravagerUnit);
                         remainingPop -= getModifiedPopCost(unit);
                     }

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.blocks;
 
 import com.solegendary.reignofnether.building.BuildingUtils;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -18,6 +19,13 @@ import net.minecraft.world.level.block.state.properties.Property;
 
 // combination of FallingBlock (sand, gravel) and RotatingPillarBlock (logs, nether wart stems)
 public class FallingRotatedPillarBlock extends FallingBlock {
+
+    public static final MapCodec<FallingRotatedPillarBlock> CODEC = simpleCodec(FallingRotatedPillarBlock::new);
+
+    @Override
+    public MapCodec<FallingRotatedPillarBlock> codec() {
+        return CODEC;
+    }
 
     public static final EnumProperty<Direction.Axis> AXIS;
     private long tickAge = 0;

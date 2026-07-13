@@ -72,7 +72,6 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.IPlantable;
-import net.neoforged.neoforge.common.world.ForgeChunkManager;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.entity.*;
@@ -429,8 +428,7 @@ saveTicks += 1;
             }
 
             ChunkAccess chunk = evt.getLevel().getChunk(entity.getOnPos());
-            ForgeChunkManager.forceChunk((ServerLevel) evt.getLevel(),
-                ReignOfNether.MOD_ID,
+            ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk((ServerLevel) evt.getLevel(),
                 entity,
                 chunk.getPos().x,
                 chunk.getPos().z,
@@ -779,16 +777,14 @@ saveTicks += 1;
                 );
 
                 if (chunkNeedsUpdate) {
-                    ForgeChunkManager.forceChunk((ServerLevel) evt.getLevel(),
-                        ReignOfNether.MOD_ID,
+                    ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk((ServerLevel) evt.getLevel(),
                         entity,
                         oldChunk.getPos().x,
                         oldChunk.getPos().z,
                         false,
                         true
                     );
-                    ForgeChunkManager.forceChunk((ServerLevel) evt.getLevel(),
-                        ReignOfNether.MOD_ID,
+                    ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk((ServerLevel) evt.getLevel(),
                         entity,
                         newChunk.getPos().x,
                         newChunk.getPos().z,

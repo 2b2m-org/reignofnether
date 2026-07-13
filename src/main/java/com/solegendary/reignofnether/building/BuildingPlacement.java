@@ -85,7 +85,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.common.world.ForgeChunkManager;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 
@@ -805,8 +804,7 @@ public class BuildingPlacement {
         if (!level.isClientSide()) {
             BlockPos centreBp = this.centrePos;
             ChunkAccess chunk = level.getChunk(centreBp);
-            ForgeChunkManager.forceChunk((ServerLevel) level,
-                ReignOfNether.MOD_ID,
+            ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk((ServerLevel) level,
                 centreBp,
                 chunk.getPos().x,
                 chunk.getPos().z,
@@ -1015,11 +1013,11 @@ public class BuildingPlacement {
                             safeTag.remove("event_distance");
                             safeTag.remove("selector");
                             safeTag.remove("source");
-                            be.load(safeTag);
+                            be.loadWithComponents(safeTag, level.registryAccess());
                             be.setChanged();
                         }
                     } else {
-                        BlockEntity be = BlockEntity.loadStatic(bp, bs, bNbt);
+                        BlockEntity be = BlockEntity.loadStatic(bp, bs, bNbt, level.registryAccess());
                         if (be != null)
                             level.setBlockEntity(be);
                     }

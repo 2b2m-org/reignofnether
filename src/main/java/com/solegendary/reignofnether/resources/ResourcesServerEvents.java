@@ -40,9 +40,9 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.CropGrowEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
-import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.*;
@@ -240,9 +240,9 @@ saveTicks += 1;
 
     // prevent vanilla growth mechanics because they're slow and random, see FarmPlacement instead
     @SubscribeEvent
-    public static void onCropGrow(BlockEvent.CropGrowEvent.Pre evt) {
+    public static void onCropGrow(CropGrowEvent.Pre evt) {
         if (BuildingUtils.isPosInsideAnyBuilding(evt.getLevel().isClientSide(), evt.getPos()))
-            evt.setResult(Event.Result.DENY);
+            evt.setResult(CropGrowEvent.Pre.Result.DO_NOT_GROW);
     }
 
     @SubscribeEvent
@@ -444,7 +444,6 @@ saveTicks += 1;
         FALLING_LOGS.put(Blocks.CRIMSON_HYPHAE, BlockRegistrar.FALLING_CRIMSON_STEM.get());
     }
 }
-
 
 
 

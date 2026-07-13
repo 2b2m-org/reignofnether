@@ -17,12 +17,12 @@ import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
@@ -137,7 +137,7 @@ public class ProductionPlacement extends BuildingPlacement {
 
         spawnPoint = spawnPoint.offset(spawnOffset);
 
-        Entity entity = entityType.spawn(level, (CompoundTag) null,
+        Entity entity = entityType.spawn(level, (ItemStack) null,
                 null,
                 spawnPoint,
                 MobSpawnType.SPAWNER,

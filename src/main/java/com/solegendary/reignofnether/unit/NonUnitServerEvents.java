@@ -67,7 +67,10 @@ public class NonUnitServerEvents {
             for (LivingEntity unit : UnitServerEvents.getAllUnits()) {
                 if (unit.tickCount % 20 != 0)
                     continue;
-                AABB aabb = new AABB(unit.blockPosition().offset(-10, -10, -10), unit.blockPosition().offset(10, 10, 10));
+                AABB aabb = AABB.encapsulatingFullBlocks(
+                        unit.blockPosition().offset(-10, -10, -10),
+                        unit.blockPosition().offset(10, 10, 10)
+                );
                 pfMobs.addAll(evt.getLevel().getNearbyEntities(PathfinderMob.class, TargetingConditions.forCombat(), unit, aabb));
             }
             for (PathfinderMob pfMob : pfMobs) {

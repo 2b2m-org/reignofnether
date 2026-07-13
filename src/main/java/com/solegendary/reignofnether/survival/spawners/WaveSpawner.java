@@ -18,7 +18,6 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.IPlantable;
 
 import java.util.*;
 
@@ -100,8 +99,7 @@ public class WaveSpawner {
         // Frostwalker effect provided in LivingEntityMixin, but it only happens on changing block positions on the ground
         for (BlockPos pos : bps) {
             BlockState bsAdj = level.getBlockState(pos);
-            if (!bsAdj.getFluidState().isEmpty() ||
-                    (bsAdj instanceof IPlantable plantable && plantable instanceof LiquidBlockContainer))
+            if (!bsAdj.getFluidState().isEmpty() || bsAdj.getBlock() instanceof LiquidBlockContainer)
                 level.setBlockAndUpdate(pos, bsToPlace);
         }
     }

@@ -56,7 +56,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.entity.EntityTravelToDimensionEvent;
-import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
+import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
@@ -612,15 +612,15 @@ saveTicks += 1;
 
     // prevent dungeons spawners from actually spawning
     @SubscribeEvent
-    public static void onLivingSpawn(MobSpawnEvent.FinalizeSpawn evt) {
+    public static void onLivingSpawn(FinalizeSpawnEvent evt) {
         if (evt.getSpawnType() == MobSpawnType.SPAWNER) {
-            if (evt.getSpawner() != null && evt.getSpawner().getSpawnerBlockEntity() != null) {
-                BlockPos bp = evt.getSpawner().getSpawnerBlockEntity().getBlockPos();
+            if (evt.getSpawner() != null && evt.getSpawner().left().isPresent()) {
+                BlockPos bp = evt.getSpawner().left().orElseThrow().getBlockPos();
                 BuildingPlacement bpl = BuildingUtils.findBuilding(false, bp);
                 if (bpl != null &&
                    (bpl.getBuilding() instanceof Dungeon ||
                     bpl.getBuilding() instanceof FlameSanctuary)) {
-                    evt.getEntity().discard();
+                    evt.setSpawnCancelled(true);
                 }
             }
         }
@@ -701,27 +701,28 @@ saveTicks += 1;
         GhastUnit ghastUnit = null;
         CreeperUnit creeperUnit = null;
         PillagerUnit pillagerUnit = null;
+        Entity explosionSource = exp.getDirectSourceEntity();
 
-        if (evt.getExplosion().getExploder() instanceof CreeperUnit cUnit) {
+        if (explosionSource instanceof CreeperUnit cUnit) {
             creeperUnit = cUnit;
         }
-        else if (evt.getExplosion().getExploder() instanceof PillagerUnit pUnit) {
+        else if (explosionSource instanceof PillagerUnit pUnit) {
             pillagerUnit = pUnit;
-        } else if (evt.getExplosion().getExploder() instanceof LargeFireball fireball && fireball.getOwner() instanceof GhastUnit gUnit) {
+        } else if (explosionSource instanceof LargeFireball fireball && fireball.getOwner() instanceof GhastUnit gUnit) {
             ghastUnit = gUnit;
         }
 
-        if (exp.getExploder() == null && ghastUnit == null) {
+        if (explosionSource == null && ghastUnit == null) {
             evt.getAffectedEntities().clear();
         }
 
         // apply creeper, ghast and mounted pillager attack damage as bonus damage to buildings
         // this is dealt in addition to the actual blocks destroyed by the explosion itself
-        if (creeperUnit != null || ghastUnit != null || pillagerUnit != null || exp.getExploder() instanceof PrimedTnt) {
+        if (creeperUnit != null || ghastUnit != null || pillagerUnit != null || explosionSource instanceof PrimedTnt) {
             Set<BuildingPlacement> affectedBuildings = new HashSet<>();
 
             if (pillagerUnit != null) {
-                Vec3 pos = evt.getExplosion().getPosition();
+                Vec3 pos = evt.getExplosion().center();
                 evt.getAffectedBlocks().add(new BlockPos((int) pos.x, (int) pos.y - 1, (int) pos.z));
             }
 
@@ -750,9 +751,9 @@ saveTicks += 1;
                 } else if (pillagerUnit != null) {
                     atkDmg = pillagerUnit.getUnitAttackDamage() / 2;
                     building.lastAttacker = pillagerUnit;
-                } else if (exp.getExploder() instanceof AdjustablePrimedTnt aTNT) {
+                } else if (explosionSource instanceof AdjustablePrimedTnt aTNT) {
                     atkDmg = aTNT.getExplosionPower() *  AdjustablePrimedTnt.DAMAGE_PER_POWER;
-                } else if (exp.getExploder() instanceof PrimedTnt) {
+                } else if (explosionSource instanceof PrimedTnt) {
                     atkDmg = TNT_BUILDING_BASE_DAMAGE;
                 }
 
@@ -761,7 +762,7 @@ saveTicks += 1;
                     GarrisonableBuildingAddon garr;
                     if ((garr = building.getBuilding().getActiveAddon(GarrisonableBuildingAddon.class)) != null) {
                         for (LivingEntity le : garr.getOccupants(building))
-                            le.hurt(exp.getDamageSource(), (random.nextFloat(atkDmg + 1)) / 2f);
+                            le.hurt(evt.getLevel().damageSources().explosion(exp), (random.nextFloat(atkDmg + 1)) / 2f);
                     }
 
                     building.destroyRandomBlocks(atkDmg);

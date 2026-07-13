@@ -64,7 +64,6 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.network.NetworkHooks;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -811,7 +810,7 @@ public class PlayerServerEvents {
             // Open GUI server-side
             MenuConstructor provider = TopdownGuiContainer.getServerContainerProvider();
             MenuProvider namedProvider = new SimpleMenuProvider(provider, TopdownGuiContainer.TITLE);
-            NetworkHooks.openScreen(serverPlayer, namedProvider);
+            serverPlayer.openMenu(namedProvider);
 
             // Save original game mode only if it's not already saved for this session
             String playerName = serverPlayer.getName().getString();

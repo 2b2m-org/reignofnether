@@ -84,10 +84,7 @@ public class BuildingUtils {
 
     // returns a list of BPs that may reside in unique chunks for fog of war calcs
     public static ArrayList<BlockPos> getUniqueChunkBps(BuildingPlacement building) {
-        AABB aabb = new AABB(
-                building.minCorner,
-                building.maxCorner.offset(1,1,1)
-        );
+        AABB aabb = AABB.encapsulatingFullBlocks(building.minCorner, building.maxCorner);
 
         ArrayList<BlockPos> bps = new ArrayList<>();
         double x = aabb.minX;

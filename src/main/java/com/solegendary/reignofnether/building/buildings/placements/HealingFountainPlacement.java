@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.building.RangeIndicator;
 import com.solegendary.reignofnether.time.TimeClientEvents;
 import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -56,10 +57,11 @@ public class HealingFountainPlacement extends BuildingPlacement {
             Collections.shuffle(waterBlocks);
             int col = 16262179; // red healing effect
             BlockPos bp = waterBlocks.get(0).getBlockPos();
-            double d0 = (double)(col >> 16 & 255) / 255.0;
-            double d1 = (double)(col >> 8 & 255) / 255.0;
-            double d2 = (double)(col >> 0 & 255) / 255.0;
-            this.level.addParticle(ParticleTypes.ENTITY_EFFECT, bp.getX(), bp.getY() + 1, bp.getZ(), d0, d1, d2);
+            this.level.addParticle(
+                    ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, col),
+                    bp.getX(), bp.getY() + 1, bp.getZ(),
+                    0, 0, 0
+            );
         }
     }
 }

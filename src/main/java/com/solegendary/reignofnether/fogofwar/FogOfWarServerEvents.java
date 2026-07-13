@@ -9,7 +9,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.neoforged.neoforge.common.IPlantable;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -87,7 +86,7 @@ public class FogOfWarServerEvents {
                 for (int z = 0; z < 16; z++) {
                     BlockPos bp = renderChunkOrigin.offset(x,y,z);
                     BlockState bs = chunk.getBlockState(bp);
-                    if (bs.is(BlockTags.REPLACEABLE_BY_TREES) || bs.getBlock() instanceof IPlantable) {
+                    if (bs.is(BlockTags.REPLACEABLE_BY_TREES) || bs.is(BlockTags.REPLACEABLE)) {
                         plants.add(new Pair<>(bp, bs));
                     }
                 }

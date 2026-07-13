@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.blocks;
 
+import com.mojang.serialization.MapCodec;
 import com.solegendary.reignofnether.ability.heroAbilities.wildfire.SoulsAflame;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
@@ -17,6 +18,13 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class UnextinguishableSoulFireBlock extends BaseFireBlock {
+    public static final MapCodec<UnextinguishableSoulFireBlock> CODEC = simpleCodec(UnextinguishableSoulFireBlock::new);
+
+    @Override
+    public MapCodec<UnextinguishableSoulFireBlock> codec() {
+        return CODEC;
+    }
+
     public UnextinguishableSoulFireBlock(BlockBehaviour.Properties p_56653_) {
         super(p_56653_, 2.0F);
     }

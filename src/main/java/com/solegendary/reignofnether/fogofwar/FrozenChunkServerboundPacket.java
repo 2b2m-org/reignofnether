@@ -12,7 +12,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.common.IPlantable;
 
 
 public class FrozenChunkServerboundPacket implements CustomPacketPayload {
@@ -39,7 +38,7 @@ public class FrozenChunkServerboundPacket implements CustomPacketPayload {
                         BlockState bs = MC.level.getBlockState(bp);
 
                         if (bs.is(BlockTags.PORTALS) ||
-                                bs.is(BlockTags.REPLACEABLE_BY_TREES) || bs.getBlock() instanceof IPlantable) {
+                                bs.is(BlockTags.REPLACEABLE_BY_TREES) || bs.is(BlockTags.REPLACEABLE)) {
                             SoundClientEvents.mutedBps.add(bp);
                         }
                     }

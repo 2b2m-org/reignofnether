@@ -113,6 +113,10 @@ public class FarmPlacement extends BuildingPlacement {
     }
 
     private void growGourd(StemBlock stemBlock, BlockPos bp) {
+        Block fruit = stemBlock == Blocks.PUMPKIN_STEM ? Blocks.PUMPKIN : Blocks.MELON;
+        Block attachedStem = stemBlock == Blocks.PUMPKIN_STEM
+                ? Blocks.ATTACHED_PUMPKIN_STEM
+                : Blocks.ATTACHED_MELON_STEM;
         ArrayList<Direction> dirs = new ArrayList<>(List.of(
                 Direction.NORTH,
                 Direction.SOUTH,
@@ -123,9 +127,15 @@ public class FarmPlacement extends BuildingPlacement {
         for (Direction dir : dirs) {
             BlockPos bpAdj = bp.relative(dir);
             BlockState bs = level.getBlockState(bpAdj.below());
-            if (level.isEmptyBlock(bpAdj) && (bs.canSustainPlant(level, bpAdj.below(), Direction.UP, stemBlock.getFruit()) || bs.is(Blocks.FARMLAND) || bs.is(BlockTags.DIRT))) {
-                level.setBlockAndUpdate(bpAdj, stemBlock.getFruit().defaultBlockState());
-                level.setBlockAndUpdate(bp, stemBlock.getFruit().getAttachedStem().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, dir));
+            boolean canSustainFruit = bs.canSustainPlant(
+                    level,
+                    bpAdj.below(),
+                    Direction.UP,
+                    fruit.defaultBlockState()
+            ).isTrue() || bs.is(Blocks.FARMLAND) || bs.is(BlockTags.DIRT);
+            if (level.isEmptyBlock(bpAdj) && canSustainFruit) {
+                level.setBlockAndUpdate(bpAdj, fruit.defaultBlockState());
+                level.setBlockAndUpdate(bp, attachedStem.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, dir));
                 return;
             }
         }

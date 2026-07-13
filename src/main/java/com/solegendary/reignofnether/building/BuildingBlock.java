@@ -29,7 +29,7 @@ public class BuildingBlock {
         }
         var isIgnored = false;
         if (state.is(BlockTags.LEAVES)) isIgnored = true;
-        else if (state.is(Tags.Blocks.GLASS)) isIgnored = true;
+        else if (state.is(Tags.Blocks.GLASS_BLOCKS)) isIgnored = true;
         else if (SculkCatalystPlacement.isSculk(state.getBlock())) isIgnored = true;
         ignoredCache.put(state, isIgnored);
         return false;

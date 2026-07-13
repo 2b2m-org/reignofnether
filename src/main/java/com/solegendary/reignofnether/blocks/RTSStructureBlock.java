@@ -5,9 +5,9 @@
 
 package com.solegendary.reignofnether.blocks;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -30,18 +30,26 @@ import net.minecraft.world.phys.BlockHitResult;
 import javax.annotation.Nullable;
 
 public class RTSStructureBlock extends BaseEntityBlock implements GameMasterBlock {
+    public static final MapCodec<RTSStructureBlock> CODEC = simpleCodec(RTSStructureBlock::new);
     public static final EnumProperty<StructureMode> MODE;
+
+    @Override
+    public MapCodec<RTSStructureBlock> codec() {
+        return CODEC;
+    }
 
     public RTSStructureBlock(BlockBehaviour.Properties pProperties) {
         super(pProperties);
         this.registerDefaultState(this.stateDefinition.any().setValue(MODE, StructureMode.SAVE));
     }
 
+    @Override
     public BlockEntity newBlockEntity(BlockPos pPos, BlockState pState) {
         return new RTSStructureBlockEntity(pPos, pState);
     }
 
-    public InteractionResult use(BlockState pState, Level pLevel, BlockPos pPos, Player pPlayer, InteractionHand pHand, BlockHitResult pHit) {
+    @Override
+    protected InteractionResult useWithoutItem(BlockState pState, Level pLevel, BlockPos pPos, Player pPlayer, BlockHitResult pHit) {
         BlockEntity $$6 = pLevel.getBlockEntity(pPos);
         if ($$6 instanceof RTSStructureBlockEntity) {
             return ((RTSStructureBlockEntity)$$6).usedBy(pPlayer) ? InteractionResult.sidedSuccess(pLevel.isClientSide) : InteractionResult.PASS;

@@ -2,9 +2,21 @@ package com.solegendary.reignofnether.blocks;
 
 import net.minecraft.world.level.block.SkullBlock;
 
-public class SkullTypes {
-    public static final SkullBlock.Type STRAY = new SkullBlock.Type() {};
-    public static final SkullBlock.Type BOGGED = new SkullBlock.Type() {};
-    public static final SkullBlock.Type DROWNED = new SkullBlock.Type() {};
-    public static final SkullBlock.Type HUSK = new SkullBlock.Type() {};
+public enum SkullTypes implements SkullBlock.Type {
+    STRAY("stray"),
+    BOGGED("bogged"),
+    DROWNED("drowned"),
+    HUSK("husk");
+
+    private final String name;
+
+    SkullTypes(String name) {
+        this.name = name;
+        SkullBlock.Type.TYPES.put(name, this);
+    }
+
+    @Override
+    public String getSerializedName() {
+        return name;
+    }
 }

@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.blocks;
 
+import com.mojang.serialization.MapCodec;
 import com.solegendary.reignofnether.registrars.BlockEntityRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.Relationship;
@@ -40,6 +41,13 @@ import javax.annotation.Nullable;
 
 public class WraithSnowLayerBlock extends BaseEntityBlock {
 
+    public static final MapCodec<WraithSnowLayerBlock> CODEC = simpleCodec(WraithSnowLayerBlock::new);
+
+    @Override
+    public MapCodec<WraithSnowLayerBlock> codec() {
+        return CODEC;
+    }
+
     private static final int MOVEMENT_SLOWDOWN_AMP_PER_LAYER = 2;
     private static final int DMG_TAKEN_INCREASE_AMP_PER_LAYER = 2;
     private static final int ATTACK_SLOWDOWN_AMP_PER_LAYER = 2;
@@ -78,7 +86,7 @@ public class WraithSnowLayerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public boolean isPathfindable(BlockState pState, BlockGetter pLevel, BlockPos pPos, PathComputationType pType) {
+    protected boolean isPathfindable(BlockState pState, PathComputationType pType) {
         return true;
     }
 

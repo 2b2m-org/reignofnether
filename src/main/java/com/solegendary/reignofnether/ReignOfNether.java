@@ -22,6 +22,7 @@ import com.solegendary.reignofnether.registrars.ServerEventRegistrar;
 import com.solegendary.reignofnether.registrars.SoundRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import net.minecraft.commands.synchronization.ArgumentTypeInfos;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -29,6 +30,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent;
+import net.neoforged.neoforge.common.world.chunk.TicketController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -37,6 +40,9 @@ public final class ReignOfNether {
     public static final Logger LOGGER = LogManager.getLogger();
     public static final String MOD_ID = "reignofnether";
     public static final String VERSION_STRING = "1.3.8a";
+    public static final TicketController CHUNK_TICKET_CONTROLLER = new TicketController(
+        ResourceLocation.fromNamespaceAndPath(MOD_ID, "default")
+    );
 
     public ReignOfNether(IEventBus modBus, ModContainer modContainer) {
         AttributeRegistrar.init(modBus);
@@ -53,6 +59,7 @@ public final class ReignOfNether {
         MobEffectRegistrar.init(modBus);
         ParticleRegistrar.init(modBus);
         modBus.addListener(PacketHandler::register);
+        modBus.addListener(ReignOfNether::registerTicketController);
         CommandArgumentRegistrar.init(modBus);
         BuildingSelectorOptions.bootStrap();
 
@@ -71,6 +78,10 @@ public final class ReignOfNether {
         } else {
             new ServerEventRegistrar().registerServerEvents();
         }
+    }
+
+    private static void registerTicketController(RegisterTicketControllersEvent event) {
+        event.register(CHUNK_TICKET_CONTROLLER);
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {

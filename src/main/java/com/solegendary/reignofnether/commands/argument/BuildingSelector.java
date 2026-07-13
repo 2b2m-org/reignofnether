@@ -11,7 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.ForgeHooks;
+import net.neoforged.neoforge.common.CommonHooks;
 
 import java.util.List;
 import java.util.Objects;
@@ -71,7 +71,7 @@ public class BuildingSelector {
 	}
 	
 	private void checkPermissions(CommandSourceStack pSource) throws CommandSyntaxException {
-		if (this.usesSelector && !ForgeHooks.canUseEntitySelectors(pSource)) {
+        if (this.usesSelector && !CommonHooks.canUseEntitySelectors(pSource)) {
 			throw EntityArgument.ERROR_SELECTORS_NOT_ALLOWED.create();
 		}
 	}
