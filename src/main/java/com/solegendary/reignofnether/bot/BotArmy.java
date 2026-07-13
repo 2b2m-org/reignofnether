@@ -105,6 +105,9 @@ final class BotArmy {
                 visibleEnemyCombatants, armyPos, player.aiHomePos);
         int mainPopulation = BotSelf.population(main);
         int tacticalEnemyPopulation = BotSelf.population(tacticalEnemyArmy);
+        boolean hasRangedResponder = main.stream().anyMatch(RangedAttackerUnit.class::isInstance);
+        boolean rangedFlyingThreat = hasRangedResponder
+                && tacticalEnemyArmy.stream().anyMatch(BotArmy::isFlying);
 
         if (tick < regroupUntilTick) {
             attackMoveArmy(main, player.aiHomePos.above());
@@ -114,9 +117,14 @@ final class BotArmy {
 
         BotDecisionMaker.ArmyOrder armyOrder = BotDecisionMaker.chooseArmyOrder(
                 difficulty, personality, mainPopulation, tacticalEnemyPopulation,
-                attackCommitted, homeThreat);
+                attackCommitted, homeThreat, rangedFlyingThreat);
         if (armyOrder == BotDecisionMaker.ArmyOrder.DEFEND) {
-            attackMoveArmy(main, defenseTarget.getClosestGroundPos(armyPos, 1));
+            BlockPos target = defenseTarget.getClosestGroundPos(armyPos, 1);
+            if (rangedFlyingThreat)
+                engageEnemyArmy(main, target,
+                        selectRangedTarget(tacticalEnemyArmy, armyPos, player.aiHomePos));
+            else
+                attackMoveArmy(main, target);
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -134,13 +142,19 @@ final class BotArmy {
             return;
         }
 
-        LivingEntity enemyArmyTarget = selectEnemyArmyTarget(
-                tacticalEnemyArmy, armyPos, mainPopulation, tacticalEnemyPopulation,
-                player.aiHomePos, attackCommitted);
-        if (enemyArmyTarget != null) {
+        if (shouldEngageEnemyArmy(tacticalEnemyArmy, mainPopulation, player.aiHomePos,
+                attackCommitted, hasRangedResponder)) {
             if (objective != null)
                 objectiveLastProgressTick = tick;
-            engageEnemyArmy(main, enemyArmyTarget);
+            LivingEntity groundTarget = selectGroundTarget(
+                    tacticalEnemyArmy, armyPos, player.aiHomePos);
+            BlockPos attackMoveTarget = groundTarget != null
+                    ? groundTarget.blockPosition()
+                    : objective != null ? objective.anchor() : player.aiHomePos.above();
+            LivingEntity rangedTarget = hasRangedResponder
+                    ? selectRangedTarget(tacticalEnemyArmy, armyPos, player.aiHomePos)
+                    : null;
+            engageEnemyArmy(main, attackMoveTarget, rangedTarget);
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -333,15 +347,23 @@ final class BotArmy {
         objectiveLastProgressTick = 0;
     }
 
-    private LivingEntity selectEnemyArmyTarget(List<LivingEntity> enemies, BlockPos armyPos,
-                                                int armyPopulation, int enemyPopulation,
-                                                BlockPos homePos, boolean attackCommitted) {
-        boolean homeThreat = enemies.stream().anyMatch(enemy ->
+    private boolean shouldEngageEnemyArmy(List<LivingEntity> enemies, int armyPopulation, BlockPos homePos,
+                                          boolean attackCommitted, boolean hasRangedResponder) {
+        List<LivingEntity> eligibleEnemies = hasRangedResponder
+                ? enemies
+                : enemies.stream().filter(enemy -> !isFlying(enemy)).toList();
+        boolean homeThreat = eligibleEnemies.stream().anyMatch(enemy ->
                 enemy.blockPosition().distSqr(homePos) <= HOME_INTERCEPTION_DISTANCE_SQR);
-        if (!BotDecisionMaker.shouldFocusEnemyArmy(
-                homeThreat, attackCommitted, armyPopulation, enemyPopulation))
-            return null;
+        boolean flyingEnemyVisible = enemies.stream().anyMatch(BotArmy::isFlying);
+        int enemyPopulation = BotSelf.population(eligibleEnemies);
+        return BotDecisionMaker.shouldFocusEnemyArmy(
+                homeThreat, attackCommitted, armyPopulation, enemyPopulation,
+                hasRangedResponder, flyingEnemyVisible);
+    }
+
+    private LivingEntity selectGroundTarget(List<LivingEntity> enemies, BlockPos armyPos, BlockPos homePos) {
         return enemies.stream()
+                .filter(enemy -> !isFlying(enemy))
                 .min(Comparator
                         .comparingInt((LivingEntity enemy) ->
                                 enemy.blockPosition().distSqr(homePos) <= HOME_INTERCEPTION_DISTANCE_SQR ? 0 : 1)
@@ -349,6 +371,22 @@ final class BotArmy {
                         .thenComparingDouble(LivingEntity::getHealth)
                         .thenComparingInt(LivingEntity::getId))
                 .orElse(null);
+    }
+
+    private LivingEntity selectRangedTarget(List<LivingEntity> enemies, BlockPos armyPos, BlockPos homePos) {
+        return enemies.stream()
+                .min(Comparator
+                        .comparingInt((LivingEntity enemy) -> BotDecisionMaker.rangedTargetPriority(
+                                enemy.blockPosition().distSqr(homePos) <= HOME_INTERCEPTION_DISTANCE_SQR,
+                                isFlying(enemy)))
+                        .thenComparingDouble(enemy -> enemy.blockPosition().distSqr(armyPos))
+                        .thenComparingDouble(LivingEntity::getHealth)
+                        .thenComparingInt(LivingEntity::getId))
+                .orElse(null);
+    }
+
+    private static boolean isFlying(LivingEntity entity) {
+        return entity instanceof Unit unit && unit.isFlyingUnit();
     }
 
     private static List<LivingEntity> tacticalEnemyArmy(List<LivingEntity> enemies, BlockPos armyPos,
@@ -443,16 +481,21 @@ final class BotArmy {
         );
     }
 
-    private void engageEnemyArmy(List<LivingEntity> army, LivingEntity target) {
+    private void engageEnemyArmy(List<LivingEntity> army, BlockPos attackMoveTarget,
+                                 LivingEntity rangedTarget) {
         List<LivingEntity> attackMoveUnits = army.stream()
                 .filter(entity -> !(entity instanceof RangedAttackerUnit))
                 .toList();
-        attackMoveArmy(attackMoveUnits, target.blockPosition());
+        attackMoveArmy(attackMoveUnits, attackMoveTarget);
+
+        if (rangedTarget == null)
+            return;
 
         int[] rangedIds = army.stream()
                 .filter(RangedAttackerUnit.class::isInstance)
                 .filter(entity -> !(entity instanceof Unit unit)
-                        || unit.getTargetGoal().getTarget() != target)
+                        || unit.getTargetGoal().getTarget() != rangedTarget
+                        || !unit.getTargetGoal().forced)
                 .mapToInt(LivingEntity::getId)
                 .toArray();
         if (rangedIds.length == 0)
@@ -460,9 +503,9 @@ final class BotArmy {
         UnitServerEvents.addActionItem(
                 ownerName,
                 UnitAction.ATTACK,
-                target.getId(),
+                rangedTarget.getId(),
                 rangedIds,
-                target.blockPosition(),
+                rangedTarget.blockPosition(),
                 BlockPos.ZERO
         );
     }
