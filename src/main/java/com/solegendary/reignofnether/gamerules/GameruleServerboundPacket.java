@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.gamerules;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -18,7 +20,7 @@ import net.minecraft.world.level.GameRules;
 public class GameruleServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<GameruleServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:gamerule_serverbound");
+        payloadType("gamerule_serverbound");
     public static final StreamCodec<FriendlyByteBuf, GameruleServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(GameruleServerboundPacket::encode, GameruleServerboundPacket::new);
 

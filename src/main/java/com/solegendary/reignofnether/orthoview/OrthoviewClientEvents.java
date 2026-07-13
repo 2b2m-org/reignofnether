@@ -530,7 +530,7 @@ long windowHandle = MC.getWindow().getWindow();
     }
 
     @SubscribeEvent
-    public static void onMouseScroll(ScreenEvent.MouseScrolled evt) {
+    public static void onMouseScroll(ScreenEvent.MouseScrolled.Post evt) {
         if (!enabled || isCameraLocked()) {
             return;
         }
@@ -540,7 +540,7 @@ long windowHandle = MC.getWindow().getWindow();
     }
 
     @SubscribeEvent
-    public static void onDrawScreen(ScreenEvent.Render evt) {
+    public static void onDrawScreen(ScreenEvent.Render.Post evt) {
         if (!enabled || !(evt.getScreen() instanceof TopdownGui)) {
             return;
         }
@@ -645,7 +645,7 @@ long windowHandle = MC.getWindow().getWindow();
     }
 
     @SubscribeEvent
-    public static void onMouseRelease(ScreenEvent.MouseButtonReleased evt) {
+    public static void onMouseRelease(ScreenEvent.MouseButtonReleased.Post evt) {
         if (!enabled || isCameraLocked()) {
             return;
         }
@@ -663,7 +663,7 @@ long windowHandle = MC.getWindow().getWindow();
     }
 
     @SubscribeEvent
-    public static void onMouseDrag(ScreenEvent.MouseDragged evt) {
+    public static void onMouseDrag(ScreenEvent.MouseDragged.Post evt) {
         if (!enabled || isCameraLocked()) {
             return;
         }

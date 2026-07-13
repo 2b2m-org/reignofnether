@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.guiscreen;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -16,7 +18,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class TopdownGuiServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<TopdownGuiServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:topdown_gui_serverbound");
+        payloadType("topdown_gui_serverbound");
     public static final StreamCodec<FriendlyByteBuf, TopdownGuiServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(TopdownGuiServerboundPacket::encode, TopdownGuiServerboundPacket::new);
 

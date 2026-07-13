@@ -66,7 +66,7 @@ public class TitleClientEvents {
     }
 
     @SubscribeEvent
-    public static void onKeyPress(ScreenEvent.KeyPressed.KeyPressed.Pre evt) {
+    public static void onKeyPress(ScreenEvent.KeyPressed.Pre evt) {
         if (evt.getKeyCode() == GLFW.GLFW_KEY_SPACE)
             splash = getRandomSplash();
     }

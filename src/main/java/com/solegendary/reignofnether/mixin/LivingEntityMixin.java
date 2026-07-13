@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.FluidTags;
@@ -64,13 +65,13 @@ public abstract class LivingEntityMixin extends Entity {
             at = @At("TAIL"),
             cancellable = true
     )
-    protected void onChangedBlock(BlockPos pPos, CallbackInfo ci) {
-        Entity entity = this.level().getEntity(this.getId());
+    protected void onChangedBlock(ServerLevel level, BlockPos pPos, CallbackInfo ci) {
+        Entity entity = level.getEntity(this.getId());
 
-        if (!this.level().isClientSide() && entity instanceof Unit unit)
+        if (entity instanceof Unit unit)
             if (SurvivalServerEvents.isEnabled() && SurvivalServerEvents.ENEMY_OWNER_NAME.equals(unit.getOwnerName())) {
                 ci.cancel();
-                FrostWalkerOnEntityMoved((LivingEntity) entity, this.level(), pPos, 1);
+                FrostWalkerOnEntityMoved((LivingEntity) entity, level, pPos, 1);
             }
     }
 

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.packets;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -19,7 +21,7 @@ import java.util.LinkedList;
 public class UnitIdleWorkerClientBoundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<UnitIdleWorkerClientBoundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:unit_idle_worker_client_bound");
+        payloadType("unit_idle_worker_client_bound");
     public static final StreamCodec<FriendlyByteBuf, UnitIdleWorkerClientBoundPacket> STREAM_CODEC =
         StreamCodec.ofMember(UnitIdleWorkerClientBoundPacket::encode, UnitIdleWorkerClientBoundPacket::new);
 

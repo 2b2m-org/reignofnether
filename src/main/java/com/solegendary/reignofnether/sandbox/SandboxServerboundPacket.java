@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.sandbox;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -15,7 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class SandboxServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<SandboxServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:sandbox_serverbound");
+        payloadType("sandbox_serverbound");
     public static final StreamCodec<FriendlyByteBuf, SandboxServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(SandboxServerboundPacket::encode, SandboxServerboundPacket::new);
 

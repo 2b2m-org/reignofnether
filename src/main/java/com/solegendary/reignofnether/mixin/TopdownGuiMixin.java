@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.mixin;
 
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,8 +20,8 @@ public class TopdownGuiMixin {
             at = @At("HEAD"),
             cancellable = true
     )
-    private void onHotbarSelected(
-            float f, GuiGraphics ps, CallbackInfo ci
+    private void onRenderHotbar(
+            GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci
     ) {
         if (OrthoviewClientEvents.isEnabled())
             ci.cancel();
@@ -31,8 +32,8 @@ public class TopdownGuiMixin {
             at = @At("HEAD"),
             cancellable = true
     )
-    private void onHotbarSelected(
-            GuiGraphics ps, CallbackInfo ci
+    private void onRenderCrosshair(
+            GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci
     ) {
         if (OrthoviewClientEvents.isEnabled())
             ci.cancel();

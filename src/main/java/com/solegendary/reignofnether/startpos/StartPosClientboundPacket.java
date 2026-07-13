@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.startpos;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -13,7 +15,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class StartPosClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<StartPosClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:start_pos_clientbound");
+        payloadType("start_pos_clientbound");
     public static final StreamCodec<FriendlyByteBuf, StartPosClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(StartPosClientboundPacket::encode, StartPosClientboundPacket::new);
 

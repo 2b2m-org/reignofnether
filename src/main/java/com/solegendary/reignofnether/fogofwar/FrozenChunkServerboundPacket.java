@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.fogofwar;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -17,7 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public class FrozenChunkServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<FrozenChunkServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:frozen_chunk_serverbound");
+        payloadType("frozen_chunk_serverbound");
     public static final StreamCodec<FriendlyByteBuf, FrozenChunkServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(FrozenChunkServerboundPacket::encode, FrozenChunkServerboundPacket::new);
 

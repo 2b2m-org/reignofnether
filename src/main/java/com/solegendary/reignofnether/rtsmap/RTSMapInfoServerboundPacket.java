@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.rtsmap;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -22,7 +24,7 @@ import java.util.Set;
 public class RTSMapInfoServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<RTSMapInfoServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:rts_map_info_serverbound");
+        payloadType("rts_map_info_serverbound");
     public static final StreamCodec<FriendlyByteBuf, RTSMapInfoServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(RTSMapInfoServerboundPacket::encode, RTSMapInfoServerboundPacket::new);
 

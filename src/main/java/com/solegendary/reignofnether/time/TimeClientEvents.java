@@ -145,7 +145,7 @@ public class TimeClientEvents {
     }
 
     @SubscribeEvent
-    public static void onDrawScreen(ScreenEvent.Render.Post evt) {
+    public static void onDrawClock(ScreenEvent.Render.Post evt) {
         if (!OrthoviewClientEvents.isEnabled() || MC.isPaused() || !HudClientEvents.enabled
             || !TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK) || MC.screen instanceof MatchStartScreen) {
             return;
@@ -176,7 +176,7 @@ public class TimeClientEvents {
     }
 
     @SubscribeEvent
-    public static void onDrawScreen(ScreenEvent.Render evt) {
+    public static void onDrawClockTooltip(ScreenEvent.Render.Post evt) {
         if (!TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK) ||
             !(MC.screen instanceof TopdownGui) || !HudClientEvents.enabled) {
             return;
@@ -237,9 +237,6 @@ public class TimeClientEvents {
         }
     }
 }
-
-
-
 
 
 

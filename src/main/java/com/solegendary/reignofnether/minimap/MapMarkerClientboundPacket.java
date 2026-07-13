@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.minimap;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -10,7 +12,7 @@ import net.minecraft.network.FriendlyByteBuf;
 public class MapMarkerClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MapMarkerClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:map_marker_clientbound");
+        payloadType("map_marker_clientbound");
     public static final StreamCodec<FriendlyByteBuf, MapMarkerClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(MapMarkerClientboundPacket::encode, MapMarkerClientboundPacket::new);
 

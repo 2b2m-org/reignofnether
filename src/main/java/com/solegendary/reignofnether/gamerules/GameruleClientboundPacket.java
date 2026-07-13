@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.gamerules;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -17,7 +19,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class GameruleClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<GameruleClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:gamerule_clientbound");
+        payloadType("gamerule_clientbound");
     public static final StreamCodec<FriendlyByteBuf, GameruleClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(GameruleClientboundPacket::encode, GameruleClientboundPacket::new);
 

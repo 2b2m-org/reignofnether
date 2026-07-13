@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.sounds;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -12,7 +14,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class SoundClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<SoundClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:sound_clientbound");
+        payloadType("sound_clientbound");
     public static final StreamCodec<FriendlyByteBuf, SoundClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(SoundClientboundPacket::encode, SoundClientboundPacket::new);
 

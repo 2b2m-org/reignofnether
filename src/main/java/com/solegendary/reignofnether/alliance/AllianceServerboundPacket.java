@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.alliance;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -15,7 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class AllianceServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<AllianceServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:alliance_serverbound");
+        payloadType("alliance_serverbound");
     public static final StreamCodec<FriendlyByteBuf, AllianceServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(AllianceServerboundPacket::encode, AllianceServerboundPacket::new);
 

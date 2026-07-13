@@ -80,6 +80,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    classpath += sourceSets.main.runtimeClasspath
 }
 
 tasks.withType(JavaCompile).configureEach {

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.resources;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -14,7 +16,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class ResourcesServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<ResourcesServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:resources_serverbound");
+        payloadType("resources_serverbound");
     public static final StreamCodec<FriendlyByteBuf, ResourcesServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(ResourcesServerboundPacket::encode, ResourcesServerboundPacket::new);
 

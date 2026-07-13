@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.debug;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -13,7 +15,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class RtsDebugChunksClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<RtsDebugChunksClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:rts_debug_chunks_clientbound");
+        payloadType("rts_debug_chunks_clientbound");
     public static final StreamCodec<FriendlyByteBuf, RtsDebugChunksClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(RtsDebugChunksClientboundPacket::encode, RtsDebugChunksClientboundPacket::new);
 

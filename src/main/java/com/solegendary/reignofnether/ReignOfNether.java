@@ -22,6 +22,7 @@ import com.solegendary.reignofnether.registrars.ServerEventRegistrar;
 import com.solegendary.reignofnether.registrars.SoundRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import net.minecraft.commands.synchronization.ArgumentTypeInfos;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -43,6 +44,10 @@ public final class ReignOfNether {
     public static final TicketController CHUNK_TICKET_CONTROLLER = new TicketController(
         ResourceLocation.fromNamespaceAndPath(MOD_ID, "default")
     );
+
+    public static <T extends CustomPacketPayload> CustomPacketPayload.Type<T> payloadType(String path) {
+        return new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(MOD_ID, path));
+    }
 
     public ReignOfNether(IEventBus modBus, ModContainer modContainer) {
         AttributeRegistrar.init(modBus);

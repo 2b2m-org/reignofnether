@@ -1,6 +1,8 @@
 
 package com.solegendary.reignofnether.attackwarnings;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -13,7 +15,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class AttackWarningClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<AttackWarningClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:attack_warning_clientbound");
+        payloadType("attack_warning_clientbound");
     public static final StreamCodec<FriendlyByteBuf, AttackWarningClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(AttackWarningClientboundPacket::encode, AttackWarningClientboundPacket::new);
 

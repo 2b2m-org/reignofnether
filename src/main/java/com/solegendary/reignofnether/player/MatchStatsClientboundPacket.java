@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.player;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -18,7 +20,7 @@ import java.util.List;
 public class MatchStatsClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MatchStatsClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:match_stats_clientbound");
+        payloadType("match_stats_clientbound");
     public static final StreamCodec<FriendlyByteBuf, MatchStatsClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(MatchStatsClientboundPacket::encode, MatchStatsClientboundPacket::new);
 

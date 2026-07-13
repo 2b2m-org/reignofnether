@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.packets;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -17,7 +19,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class UnitSyncMobEffectsClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<UnitSyncMobEffectsClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:unit_sync_mob_effects_clientbound");
+        payloadType("unit_sync_mob_effects_clientbound");
     public static final StreamCodec<FriendlyByteBuf, UnitSyncMobEffectsClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(UnitSyncMobEffectsClientboundPacket::encode, UnitSyncMobEffectsClientboundPacket::new);
 

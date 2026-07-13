@@ -156,7 +156,7 @@ public class PlayerDisplayClientEvents {
     }
 
     @SubscribeEvent
-    public static void onKeyRelease(ScreenEvent.KeyReleased.KeyReleased.Post evt) {
+    public static void onKeyRelease(ScreenEvent.KeyReleased.Post evt) {
         if (TextInputClientEvents.isAnyInputFocused())
             return;
         if (MC.screen == null || !MC.screen.getTitle().getString().contains("topdowngui_container"))

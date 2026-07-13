@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.building;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -23,7 +25,7 @@ import static com.solegendary.reignofnether.building.BuildingUtils.findBuilding;
 public class BuildingClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<BuildingClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:building_clientbound");
+        payloadType("building_clientbound");
     public static final StreamCodec<FriendlyByteBuf, BuildingClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(BuildingClientboundPacket::encode, BuildingClientboundPacket::new);
 

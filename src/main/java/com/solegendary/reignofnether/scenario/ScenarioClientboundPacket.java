@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.scenario;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -11,7 +13,7 @@ import net.minecraft.network.FriendlyByteBuf;
 public class ScenarioClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<ScenarioClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:scenario_clientbound");
+        payloadType("scenario_clientbound");
     public static final StreamCodec<FriendlyByteBuf, ScenarioClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(ScenarioClientboundPacket::encode, ScenarioClientboundPacket::new);
 

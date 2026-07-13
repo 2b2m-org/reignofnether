@@ -2,10 +2,8 @@ package com.solegendary.reignofnether.mixin.fogofwar;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
@@ -22,6 +20,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.joml.Quaternionf;
 
 @Mixin(EntityRenderDispatcher.class)
 public abstract class EntityRenderDispatcherMixin {
@@ -37,7 +36,6 @@ public abstract class EntityRenderDispatcherMixin {
                 .apply(loc);
     }
 
-    @Shadow public Camera camera;
     @Shadow private static void fireVertex(PoseStack.Pose pMatrixEntry, VertexConsumer pBuffer, float pX, float pY, float pZ, float pTexU, float pTexV) { }
 
     @Unique private static boolean reignofnether$shouldRenderSoulfire(Entity entity) {
@@ -54,7 +52,7 @@ public abstract class EntityRenderDispatcherMixin {
             at = @At("HEAD"),
             cancellable = true
     )
-    private void onRenderFlame(PoseStack poseStack, MultiBufferSource pBuffer, Entity pEntity, CallbackInfo ci) {
+    private void onRenderFlame(PoseStack poseStack, MultiBufferSource pBuffer, Entity pEntity, Quaternionf quaternion, CallbackInfo ci) {
         if (!FogOfWarClientEvents.isInBrightChunk(pEntity))
             ci.cancel();
         else if (reignofnether$shouldRenderSoulfire(pEntity)) {
@@ -68,8 +66,8 @@ public abstract class EntityRenderDispatcherMixin {
             float f2 = 0.0F;
             float f3 = pEntity.getBbHeight() / f;
             float f4 = 0.0F;
-            poseStack.mulPose(Axis.YP.rotationDegrees(-this.camera.getYRot()));
-            poseStack.translate(0.0F, 0.0F, -0.3F + (float)((int)f3) * 0.02F);
+            poseStack.mulPose(quaternion);
+            poseStack.translate(0.0F, 0.0F, 0.3F - (float)((int)f3) * 0.02F);
             float f5 = 0.0F;
             int i = 0;
             VertexConsumer vertexconsumer = pBuffer.getBuffer(Sheets.cutoutBlockSheet());
@@ -85,14 +83,14 @@ public abstract class EntityRenderDispatcherMixin {
                     f8 = f6;
                     f6 = f10;
                 }
-                fireVertex(posestack$pose, vertexconsumer, f1 - 0.0F, 0.0F - f4, f5, f8, f9);
-                fireVertex(posestack$pose, vertexconsumer, -f1 - 0.0F, 0.0F - f4, f5, f6, f9);
-                fireVertex(posestack$pose, vertexconsumer, -f1 - 0.0F, 1.4F - f4, f5, f6, f7);
-                fireVertex(posestack$pose, vertexconsumer, f1 - 0.0F, 1.4F - f4, f5, f8, f7);
+                fireVertex(posestack$pose, vertexconsumer, -f1 - 0.0F, 0.0F - f4, f5, f8, f9);
+                fireVertex(posestack$pose, vertexconsumer, f1 - 0.0F, 0.0F - f4, f5, f6, f9);
+                fireVertex(posestack$pose, vertexconsumer, f1 - 0.0F, 1.4F - f4, f5, f6, f7);
+                fireVertex(posestack$pose, vertexconsumer, -f1 - 0.0F, 1.4F - f4, f5, f8, f7);
                 f3 -= 0.45F;
                 f4 -= 0.45F;
                 f1 *= 0.9F;
-                f5 += 0.03F;
+                f5 -= 0.03F;
             }
             poseStack.popPose();
         }

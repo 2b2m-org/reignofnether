@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.hero;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -17,7 +19,7 @@ import java.util.List;
 public class HeroServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<HeroServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:hero_serverbound");
+        payloadType("hero_serverbound");
     public static final StreamCodec<FriendlyByteBuf, HeroServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(HeroServerboundPacket::encode, HeroServerboundPacket::new);
 

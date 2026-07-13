@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.fogofwar;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -11,7 +13,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class FogOfWarClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<FogOfWarClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:fog_of_war_clientbound");
+        payloadType("fog_of_war_clientbound");
     public static final StreamCodec<FriendlyByteBuf, FogOfWarClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(FogOfWarClientboundPacket::encode, FogOfWarClientboundPacket::new);
 

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.survival;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -13,7 +15,7 @@ import net.minecraft.network.FriendlyByteBuf;
 public class SurvivalServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<SurvivalServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:survival_serverbound");
+        payloadType("survival_serverbound");
     public static final StreamCodec<FriendlyByteBuf, SurvivalServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(SurvivalServerboundPacket::encode, SurvivalServerboundPacket::new);
 

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.tutorial;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -12,7 +14,7 @@ import net.minecraft.network.FriendlyByteBuf;
 public class TutorialServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<TutorialServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:tutorial_serverbound");
+        payloadType("tutorial_serverbound");
     public static final StreamCodec<FriendlyByteBuf, TutorialServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(TutorialServerboundPacket::encode, TutorialServerboundPacket::new);
 

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.gamemode;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -14,7 +16,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class GameModeClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<GameModeClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:game_mode_clientbound");
+        payloadType("game_mode_clientbound");
     public static final StreamCodec<FriendlyByteBuf, GameModeClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(GameModeClientboundPacket::encode, GameModeClientboundPacket::new);
 

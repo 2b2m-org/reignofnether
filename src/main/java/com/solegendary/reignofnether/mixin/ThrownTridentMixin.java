@@ -22,8 +22,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ThrownTrident.class)
 public abstract class ThrownTridentMixin extends Projectile {
 
-    @Shadow private ItemStack tridentItem;
     @Shadow private boolean dealtDamage;
+    @Shadow public abstract ItemStack getWeaponItem();
 
     protected ThrownTridentMixin(EntityType<? extends Projectile> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
@@ -43,7 +43,7 @@ public abstract class ThrownTridentMixin extends Projectile {
         Entity $$4 = this.getOwner();
         DamageSource $$5 = this.damageSources().trident(this, $$4 == null ? this : $$4);
         if (this.level() instanceof ServerLevel serverLevel) {
-            $$2 = EnchantmentHelper.modifyDamage(serverLevel, this.tridentItem, $$1, $$5, $$2);
+            $$2 = EnchantmentHelper.modifyDamage(serverLevel, this.getWeaponItem(), $$1, $$5, $$2);
         }
         SoundEvent $$6 = SoundEvents.TRIDENT_HIT;
         if ($$1.hurt($$5, $$2)) {
@@ -52,7 +52,7 @@ public abstract class ThrownTridentMixin extends Projectile {
             }
             if (this.level() instanceof ServerLevel serverLevel) {
                 EnchantmentHelper.doPostAttackEffectsWithItemSource(
-                        serverLevel, $$1, $$5, this.tridentItem
+                        serverLevel, $$1, $$5, this.getWeaponItem()
                 );
             }
             if ($$1 instanceof LivingEntity) {

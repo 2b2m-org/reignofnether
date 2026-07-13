@@ -353,7 +353,7 @@ public class PlayerClientEvents {
 
     // allow tab player list menu on the orthoview screen
     @SubscribeEvent
-    public static void onScreenRender(ScreenEvent.Render evt) {
+    public static void onScreenRender(ScreenEvent.Render.Post evt) {
         if (OrthoviewClientEvents.isEnabled() && Keybindings.tab.isDown() && MC.level != null) {
             if (!MC.isLocalServer()) {
                 MC.gui.getTabList().setVisible(true);

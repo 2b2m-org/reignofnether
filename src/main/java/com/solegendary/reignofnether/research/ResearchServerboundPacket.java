@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.research;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -14,7 +16,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class ResearchServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<ResearchServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:research_serverbound");
+        payloadType("research_serverbound");
     public static final StreamCodec<FriendlyByteBuf, ResearchServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(ResearchServerboundPacket::encode, ResearchServerboundPacket::new);
 

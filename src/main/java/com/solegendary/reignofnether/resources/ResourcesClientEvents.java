@@ -49,7 +49,7 @@ for (Resources resources : resourcesList)
     }
 
     @SubscribeEvent
-    public static void onClientTick(ScreenEvent.Render evt) {
+    public static void onClientTick(ScreenEvent.Render.Post evt) {
         if (HudClientEvents.hudSelectedEntity instanceof WorkerUnit workerUnit &&
             UnitClientEvents.getPlayerToEntityRelationship((LivingEntity) workerUnit) == Relationship.OWNED &&
             MC.level != null && !HudClientEvents.isMouseOverAnyButtonOrHud()) {

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.packets;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -16,7 +18,7 @@ import java.util.List;
 public class UnitConvertClientboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<UnitConvertClientboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:unit_convert_clientbound");
+        payloadType("unit_convert_clientbound");
     public static final StreamCodec<FriendlyByteBuf, UnitConvertClientboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(UnitConvertClientboundPacket::encode, UnitConvertClientboundPacket::new);
 

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.config;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -15,7 +17,7 @@ import net.minecraft.network.FriendlyByteBuf;
 public class ClientboundSyncResourceCostPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<ClientboundSyncResourceCostPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:clientbound_sync_resource_cost");
+        payloadType("clientbound_sync_resource_cost");
     public static final StreamCodec<FriendlyByteBuf, ClientboundSyncResourceCostPacket> STREAM_CODEC =
         StreamCodec.ofMember(ClientboundSyncResourceCostPacket::encode, ClientboundSyncResourceCostPacket::new);
 

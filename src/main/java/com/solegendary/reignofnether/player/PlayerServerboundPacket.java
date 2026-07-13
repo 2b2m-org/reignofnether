@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.player;
 
+import static com.solegendary.reignofnether.ReignOfNether.payloadType;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import net.minecraft.network.codec.StreamCodec;
@@ -36,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 public class PlayerServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<PlayerServerboundPacket> TYPE =
-        CustomPacketPayload.createType("reignofnether:player_serverbound");
+        payloadType("player_serverbound");
     public static final StreamCodec<FriendlyByteBuf, PlayerServerboundPacket> STREAM_CODEC =
         StreamCodec.ofMember(PlayerServerboundPacket::encode, PlayerServerboundPacket::new);
 

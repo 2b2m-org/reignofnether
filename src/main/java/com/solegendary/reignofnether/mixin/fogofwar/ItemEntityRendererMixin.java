@@ -9,7 +9,6 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.ItemEntityRenderer;
 import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
@@ -35,8 +34,7 @@ import java.util.List;
 public abstract class ItemEntityRendererMixin {
 
     @Final @Shadow private ItemRenderer itemRenderer;
-    @Final @Shadow private RandomSource random = RandomSource.create();
-    @Shadow protected int getRenderAmount(ItemStack pStack) { return 0; }
+    @Final @Shadow private RandomSource random;
     
     private static final List<Item> enlargedItems = List.of(
         Items.GOLDEN_CHESTPLATE,
@@ -86,47 +84,24 @@ public abstract class ItemEntityRendererMixin {
             pPoseStack.pushPose();
             pPoseStack.scale(2,2,2);
             ItemStack itemstack = pEntity.getItem();
-            int i = itemstack.isEmpty() ? 187 : Item.getId(itemstack.getItem()) + itemstack.getDamageValue();
-            this.random.setSeed(i);
+            this.random.setSeed(ItemEntityRenderer.getSeedForItemStack(itemstack));
             BakedModel bakedmodel = this.itemRenderer.getModel(itemstack, pEntity.level(), null, pEntity.getId());
             boolean flag = bakedmodel.isGui3d();
-            int j = this.getRenderAmount(itemstack);
-            float f = 0.25F;
             float f1 = Mth.sin(((float)pEntity.getAge() + pPartialTicks) / 10.0F + pEntity.bobOffs) * 0.1F + 0.1F;
             float f2 = bakedmodel.getTransforms().getTransform(ItemDisplayContext.GROUND).scale.y();
             pPoseStack.translate(0.0F, f1 + 0.25F * f2, 0.0F);
             float f3 = pEntity.getSpin(pPartialTicks);
             pPoseStack.mulPose(Axis.YP.rotation(f3));
-            float f11;
-            float f13;
-            if (!flag) {
-                float f7 = -0.0F * (float)(j - 1) * 0.5F;
-                f11 = -0.0F * (float)(j - 1) * 0.5F;
-                f13 = -0.09375F * (float)(j - 1) * 0.5F;
-                pPoseStack.translate(f7, f11, f13);
-            }
-
-            for(int k = 0; k < j; ++k) {
-                pPoseStack.pushPose();
-                if (k > 0) {
-                    if (flag) {
-                        f11 = (this.random.nextFloat() * 2.0F - 1.0F) * 0.15F;
-                        f13 = (this.random.nextFloat() * 2.0F - 1.0F) * 0.15F;
-                        float f10 = (this.random.nextFloat() * 2.0F - 1.0F) * 0.15F;
-                        pPoseStack.translate(f11, f13, f10);
-                    } else {
-                        f11 = (this.random.nextFloat() * 2.0F - 1.0F) * 0.15F * 0.5F;
-                        f13 = (this.random.nextFloat() * 2.0F - 1.0F) * 0.15F * 0.5F;
-                        pPoseStack.translate(f11, f13, 0.0);
-                    }
-                }
-                this.itemRenderer.render(itemstack, ItemDisplayContext.GROUND, false, pPoseStack,
-                        pBuffer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, bakedmodel);
-                pPoseStack.popPose();
-                if (!flag) {
-                    pPoseStack.translate(0.0, 0.0, 0.09375);
-                }
-            }
+            ItemEntityRenderer.renderMultipleFromCount(
+                this.itemRenderer,
+                pPoseStack,
+                pBuffer,
+                LightTexture.FULL_BRIGHT,
+                itemstack,
+                bakedmodel,
+                flag,
+                this.random
+            );
             pPoseStack.popPose();
         }
     }
