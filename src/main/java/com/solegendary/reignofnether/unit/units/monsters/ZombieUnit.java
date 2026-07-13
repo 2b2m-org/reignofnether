@@ -25,8 +25,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -40,9 +38,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
-import net.neoforged.bus.api.Event;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -130,11 +125,11 @@ public class ZombieUnit extends Zombie implements Unit, AttackerUnit, Convertabl
 
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
-        this.entityData.define(isSummonedAccessor, false);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
+        builder.define(isSummonedAccessor, false);
     }
 
     // combat stats
@@ -307,21 +302,8 @@ public class ZombieUnit extends Zombie implements Unit, AttackerUnit, Convertabl
     // prevent spawning baby zombie
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 
-    @Override
-    public boolean canBeAffected(MobEffectInstance pEffectInstance) {
-        MobEffectEvent.Applicable event = new MobEffectEvent.Applicable(this, pEffectInstance);
-        NeoForge.EVENT_BUS.post(event);
-        if (event.getResult() != Event.Result.DEFAULT) {
-            return event.getResult() == Event.Result.ALLOW;
-        } else {
-            if (this.getMobType() == MobType.UNDEAD) {
-                return pEffectInstance.getEffect() != MobEffects.REGENERATION;
-            }
-            return true;
-        }
-    }
 }

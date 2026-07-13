@@ -171,10 +171,10 @@ public class PiglinMerchantUnit extends Piglin implements Unit, AttackerUnit, He
             SynchedEntityData.defineId(PiglinMerchantUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     @Nullable
@@ -464,7 +464,7 @@ public class PiglinMerchantUnit extends Piglin implements Unit, AttackerUnit, He
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 
@@ -543,7 +543,7 @@ public class PiglinMerchantUnit extends Piglin implements Unit, AttackerUnit, He
 
         for (int i = 0; i < numItems; i++) {
             ItemEntity foodEntity = new ItemEntity(level(), pos.x, pos.y, pos.z, new ItemStack(getFancyFeast().getFoodItem(this)));
-            foodEntity.setThrower(getUUID());
+            foodEntity.setThrower(this);
             Vec3 dMove = Vec3.atCenterOf(targetBp).subtract(pos)
                     .multiply(1,0,1)
                     .scale(0.04)
@@ -633,7 +633,7 @@ public class PiglinMerchantUnit extends Piglin implements Unit, AttackerUnit, He
 
         for (ItemStack itemStack : items) {
             ItemEntity item = new ItemEntity(level(), pos.x, pos.y, pos.z, itemStack);
-            item.setThrower(getUUID());
+            item.setThrower(this);
             Vec3 dMove = new Vec3(
                     (random.nextFloat() - 0.5f) / 2,
                     0.5,

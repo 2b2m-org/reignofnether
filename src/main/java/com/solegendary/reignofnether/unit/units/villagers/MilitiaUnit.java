@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.units.villagers;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.util.EnchantmentUtil;
 
 import com.solegendary.reignofnether.ability.Abilities;
@@ -32,15 +33,18 @@ import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.unit.units.monsters.CreeperUnit;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -53,6 +57,7 @@ import net.minecraft.world.entity.npc.*;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -233,8 +238,9 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
         } else if (weapon == Items.BOW && bowEnchanted) {
             EnchantmentUtil.enchant(weaponStack, registryAccess(), Enchantments.POWER, 1);
         }
-        AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), damageMod, AttributeModifier.Operation.ADD_VALUE);
-        weaponStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
+        AttributeModifier mod = new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, UUID.randomUUID().toString()), damageMod, AttributeModifier.Operation.ADD_VALUE);
+        weaponStack.update(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY,
+                modifiers -> modifiers.withModifierAdded(Attributes.ATTACK_DAMAGE, mod, EquipmentSlotGroup.MAINHAND));
         this.setItemSlot(EquipmentSlot.MAINHAND, weaponStack);
         AttributeInstance ai2 = getAttribute(Attributes.MOVEMENT_SPEED);
         if (ai2 != null)
@@ -430,18 +436,19 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
         swapWeapons(isUsingBow());
     }
 
-    protected AbstractArrow getArrow(ItemStack pArrowStack, float pVelocity) {
-        return ProjectileUtil.getMobArrow(this, pArrowStack, pVelocity);
+    protected AbstractArrow getArrow(ItemStack pArrowStack, float pVelocity, @Nullable ItemStack weapon) {
+        return ProjectileUtil.getMobArrow(this, pArrowStack, pVelocity, weapon);
     }
 
     @Override
     public void performUnitRangedAttack(LivingEntity pTarget, float velocity) {
-        ItemStack itemstack = this.getProjectile(this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this,
+        ItemStack weapon = this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this,
                 (item) -> item instanceof BowItem
-        )));
-        AbstractArrow abstractarrow = this.getArrow(itemstack, velocity);
-        if (this.getMainHandItem().getItem() instanceof BowItem) {
-            abstractarrow = ((BowItem)this.getMainHandItem().getItem()).customArrow(abstractarrow);
+        ));
+        ItemStack ammo = this.getProjectile(weapon);
+        AbstractArrow abstractarrow = this.getArrow(ammo, velocity, weapon);
+        if (weapon.getItem() instanceof ProjectileWeaponItem projectileWeapon) {
+            abstractarrow = projectileWeapon.customArrow(abstractarrow, ammo, weapon);
         }
         double d0 = pTarget.getX() - this.getX();
         double d1 = pTarget.getY(0.3333333333333333) - abstractarrow.getY();
@@ -461,18 +468,18 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 
     private static final EntityDataAccessor<VillagerData> VILLAGER_DATA;
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
-        this.entityData.define(VILLAGER_DATA, new VillagerData(VillagerType.PLAINS, VillagerProfession.ARMORER, 1));
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
+        builder.define(VILLAGER_DATA, new VillagerData(VillagerType.PLAINS, VillagerProfession.ARMORER, 1));
     }
 
     @Override

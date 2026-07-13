@@ -119,10 +119,10 @@ public class HuskUnit extends Husk implements Unit, AttackerUnit {
             SynchedEntityData.defineId(HuskUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -235,7 +235,7 @@ public class HuskUnit extends Husk implements Unit, AttackerUnit {
     // prevent spawning baby zombie
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 }

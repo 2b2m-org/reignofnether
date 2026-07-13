@@ -33,11 +33,11 @@ public class UnitPathClientboundPacket implements CustomPacketPayload {
     private final List<BlockPos> nodes;
 
     public static void sendPath(LivingEntity entity, Path path, byte pathType) {
-        if (path == null || path.nodes.isEmpty())
+        if (path == null || path.getNodeCount() == 0)
             return;
-        List<BlockPos> bps = new ArrayList<>(path.nodes.size());
-        for (var node : path.nodes)
-            bps.add(node.asBlockPos());
+        List<BlockPos> bps = new ArrayList<>(path.getNodeCount());
+        for (int i = 0; i < path.getNodeCount(); i++)
+            bps.add(path.getNode(i).asBlockPos());
         PacketDistributor.sendToAllPlayers(new UnitPathClientboundPacket(entity.getId(), pathType, bps));
     }
 

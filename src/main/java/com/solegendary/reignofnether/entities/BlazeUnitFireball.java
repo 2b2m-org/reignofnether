@@ -22,6 +22,7 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 
@@ -34,7 +35,7 @@ public class BlazeUnitFireball extends SmallFireball {
     public static final int FIRE_SECONDS = 5;
 
     public BlazeUnitFireball(Level pLevel, LivingEntity pShooter, double pOffsetX, double pOffsetY, double pOffsetZ, boolean isFirewallShot) {
-        super(pLevel, pShooter, pOffsetX, pOffsetY, pOffsetZ);
+        super(pLevel, pShooter, new Vec3(pOffsetX, pOffsetY, pOffsetZ));
         this.isFirewallShot = isFirewallShot;
     }
 
@@ -51,7 +52,7 @@ public class BlazeUnitFireball extends SmallFireball {
             Block blockBelow2 = this.level().getBlockState(this.getOnPos().below().below()).getBlock();
 
             List<Block> nonSolidBlocks = List.of(
-                    Blocks.AIR, Blocks.TALL_GRASS, Blocks.GRASS,
+                    Blocks.AIR, Blocks.TALL_GRASS, Blocks.SHORT_GRASS,
                     Blocks.CRIMSON_ROOTS, Blocks.WARPED_ROOTS,
                     Blocks.DEAD_BUSH, Blocks.SNOW,
                     BlockRegistrar.WRAITH_SNOW_LAYER.get()

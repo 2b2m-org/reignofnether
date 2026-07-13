@@ -55,7 +55,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.event.ForgeEventFactory;
+import net.neoforged.neoforge.event.EventHooks;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -142,10 +142,10 @@ public class GhastUnit extends Ghast implements Unit, AttackerUnit, RangedAttack
             SynchedEntityData.defineId(GhastUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     @Nullable
@@ -235,7 +235,7 @@ public class GhastUnit extends Ghast implements Unit, AttackerUnit, RangedAttack
 
     @Override // destroy touching leaves, copied from Ravager AI
     protected void customServerAiStep() {
-        if (this.isAlive() && this.horizontalCollision && ForgeEventFactory.getMobGriefingEvent(this.level(), this)) {
+        if (this.isAlive() && this.horizontalCollision && EventHooks.canEntityGrief(this.level(), this)) {
             boolean flag = false;
             AABB aabb = this.getBoundingBox().inflate(0.2);
             Iterator var8 = BlockPos.betweenClosed(Mth.floor(aabb.minX), Mth.floor(aabb.minY), Mth.floor(aabb.minZ), Mth.floor(aabb.maxX), Mth.floor(aabb.maxY), Mth.floor(aabb.maxZ)).iterator();

@@ -9,9 +9,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.LargeFireball;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,11 +26,11 @@ public class GhastUnitFireball extends LargeFireball {
     public static final int SOULSAND_DURATION = 200;
 
     public GhastUnitFireball(Level pLevel, LivingEntity pShooter, double pOffsetX, double pOffsetY, double pOffsetZ, int pExplosionPower) {
-        super(pLevel, pShooter, pOffsetX, pOffsetY, pOffsetZ, pExplosionPower);
+        super(pLevel, pShooter, new Vec3(pOffsetX, pOffsetY, pOffsetZ), pExplosionPower);
     }
 
     @Override
-    public boolean ignoreExplosion() {
+    public boolean ignoreExplosion(Explosion explosion) {
         return true;
     }
 

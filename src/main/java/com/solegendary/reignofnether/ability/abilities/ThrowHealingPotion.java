@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.villagers.WitchUnit;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.alchemy.Potion;
@@ -28,7 +29,7 @@ public class ThrowHealingPotion extends Ability {
 
     public static final int CD_MAX_SECONDS = 12;
 
-    public final Potion potion = Potions.STRONG_HEALING;
+    public final Holder<Potion> potion = Potions.STRONG_HEALING;
 
     //TODO Fix potionThrowRange for Witches gathering on a building
     public ThrowHealingPotion(int potionThrowRange) {

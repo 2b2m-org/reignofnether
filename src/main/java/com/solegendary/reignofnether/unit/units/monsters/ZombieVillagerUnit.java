@@ -128,10 +128,10 @@ public class ZombieVillagerUnit extends Vindicator implements Unit, WorkerUnit, 
             SynchedEntityData.defineId(ZombieVillagerUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     @Nullable
@@ -253,12 +253,6 @@ public class ZombieVillagerUnit extends Vindicator implements Unit, WorkerUnit, 
     @Override // prevent vanilla logic for picking up items
     protected void pickUpItem(ItemEntity pItemEntity) { }
 
-    // needed as we extended a Vindicator - ensures we reverse healing/harming potions
-    @Override
-    public MobType getMobType() {
-        return MobType.UNDEAD;
-    }
-
     public void tick() {
         this.setCanPickUpLoot(true);
         super.tick();
@@ -334,7 +328,7 @@ public class ZombieVillagerUnit extends Vindicator implements Unit, WorkerUnit, 
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 }

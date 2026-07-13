@@ -47,7 +47,7 @@ import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.ForgeHooks;
+import net.neoforged.neoforge.common.CommonHooks;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 
@@ -137,10 +137,10 @@ public class SlimeUnit extends Slime implements Unit, AttackerUnit {
             SynchedEntityData.defineId(SlimeUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -362,7 +362,7 @@ public class SlimeUnit extends Slime implements Unit, AttackerUnit {
         Vec3 vec3 = this.getDeltaMovement();
         this.setDeltaMovement(vec3.x, (double)(this.getJumpPower() + (float)this.getSize() * 0.1F), vec3.z);
         this.hasImpulse = true;
-        ForgeHooks.onLivingJump(this);
+        CommonHooks.onLivingJump(this);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -511,7 +511,7 @@ public class SlimeUnit extends Slime implements Unit, AttackerUnit {
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         this.setSize(STARTING_SIZE, true);
         return pSpawnData;
     }

@@ -19,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 import static com.solegendary.reignofnether.util.MiscUtil.fcs;
@@ -48,8 +49,8 @@ public class BoggedUnit extends SkeletonUnit implements Unit, AttackerUnit, Rang
     final static public float attackDamage = 2.0f;
 
     @Override
-    protected @NotNull AbstractArrow getArrow(@NotNull ItemStack pArrowStack, float pDistanceFactor) {
-        AbstractArrow arrow = super.getArrow(pArrowStack, pDistanceFactor);
+    protected @NotNull AbstractArrow getArrow(@NotNull ItemStack pArrowStack, float pDistanceFactor, @Nullable ItemStack weapon) {
+        AbstractArrow arrow = super.getArrow(pArrowStack, pDistanceFactor, weapon);
         if (arrow instanceof Arrow)
             ((Arrow)arrow).addEffect(new MobEffectInstance(MobEffects.POISON, POISON_DAMAGE * 27));
         return arrow;

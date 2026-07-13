@@ -41,6 +41,7 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -133,10 +134,10 @@ public class StrayUnit extends Stray implements Unit, AttackerUnit, RangedAttack
             SynchedEntityData.defineId(StrayUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -275,8 +276,8 @@ public class StrayUnit extends Stray implements Unit, AttackerUnit, RangedAttack
     public static final int SLOW_SECONDS = 5;
 
     @Override
-    protected @NotNull AbstractArrow getArrow(@NotNull ItemStack pArrowStack, float pDistanceFactor) {
-        AbstractArrow arrow = super.getArrow(pArrowStack, pDistanceFactor);
+    protected @NotNull AbstractArrow getArrow(@NotNull ItemStack pArrowStack, float pDistanceFactor, @Nullable ItemStack weapon) {
+        AbstractArrow arrow = super.getArrow(pArrowStack, pDistanceFactor, weapon);
         if (arrow instanceof Arrow)
             ((Arrow)arrow).addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, SLOW_SECONDS * 20));
         return arrow;
@@ -290,12 +291,13 @@ public class StrayUnit extends Stray implements Unit, AttackerUnit, RangedAttack
     // override to make inaccuracy 0
     @Override
     public void performUnitRangedAttack(LivingEntity pTarget, float velocity) {
-        ItemStack itemstack = this.getProjectile(this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this,
+        ItemStack weapon = this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this,
                 (item) -> item instanceof BowItem
-        )));
-        AbstractArrow abstractarrow = this.getArrow(itemstack, velocity);
-        if (this.getMainHandItem().getItem() instanceof BowItem) {
-            abstractarrow = ((BowItem)this.getMainHandItem().getItem()).customArrow(abstractarrow);
+        ));
+        ItemStack ammo = this.getProjectile(weapon);
+        AbstractArrow abstractarrow = this.getArrow(ammo, velocity, weapon);
+        if (weapon.getItem() instanceof ProjectileWeaponItem projectileWeapon) {
+            abstractarrow = projectileWeapon.customArrow(abstractarrow, ammo, weapon);
         }
         double d0 = pTarget.getX() - this.getX();
         double d1 = pTarget.getY(0.3333333333333333) - abstractarrow.getY();
@@ -315,7 +317,7 @@ public class StrayUnit extends Stray implements Unit, AttackerUnit, RangedAttack
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 

@@ -12,9 +12,10 @@ import com.solegendary.reignofnether.unit.units.villagers.WitchUnit;
 import com.solegendary.reignofnether.util.MiscUtil;
 import com.solegendary.reignofnether.util.MyMath;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobType;
 import net.minecraft.world.item.alchemy.Potion;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
@@ -27,14 +28,14 @@ import java.util.List;
 
 public class ThrowPotionGoal extends MoveToTargetBlockGoal {
 
-    private Potion potion = null;
+    private Holder<Potion> potion = null;
     private LivingEntity targetEntity = null;
 
     public ThrowPotionGoal(Mob mob) {
         super(mob, false, 0);
     }
 
-    public void setPotion(Potion potion) {
+    public void setPotion(Holder<Potion> potion) {
         this.potion = potion;
     }
 
@@ -92,7 +93,7 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
                     List<Mob> nearbyFriendlyHurtUnits = new ArrayList<>();
                     for (Mob nearbyMob : nearbyMobs) {
                         if (nearbyMob instanceof Unit unit &&
-                            nearbyMob.getMobType() != MobType.UNDEAD &&
+                            !nearbyMob.getType().is(EntityTypeTags.UNDEAD) &&
                             nearbyMob.getHealth() < nearbyMob.getMaxHealth() && (
                                     unit.getOwnerName().equals(witch.getOwnerName()) ||
                                     AlliancesServerEvents.isAllied(unit.getOwnerName(), witch.getOwnerName())
@@ -141,7 +142,7 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
                     List<Mob> nearbyEnemyUnits = new ArrayList<>();
                     for (Mob mb : nearbyMobs) {
                         if (mb instanceof Unit unit &&
-                            mb.getMobType() != MobType.UNDEAD && (
+                            !mb.getType().is(EntityTypeTags.UNDEAD) && (
                                     !unit.getOwnerName().equals(witch.getOwnerName()) &&
                                     !AlliancesServerEvents.isAllied(unit.getOwnerName(), witch.getOwnerName())
                             )) {

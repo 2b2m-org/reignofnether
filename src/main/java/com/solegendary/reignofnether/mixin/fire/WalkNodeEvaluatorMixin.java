@@ -8,7 +8,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FenceBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.pathfinder.NodeEvaluator;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,11 +25,11 @@ public abstract class WalkNodeEvaluatorMixin extends NodeEvaluator {
     }
 
     @Inject(
-            method = "getBlockPathType(Lnet/minecraft/world/level/BlockGetter;III)Lnet/minecraft/world/level/pathfinder/BlockPathTypes;",
+            method = "getBlockPathType(Lnet/minecraft/world/level/BlockGetter;III)Lnet/minecraft/world/level/pathfinder/PathType;",
             at = @At("HEAD"),
             cancellable = true
     )
-    public void getBlockPathType(BlockGetter pLevel, int pX, int pY, int pZ, CallbackInfoReturnable<BlockPathTypes> cir) {
+    public void getBlockPathType(BlockGetter pLevel, int pX, int pY, int pZ, CallbackInfoReturnable<PathType> cir) {
         if (!(this.mob instanceof Unit))
             return;
 
@@ -40,13 +40,13 @@ public abstract class WalkNodeEvaluatorMixin extends NodeEvaluator {
         // allow units to walk on fire and magma but not leaves (to prevent workers getting stuck in trees)
         if (block == Blocks.FIRE || blockBelow == Blocks.FIRE ||
             block == Blocks.MAGMA_BLOCK || blockBelow == Blocks.MAGMA_BLOCK)
-            cir.setReturnValue(BlockPathTypes.WALKABLE);
+            cir.setReturnValue(PathType.WALKABLE);
         else if (block == Blocks.POINTED_DRIPSTONE || blockBelow == Blocks.POINTED_DRIPSTONE)
-            cir.setReturnValue(BlockPathTypes.UNPASSABLE_RAIL);
+            cir.setReturnValue(PathType.UNPASSABLE_RAIL);
         else if (BlockUtils.isLeafBlock(blockStateBelow))
-            cir.setReturnValue(BlockPathTypes.DAMAGE_FIRE);
+            cir.setReturnValue(PathType.DAMAGE_FIRE);
         else {
-            BlockPathTypes bpt = getBlockPathTypeStatic(pLevel, new BlockPos.MutableBlockPos(pX, pY, pZ));
+            PathType bpt = getBlockPathTypeStatic(pLevel, new BlockPos.MutableBlockPos(pX, pY, pZ));
             cir.setReturnValue(bpt);
         }
     }

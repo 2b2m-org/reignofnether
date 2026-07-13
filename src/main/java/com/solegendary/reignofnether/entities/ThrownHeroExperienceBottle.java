@@ -11,7 +11,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
@@ -34,14 +34,14 @@ public class ThrownHeroExperienceBottle extends ThrowableItemProjectile {
         return ItemRegistrar.THROWN_HERO_EXPERIENCE_BOTTLE.get();
     }
 
-    protected float getGravity() {
-        return 0.07F;
+    protected double getDefaultGravity() {
+        return 0.07;
     }
 
     protected void onHit(HitResult pResult) {
         super.onHit(pResult);
         if (this.level() instanceof ServerLevel) {
-            this.level().levelEvent(2002, this.blockPosition(), PotionUtils.getColor(Potions.WATER));
+            this.level().levelEvent(2002, this.blockPosition(), PotionContents.getColor(Potions.WATER));
 
             List<LivingEntity> nearbyEntities = MiscUtil.getEntitiesWithinRange(position(), RANGE, LivingEntity.class, level());
             HeroUnit closestHero = null;

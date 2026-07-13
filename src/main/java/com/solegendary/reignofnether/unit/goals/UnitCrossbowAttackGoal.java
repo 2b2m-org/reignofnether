@@ -120,7 +120,7 @@ public class UnitCrossbowAttackGoal<T extends Monster & RangedAttackMob & Crossb
     public void tickChargeCrossbow() {
         ItemStack itemstack = this.mob.getItemBySlot(EquipmentSlot.MAINHAND);
         if (this.crossbowState == UNCHARGED) {
-            int ticks = CrossbowItem.getChargeDuration(itemstack);
+            int ticks = CrossbowItem.getChargeDuration(itemstack, this.mob);
             this.mob.addEffect(new MobEffectInstance(MobEffectRegistrar.MINOR_MOVEMENT_SLOWDOWN, ticks, 3, true, false));
             this.mob.startUsingItem(ProjectileUtil.getWeaponHoldingHand(this.mob, item -> item instanceof CrossbowItem));
             this.crossbowState = CHARGING;
@@ -128,7 +128,7 @@ public class UnitCrossbowAttackGoal<T extends Monster & RangedAttackMob & Crossb
         }
         else if (this.crossbowState == CHARGING) {
             int i = this.mob.getTicksUsingItem();
-            if (i >= CrossbowItem.getChargeDuration(itemstack) + windupTime) {
+            if (i >= CrossbowItem.getChargeDuration(itemstack, this.mob) + windupTime) {
                 this.mob.releaseUsingItem();
                 this.crossbowState = CHARGED;
                 this.attackCooldown = attackCooldownMax;
@@ -224,8 +224,6 @@ public class UnitCrossbowAttackGoal<T extends Monster & RangedAttackMob & Crossb
 
     public void performAttack() {
         this.mob.performCrossbowAttack(this.mob, 1.6F);
-        ItemStack itemstack1 = this.mob.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this.mob, item -> item instanceof CrossbowItem));
-        CrossbowItem.setCharged(itemstack1, false);
         this.crossbowState = UNCHARGED;
     }
 

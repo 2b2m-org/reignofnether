@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.resources;
 
 import com.solegendary.reignofnether.registrars.BlockRegistrar;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
@@ -157,7 +158,7 @@ public class ResourceSources {
     );
 
     public static boolean isPreparedFood(Item item) {
-        return item.isEdible() && edibleFoods.contains(item);
+        return item.components().has(DataComponents.FOOD) && edibleFoods.contains(item);
     }
 
     public static final int REPLANT_TICKS_MAX = 10;

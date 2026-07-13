@@ -16,6 +16,7 @@ import com.solegendary.reignofnether.unit.units.villagers.*;
 import com.solegendary.reignofnether.util.MiscUtil;
 import com.solegendary.reignofnether.util.MyRenderer;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -133,7 +134,8 @@ public class PromoteIllager extends Ability {
                 promotedIllager.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.AIR));
             }
             buildingUsing.getDataStorage().setData(Castle.PROMOTED_ILLAGER, targetEntity);
-            targetEntity.setItemSlot(EquipmentSlot.HEAD, Raid.getLeaderBannerInstance());
+            targetEntity.setItemSlot(EquipmentSlot.HEAD,
+                    Raid.getLeaderBannerInstance(targetEntity.registryAccess().lookupOrThrow(Registries.BANNER_PATTERN)));
 
             // spawn a firework
             if (!level.isClientSide()) {

@@ -129,10 +129,10 @@ public class GruntUnit extends Piglin implements Unit, WorkerUnit, AttackerUnit,
             SynchedEntityData.defineId(GruntUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     @Nullable
@@ -210,11 +210,6 @@ public class GruntUnit extends Piglin implements Unit, WorkerUnit, AttackerUnit,
         super(entityType, level);
 
         updateAbilityButtons();
-    }
-
-    @Override
-    protected boolean onSoulSpeedBlock() {
-        return false;
     }
 
     @Override
@@ -332,7 +327,7 @@ public class GruntUnit extends Piglin implements Unit, WorkerUnit, AttackerUnit,
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 }

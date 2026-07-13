@@ -5,6 +5,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import com.solegendary.reignofnether.unit.UnitClientEvents;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -30,12 +32,12 @@ public class UnitSyncMobEffectsClientboundPacket implements CustomPacketPayload 
     private final int duration;
 
     public static void addEffectClientside(LivingEntity entity, MobEffectInstance mei) {
-        PacketDistributor.sendToAllPlayers(new UnitSyncMobEffectsClientboundPacket(entity.getId(), MobEffect.getId(mei.getEffect()), mei.getAmplifier(), mei.getDuration())
+        PacketDistributor.sendToAllPlayers(new UnitSyncMobEffectsClientboundPacket(entity.getId(), BuiltInRegistries.MOB_EFFECT.getId(mei.getEffect().value()), mei.getAmplifier(), mei.getDuration())
         );
     }
 
-    public static void removeEffectClientside(LivingEntity entity, MobEffect me) {
-        PacketDistributor.sendToAllPlayers(new UnitSyncMobEffectsClientboundPacket(entity.getId(), MobEffect.getId(me), 0, 0)
+    public static void removeEffectClientside(LivingEntity entity, Holder<MobEffect> me) {
+        PacketDistributor.sendToAllPlayers(new UnitSyncMobEffectsClientboundPacket(entity.getId(), BuiltInRegistries.MOB_EFFECT.getId(me.value()), 0, 0)
         );
     }
 

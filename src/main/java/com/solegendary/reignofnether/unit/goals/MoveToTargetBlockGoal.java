@@ -11,6 +11,7 @@ import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
@@ -144,7 +145,7 @@ public class MoveToTargetBlockGoal extends Goal {
 
         // When the rtsPathfinding gamerule is on, route through the async grid A* pathfinder.
         if (useRtsPathfinding()) {
-            this.mob.setMaxUpStep(1.15f);
+            this.mob.getAttribute(Attributes.STEP_HEIGHT).setBaseValue(1.15);
             if (this.mob.getNavigation() instanceof GroundPathNavigation gpn) gpn.setCanFloat(true);
             this.mob.getNavigation().stop();
             MobilityClass mobility = MobilityClass.of(u);
@@ -293,8 +294,8 @@ public class MoveToTargetBlockGoal extends Goal {
 
     @Nullable public BlockPos getFinalNodePos() {
         Path path = this.mob.getNavigation().getPath();
-        if (path != null && !path.nodes.isEmpty())
-            return path.nodes.get(path.nodes.size() - 1).asBlockPos();
+        if (path != null && path.getEndNode() != null)
+            return path.getEndNode().asBlockPos();
         return null;
     }
 

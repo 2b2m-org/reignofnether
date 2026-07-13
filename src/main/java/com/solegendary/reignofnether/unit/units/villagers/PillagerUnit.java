@@ -2,7 +2,6 @@ package com.solegendary.reignofnether.unit.units.villagers;
 
 import com.solegendary.reignofnether.util.EnchantmentUtil;
 
-import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.abilities.MountRavager;
@@ -26,7 +25,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.*;
@@ -35,16 +33,13 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.monster.Pillager;
-import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
-import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -143,10 +138,10 @@ public class PillagerUnit extends Pillager implements Unit, AttackerUnit, Ranged
             SynchedEntityData.defineId(PillagerUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -154,7 +149,7 @@ public class PillagerUnit extends Pillager implements Unit, AttackerUnit, Ranged
     public float getAttackCooldown() {return ((20 / AttackerUnit.super.getBaseAttacksPerSecond()) * getAttackCooldownMultiplier());}
     public float getAttacksPerSecond() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return 20f / (getAttackCooldown() + (CrossbowItem.getChargeDuration(itemStack)));
+        return 20f / (getAttackCooldown() + CrossbowItem.getChargeDuration(itemStack, this));
     }
     public float getBaseAttacksPerSecond() {
         return 20f / (getAttackCooldown() + 35);
@@ -313,74 +308,23 @@ public class PillagerUnit extends Pillager implements Unit, AttackerUnit, Ranged
                 item instanceof CrossbowItem
         );
         ItemStack itemstack = pUser.getItemInHand(interactionhand);
-        if (pUser.isHolding((is) -> is.getItem() instanceof CrossbowItem)) {
-            CrossbowItem.performShooting(pUser.level(), pUser, interactionhand, itemstack, pVelocity, 0);
-            this.playSound(SoundEvents.CROSSBOW_SHOOT, 3.0F, 0);
+        if (itemstack.getItem() instanceof CrossbowItem crossbowItem) {
+            LivingEntity target = this.getTarget();
+            crossbowItem.performShooting(pUser.level(), pUser, interactionhand, itemstack, pVelocity, 0, target);
+            if (!level().isClientSide() && target instanceof Unit unit) {
+                FogOfWarClientboundPacket.revealRangedUnit(unit.getOwnerName(), this.getId());
+            } else if (!level().isClientSide() && this.getAttackBuildingGoal() instanceof RangedAttackBuildingGoal<?> attackBuildingGoal
+                    && attackBuildingGoal.getBuildingTarget() != null) {
+                FogOfWarClientboundPacket.revealRangedUnit(attackBuildingGoal.getBuildingTarget().ownerName, this.getId());
+            }
         }
         this.onCrossbowAttackPerformed();
         getMainHandItem().setDamageValue(0);
     }
 
     @Override
-    public void shootCrossbowProjectile(LivingEntity pUser, LivingEntity pTarget, Projectile pProjectile, float pProjectileAngle, float pVelocity) {
-        // bit of a hacky fix to attack buildings since this function is called from CrossbowItem
-        try {
-            if (pTarget == null) {
-                if (this.getAttackBuildingGoal() instanceof RangedAttackBuildingGoal<?> rabg && rabg.getBuildingTarget() != null) {
-                    shootCrossbowProjectileAtBuilding(pUser, rabg, pProjectile, pProjectileAngle, pVelocity);
-                    return;
-                }
-                if (this.getRangedAttackGroundGoal() != null && this.getRangedAttackGroundGoal().getGroundTarget() != null) {
-                    shootCrossbowProjectileAtGround(pUser, this.getRangedAttackGroundGoal(), pProjectile, pProjectileAngle, pVelocity);
-                    return;
-                }
-            }
-        } catch (NullPointerException e) {
-            ReignOfNether.LOGGER.error("Caught NullPointerException in shootCrossbowProjectile", e);
-        }
-        if (pTarget == null)
-            return;
-
-        double d0 = pTarget.getX() - pUser.getX();
-        double d1 = pTarget.getZ() - pUser.getZ();
-        double d2 = Math.sqrt(d0 * d0 + d1 * d1);
-        double d3 = pTarget.getY(0.3333333333333333) - pProjectile.getY() + d2 * 0.20000000298023224;
-
-        if (pTarget.getEyeHeight() <= 1.0f)
-            d1 -= (1.0f - pTarget.getEyeHeight());
-
-        Vector3f vector3f = this.getProjectileShotVector(pUser, new Vec3(d0, d3, d1), pProjectileAngle);
-        pProjectile.shoot(vector3f.x(), vector3f.y(), vector3f.z(), pVelocity, 0);
-        pUser.playSound(SoundEvents.CROSSBOW_SHOOT, 1.0F, 1.0F / (pUser.getRandom().nextFloat() * 0.4F + 0.8F));
-
-        if (!level().isClientSide() && pTarget instanceof Unit unit)
-            FogOfWarClientboundPacket.revealRangedUnit(unit.getOwnerName(), this.getId());
-    }
-
-    private void shootCrossbowProjectileAtBuilding(LivingEntity pUser, RangedAttackBuildingGoal<?> rabg, Projectile pProjectile, float pProjectileAngle, float pVelocity) {
-        double d0 = rabg.getBuildingTarget().centrePos.getX() - pUser.getX() + 0.5f;
-        double d1 = rabg.getBuildingTarget().centrePos.getZ() - pUser.getZ() + 0.5f;
-
-        Vector3f vector3f = this.getProjectileShotVector(pUser, new Vec3(d0, 75, d1), pProjectileAngle);
-        pProjectile.shoot(vector3f.x(), vector3f.y(), vector3f.z(), pVelocity, 0);
-        pUser.playSound(SoundEvents.CROSSBOW_SHOOT, 1.0F, 1.0F / (pUser.getRandom().nextFloat() * 0.4F + 0.8F));
-
-        if (!level().isClientSide())
-            FogOfWarClientboundPacket.revealRangedUnit(rabg.getBuildingTarget().ownerName, this.getId());
-    }
-
-    private void shootCrossbowProjectileAtGround(LivingEntity pUser, RangedAttackGroundGoal<?> ragg, Projectile pProjectile, float pProjectileAngle, float pVelocity) {
-        double d0 = ragg.getGroundTarget().getX() - pUser.getX() + 0.5f;
-        double d1 = ragg.getGroundTarget().getZ() - pUser.getZ() + 0.5f;
-
-        Vector3f vector3f = this.getProjectileShotVector(pUser, new Vec3(d0, 75, d1), pProjectileAngle);
-        pProjectile.shoot(vector3f.x(), vector3f.y(), vector3f.z(), pVelocity, 0);
-        pUser.playSound(SoundEvents.CROSSBOW_SHOOT, 1.0F, 1.0F / (pUser.getRandom().nextFloat() * 0.4F + 0.8F));
-    }
-
-    @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 }

@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.units.piglins;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.util.EnchantmentUtil;
 
 import com.solegendary.reignofnether.ability.Abilities;
@@ -28,13 +29,16 @@ import com.solegendary.reignofnether.faction.Faction;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -48,6 +52,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
@@ -141,11 +146,11 @@ public class BruteUnit extends PiglinBrute implements Unit, AttackerUnit {
             SynchedEntityData.defineId(BruteUnit.class, EntityDataSerializers.BOOLEAN);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
-        this.entityData.define(holdingUpShieldAccessor, false);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
+        builder.define(holdingUpShieldAccessor, false);
     }
 
     // combat stats
@@ -214,11 +219,6 @@ public class BruteUnit extends PiglinBrute implements Unit, AttackerUnit {
             getMoveGoal().stopMoving();
             getMoveGoal().setMoveTarget(bp);
         }
-    }
-
-    @Override
-    protected boolean onSoulSpeedBlock() {
-        return false;
     }
 
     @Override
@@ -307,8 +307,9 @@ public class BruteUnit extends PiglinBrute implements Unit, AttackerUnit {
     public void setupEquipmentAndUpgradesServer() {
         if (!hasEnchantedNetheriteSword()) {
             ItemStack swordStack = new ItemStack(Items.GOLDEN_SWORD);
-            AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 0, AttributeModifier.Operation.ADD_VALUE);
-            swordStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
+            AttributeModifier mod = new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, UUID.randomUUID().toString()), 0, AttributeModifier.Operation.ADD_VALUE);
+            swordStack.update(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY,
+                    modifiers -> modifiers.withModifierAdded(Attributes.ATTACK_DAMAGE, mod, EquipmentSlotGroup.MAINHAND));
             this.setItemSlot(EquipmentSlot.MAINHAND, swordStack);
         }
         if (ResearchServerEvents.playerHasResearch(this.getOwnerName(), ProductionItems.RESEARCH_BRUTE_SHIELDS)) {
@@ -354,8 +355,9 @@ public class BruteUnit extends PiglinBrute implements Unit, AttackerUnit {
     @Override
     public void onPickupEquipment(ItemStack itemStack) {
         if (itemStack.getItem() == Items.NETHERITE_SWORD) {
-            AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 2, AttributeModifier.Operation.ADD_VALUE);
-            itemStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
+            AttributeModifier mod = new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, UUID.randomUUID().toString()), 2, AttributeModifier.Operation.ADD_VALUE);
+            itemStack.update(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY,
+                    modifiers -> modifiers.withModifierAdded(Attributes.ATTACK_DAMAGE, mod, EquipmentSlotGroup.MAINHAND));
         }
         setItemSlot(getEquipmentSlotForItem(itemStack), itemStack);
     }

@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.units.villagers;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.util.EnchantmentUtil;
 
 import com.solegendary.reignofnether.ability.Abilities;
@@ -21,14 +22,17 @@ import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.unit.units.monsters.DrownedUnit;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -39,6 +43,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.NotNull;
@@ -126,10 +131,10 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
             SynchedEntityData.defineId(VindicatorUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -266,8 +271,9 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
         Item axe = Items.IRON_AXE;
         int damageMod = 0;
         ItemStack axeStack = new ItemStack(axe);
-        AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), damageMod, AttributeModifier.Operation.ADD_VALUE);
-        axeStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
+        AttributeModifier mod = new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, UUID.randomUUID().toString()), damageMod, AttributeModifier.Operation.ADD_VALUE);
+        axeStack.update(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY,
+                modifiers -> modifiers.withModifierAdded(Attributes.ATTACK_DAMAGE, mod, EquipmentSlotGroup.MAINHAND));
 
         this.setItemSlot(EquipmentSlot.MAINHAND, axeStack);
     }
@@ -302,8 +308,7 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
             @NotNull ServerLevelAccessor pLevel,
             @NotNull DifficultyInstance pDifficulty,
             @NotNull MobSpawnType pReason,
-            @Nullable SpawnGroupData pSpawnData,
-            @Nullable CompoundTag pDataTag
+            @Nullable SpawnGroupData pSpawnData
     ) {
         return pSpawnData;
     }

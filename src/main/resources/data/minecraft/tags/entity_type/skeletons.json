@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "reignofnether:skeleton_unit",
+    "reignofnether:stray_unit",
+    "reignofnether:bogged_unit",
+    "reignofnether:wither_skeleton_unit",
+    "reignofnether:necromancer_unit"
+  ]
+}

@@ -144,11 +144,11 @@ public class SpiderUnit extends Spider implements Unit, AttackerUnit, Convertabl
             SynchedEntityData.defineId(SpiderUnit.class, EntityDataSerializers.BOOLEAN);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
-        this.entityData.define(wallClimbingAccessor, true);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
+        builder.define(wallClimbingAccessor, true);
     }
 
     // combat stats
@@ -199,7 +199,7 @@ public class SpiderUnit extends Spider implements Unit, AttackerUnit, Convertabl
 
     public SpiderUnit(EntityType<? extends Spider> entityType, Level level) {
         super(entityType, level);
-        this.setMaxUpStep(1.15F);
+        this.getAttribute(Attributes.STEP_HEIGHT).setBaseValue(1.15);
     }
 
     public void toggleWallClimbing() {
@@ -323,7 +323,7 @@ public class SpiderUnit extends Spider implements Unit, AttackerUnit, Convertabl
     // removes vanilla spider jockey spawn and random effects
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 

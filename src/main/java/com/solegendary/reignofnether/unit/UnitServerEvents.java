@@ -42,12 +42,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffect;
@@ -67,18 +67,16 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.IPlantable;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.entity.*;
 import net.neoforged.neoforge.event.entity.living.*;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
-import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.joml.Vector3d;
 
@@ -394,10 +392,10 @@ saveTicks += 1;
 
         if (evt.getEntity() instanceof Unit && evt.getEntity() instanceof Mob mob) {
             mob.setBaby(false);
-            mob.setPathfindingMalus(BlockPathTypes.WATER, -1.0f);
-            mob.setPathfindingMalus(BlockPathTypes.DANGER_FIRE, 1.0f);
-            mob.setPathfindingMalus(BlockPathTypes.DAMAGE_FIRE, 1.0f);
-            mob.setPathfindingMalus(BlockPathTypes.STICKY_HONEY, 1.0f);
+            mob.setPathfindingMalus(PathType.WATER, -1.0f);
+            mob.setPathfindingMalus(PathType.DANGER_FIRE, 1.0f);
+            mob.setPathfindingMalus(PathType.DAMAGE_FIRE, 1.0f);
+            mob.setPathfindingMalus(PathType.STICKY_HONEY, 1.0f);
         }
 
         if (evt.getEntity() instanceof Unit unit && evt.getEntity() instanceof LivingEntity entity
@@ -499,7 +497,7 @@ saveTicks += 1;
                             if (level.getBlockState(bp).getBlock() == Blocks.DIRT_PATH) {
                                 level.setBlockAndUpdate(bp, Blocks.DIRT.defaultBlockState());
                             }
-                            if (level.getBlockState(bp.above()).getBlock() instanceof IPlantable) {
+                            if (level.getBlockState(bp.above()).is(net.minecraft.tags.BlockTags.REPLACEABLE)) {
                                 level.destroyBlock(bp.above(), false);
                             }
 
@@ -566,7 +564,7 @@ saveTicks += 1;
 
             if (entityType != null && evt.getEntity().level() instanceof ServerLevel serverLevel) {
                 Entity entity = entityType.spawn(serverLevel,
-                        (CompoundTag) null,
+                        (ItemStack) null,
                     null,
                     evt.getEntity().getOnPos(),
                     MobSpawnType.SPAWNER,
@@ -823,7 +821,7 @@ saveTicks += 1;
 
     @SubscribeEvent
     // assign unit owner when spawned with an egg based on whoever is closest
-    public static void onMobSpawn(MobSpawnEvent.FinalizeSpawn evt) {
+    public static void onMobSpawn(FinalizeSpawnEvent evt) {
         if (!evt.getSpawnType().equals(MobSpawnType.SPAWN_EGG)) {
             return;
         }
@@ -852,7 +850,7 @@ saveTicks += 1;
         }
     }
 
-    private static boolean shouldIgnoreKnockback(LivingDamageEvent evt) {
+    private static boolean shouldIgnoreKnockback(LivingDamageEvent.Pre evt) {
         Entity directEntity = evt.getSource().getDirectEntity();
         Entity sourceEntity = evt.getSource().getEntity();
 
@@ -880,11 +878,11 @@ saveTicks += 1;
             ResourceSources.isHuntableAnimal(mob.getTarget()))
             return true;
 
-        return evt.getSource().is(DamageTypeTags.WITCH_RESISTANT_TO) && evt.getSource().isIndirect()
+        return evt.getSource().is(DamageTypeTags.WITCH_RESISTANT_TO) && !evt.getSource().isDirect()
                 && (!(sourceEntity instanceof EvokerUnit));
     }
 
-    private static boolean shouldIncreaseKnockback(LivingDamageEvent evt) {
+    private static boolean shouldIncreaseKnockback(LivingDamageEvent.Pre evt) {
         Entity projectile = evt.getSource().getDirectEntity();
 
         if (projectile instanceof WindcallerProjectile proj && proj.getOwner() instanceof WindcallerUnit windcallerUnit)
@@ -928,10 +926,11 @@ saveTicks += 1;
     }
 
     @SubscribeEvent
-    public static void onEntityDamaged(LivingDamageEvent evt) {
+    public static void onEntityDamaged(LivingDamageEvent.Pre evt) {
 
         if (evt.getEntity() instanceof WretchedWraithUnit wraith && wraith.isFrostBlinkInProgress()) {
-            evt.setCanceled(true);
+            evt.setNewDamage(0);
+            return;
         }
 
         if (shouldIgnoreKnockback(evt)) {
@@ -944,16 +943,16 @@ saveTicks += 1;
         // halve friendly fire from your own/friendly creepers (but still cause knockback)
         if (evt.getSource().getEntity() instanceof CreeperUnit creeperUnit &&
                 getUnitToEntityRelationship(creeperUnit, evt.getEntity()) == Relationship.FRIENDLY) {
-            evt.setAmount(evt.getAmount() / 2);
+            evt.setNewDamage(evt.getNewDamage() / 2);
 
             if (evt.getEntity() instanceof CreeperUnit)
-                evt.setAmount(evt.getAmount() / 2);
+                evt.setNewDamage(evt.getNewDamage() / 2);
         }
 
         if (evt.getEntity() instanceof Unit && (
-            evt.getSource() == evt.getEntity().damageSources().sweetBerryBush() || evt.getSource() == evt.getEntity().damageSources().cactus()
+            evt.getSource().is(DamageTypes.SWEET_BERRY_BUSH) || evt.getSource().is(DamageTypes.CACTUS)
         )) {
-            evt.setCanceled(true);
+            evt.setNewDamage(0);
             return;
         }
 
@@ -961,33 +960,33 @@ saveTicks += 1;
         if (evt.getSource().getEntity() instanceof GhastUnit) {
             // (unless its to a garrisoned unit)
             if (!(evt.getEntity() instanceof Unit unit && GarrisonableBuildingAddon.getGarrison(unit) != null)) {
-                evt.setAmount(evt.getAmount() / 2);
+                evt.setNewDamage(evt.getNewDamage() / 2);
             }
         }
 
         // ignore added weapon damage for workers
         if (evt.getSource().getEntity() instanceof WorkerUnit && evt.getSource()
             .getEntity() instanceof AttackerUnit attackerUnit) {
-            evt.setAmount(attackerUnit.getUnitAttackDamage());
+            evt.setNewDamage(attackerUnit.getUnitAttackDamage());
         }
 
-        if (evt.getSource() == evt.getEntity().damageSources().lightningBolt()) {
+        if (evt.getSource().is(DamageTypes.LIGHTNING_BOLT)) {
             if (evt.getEntity() instanceof CreeperUnit) {
-                evt.setCanceled(true);
+                evt.setNewDamage(0);
             } else {
-                evt.setAmount(evt.getAmount() / 2);
+                evt.setNewDamage(evt.getNewDamage() / 2);
             }
         }
 
-        if (evt.getEntity() instanceof Unit && (evt.getSource() == evt.getEntity().damageSources().inWall())) {
-            evt.setCanceled(true);
+        if (evt.getEntity() instanceof Unit && evt.getSource().is(DamageTypes.IN_WALL)) {
+            evt.setNewDamage(0);
         }
 
         // prevent friendly fire damage from ranged units (unless specifically targeted)
         if (evt.getSource().is(DamageTypeTags.IS_PROJECTILE) && evt.getSource().getEntity() instanceof Unit unit) {
             if (getUnitToEntityRelationship(unit, evt.getEntity()) == Relationship.FRIENDLY
                 && unit.getTargetGoal().getTarget() != evt.getEntity()) {
-                evt.setCanceled(true);
+                evt.setNewDamage(0);
             }
         }
 
@@ -996,8 +995,8 @@ saveTicks += 1;
 
         if (evt.getSource().getEntity() instanceof HeadhunterUnit headhunterUnit &&
                 headhunterUnit.hasFlameTrident() &&
-                evt.getAmount() > 0)
-            evt.getEntity().setSecondsOnFire(4);
+                evt.getNewDamage() > 0)
+            evt.getEntity().igniteForSeconds(4);
 
         if (evt.getSource().getEntity() instanceof LivingEntity le) {
             int breachLevel = EnchantmentUtil.getLevel(le.getMainHandItem(), EnchantmentRegistrar.BREACHING);
@@ -1010,13 +1009,13 @@ saveTicks += 1;
         if (evt.getSource().getEntity() instanceof Vex vex && vex.getOwner() instanceof EvokerUnit evokerUnit) {
             int zealLevel = EnchantmentUtil.getLevel(evokerUnit.getMainHandItem(), EnchantmentRegistrar.ZEAL);
             if (zealLevel > 0) {
-                evt.setAmount(evt.getAmount() + zealLevel);
+                evt.setNewDamage(evt.getNewDamage() + zealLevel);
             }
         }
         if (evt.getSource().getEntity() instanceof EvokerUnit evokerUnit) {
             int zealLevel = EnchantmentUtil.getLevel(evokerUnit.getMainHandItem(), EnchantmentRegistrar.ZEAL);
             if (zealLevel > 0) {
-                evt.setAmount(evt.getAmount() + zealLevel);
+                evt.setNewDamage(evt.getNewDamage() + zealLevel);
             }
         }
 
@@ -1029,30 +1028,30 @@ saveTicks += 1;
         }
 
         if (evt.getEntity().hasEffect(MobEffectRegistrar.SCORCHING_FIRE) && evt.getSource().is(DamageTypes.ON_FIRE)) {
-            evt.setAmount(evt.getAmount() * 3);
+            evt.setNewDamage(evt.getNewDamage() * 3);
         }
 
         if (evt.getEntity().hasEffect(MobEffectRegistrar.SOULS_AFLAME) && evt.getSource().is(DamageTypes.ON_FIRE)) {
-            evt.setAmount(evt.getAmount() * 2);
+            evt.setNewDamage(evt.getNewDamage() * 2);
         }
 
         if (evt.getEntity().hasEffect(MobEffectRegistrar.SOULS_AFLAME) && evt.getSource().is(DamageTypes.ON_FIRE)) {
-            evt.setAmount(evt.getAmount() * 2);
+            evt.setNewDamage(evt.getNewDamage() * 2);
         }
 
         if (evt.getEntity() instanceof HeroUnit && evt.getSource().getEntity() instanceof PhantomSummon) {
-            evt.setAmount(evt.getAmount() * PhantomSummon.HERO_DAMAGE_MULT);
+            evt.setNewDamage(evt.getNewDamage() * PhantomSummon.HERO_DAMAGE_MULT);
         }
 
         if (evt.getSource().getDirectEntity() instanceof GhastUnitFireball) {
-            evt.setAmount(0); // flying units hit only, explosion will do enough damage anyway
+            evt.setNewDamage(0); // flying units hit only, explosion will do enough damage anyway
         }
     }
 
     @SubscribeEvent
     public static void onLightningStrike(EntityStruckByLightningEvent evt) {
         if (evt.getEntity() instanceof CreeperUnit creeperUnit) {
-            creeperUnit.setSecondsOnFire(0);
+            creeperUnit.clearFire();
         }
     }
 
@@ -1070,7 +1069,7 @@ saveTicks += 1;
         //  instead just relying on splash damage and fire creation
         if (owner instanceof GhastUnit && hit != null) {
             if (!(hit instanceof Unit unit && unit.isFlyingUnit())) {
-                evt.setImpactResult(ProjectileImpactEvent.ImpactResult.SKIP_ENTITY);
+                evt.setCanceled(true);
             }
         }
 
@@ -1081,14 +1080,14 @@ saveTicks += 1;
                 if (evt.getProjectile() instanceof AbstractArrow arrow && arrow.getPierceLevel() > 0) {
                     return;
                 }
-                evt.setImpactResult(ProjectileImpactEvent.ImpactResult.SKIP_ENTITY);
+                evt.setCanceled(true);
             }
         }
 
         if (hit instanceof Unit unit && evt.getProjectile().getPersistentData().contains("accuracyRoll")) {
             float accuracyRoll = evt.getProjectile().getPersistentData().getFloat("accuracyRoll");
             if (accuracyRoll < unit.getEvasionChance())
-                evt.setImpactResult(ProjectileImpactEvent.ImpactResult.SKIP_ENTITY);
+                evt.setCanceled(true);
         }
     }
 
@@ -1098,9 +1097,6 @@ saveTicks += 1;
         if (evt.getEffectInstance().is(MobEffectRegistrar.ENCHANTMENT_AMPLIFIER) &&
             evt.getOldEffectInstance() == null) {
             EnchantmentUtil.updateEnchantLevels(evt.getEntity(), false);
-        }
-        if (evt.getEntity() instanceof Unit unit && MobEffectRegistrar.isInterrupt(evt.getEffectInstance().getEffect()) && unit.uninterruptable()) {
-            evt.setCanceled(true);
         }
     }
 
@@ -1119,11 +1115,18 @@ saveTicks += 1;
 
     @SubscribeEvent
     public static void onMobEffectApplicable(MobEffectEvent.Applicable evt) {
+        if (evt.getEntity() instanceof Unit unit
+                && MobEffectRegistrar.isInterrupt(evt.getEffectInstance().getEffect())
+                && unit.uninterruptable()) {
+            evt.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
+            return;
+        }
+
         // allow undead to be poisoned
-        if (evt.getEntity().getMobType() == MobType.UNDEAD &&
+        if (evt.getEntity().getType().is(EntityTypeTags.UNDEAD) &&
             evt.getEntity() instanceof Unit &&
-            evt.getEffectInstance().getEffect() == MobEffects.POISON) {
-            evt.setResult(Event.Result.ALLOW);
+            evt.getEffectInstance().is(MobEffects.POISON)) {
+            evt.setResult(MobEffectEvent.Applicable.Result.APPLY);
         }
     }
 

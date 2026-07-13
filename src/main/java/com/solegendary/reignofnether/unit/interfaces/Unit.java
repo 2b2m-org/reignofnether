@@ -37,6 +37,7 @@ import com.solegendary.reignofnether.util.MiscUtil;
 import com.solegendary.reignofnether.util.EnchantmentUtil;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -149,11 +150,11 @@ public interface Unit {
 
     public default float getBaseMovementSpeed() {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(Attributes.MOVEMENT_SPEED);
-        return (float) (attr != null ?  attr.getBaseValue() : Attributes.MOVEMENT_SPEED.getDefaultValue());
+        return (float) (attr != null ?  attr.getBaseValue() : Attributes.MOVEMENT_SPEED.value().getDefaultValue());
     }
     public default float getMovementSpeed() {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(Attributes.MOVEMENT_SPEED);
-        return (float) (attr != null ?  attr.getValue() : Attributes.MOVEMENT_SPEED.getDefaultValue());
+        return (float) (attr != null ?  attr.getValue() : Attributes.MOVEMENT_SPEED.value().getDefaultValue());
     }
     public default float getUnitMaxHealth() {
         float bonus = 0;
@@ -161,7 +162,7 @@ public interface Unit {
             bonus = heroUnit.getHealthBonusPerLevel() * heroUnit.getHeroLevel();
         }
         AttributeInstance attr = ((LivingEntity) this).getAttribute(Attributes.MAX_HEALTH);
-        return (float) (attr != null ?  attr.getValue() : Attributes.MAX_HEALTH.getDefaultValue()) + bonus;
+        return (float) (attr != null ?  attr.getValue() : Attributes.MAX_HEALTH.value().getDefaultValue()) + bonus;
     }
 
     public ResourceCost getCost();
@@ -185,7 +186,13 @@ public interface Unit {
     // SOURCE: armour attribute, armour items and the damage amplifier debuff
     default double getUnitPhysicalArmorPercentage() {
         Mob mob = (Mob) this;
-        double dmgAfterAbsorb = CombatRules.getDamageAfterAbsorb(1, (float)mob.getArmorValue(), (float)mob.getAttributeValue(Attributes.ARMOR_TOUGHNESS));
+        double dmgAfterAbsorb = CombatRules.getDamageAfterAbsorb(
+                mob,
+                1,
+                mob.damageSources().generic(),
+                mob.getArmorValue(),
+                (float) mob.getAttributeValue(Attributes.ARMOR_TOUGHNESS)
+        );
         dmgAfterAbsorb += getDamageTakenIncrease();
         return Math.round((1 - dmgAfterAbsorb)/ 0.01d) * 0.01d;
     }
@@ -193,18 +200,18 @@ public interface Unit {
     // SOURCE: inherent unit stats and abilities
     default double getUnitRangedArmorPercentage() {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.RANGED_DAMAGE_RESIST);
-        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.RANGED_DAMAGE_RESIST.getDefaultValue());
+        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.RANGED_DAMAGE_RESIST.value().getDefaultValue());
     }
 
     // SOURCE: inherent unit stats and vanilla mechanics (like resistance)
     default double getUnitMagicArmorPercentage() {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.MAGIC_DAMAGE_RESIST);
-        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.MAGIC_DAMAGE_RESIST.getDefaultValue());
+        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.MAGIC_DAMAGE_RESIST.value().getDefaultValue());
     }
 
     public default float getEvasionChance() {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.EVASION_CHANCE);
-        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.EVASION_CHANCE.getDefaultValue());
+        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.EVASION_CHANCE.value().getDefaultValue());
     }
 
     // SOURCE: resistance mob effect
@@ -352,7 +359,7 @@ public interface Unit {
                                 SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 0.5F,
                                 unitMob.getRandom().nextFloat() * 0.1F + 0.9F
                         );
-                        int nutrition = itemStack.getItem().getFoodProperties(itemStack, (LivingEntity) unit).getNutrition();
+                        int nutrition = itemStack.getItem().getFoodProperties(itemStack, (LivingEntity) unit).nutrition();
                         if (itemStack.getItem() == Items.ENCHANTED_GOLDEN_APPLE) {
                             unitMob.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 999999, 5));
                             unitMob.setAbsorptionAmount(24);
@@ -829,7 +836,7 @@ public interface Unit {
         return ((Entity) this).getBoundingBox();
     }
 
-    default boolean hasEffectWithDuration(MobEffect mobEffect) {
+    default boolean hasEffectWithDuration(Holder<MobEffect> mobEffect) {
         MobEffectInstance mei = ((LivingEntity) this).getEffect(mobEffect);
         return mei != null && mei.getDuration() > 0;
     }

@@ -219,7 +219,7 @@ public abstract class AbstractArrowMixin extends Projectile {
         boolean flag = entity.getType() == EntityType.ENDERMAN;
         int k = entity.getRemainingFireTicks();
         if (this.isOnFire() && !flag) {
-            entity.setSecondsOnFire(5);
+            entity.igniteForSeconds(5);
         }
 
         if (entity.hurt(damagesource, (float)i)) {

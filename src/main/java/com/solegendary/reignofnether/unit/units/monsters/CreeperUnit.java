@@ -34,7 +34,7 @@ import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.event.ForgeEventFactory;
+import net.neoforged.neoforge.event.EventHooks;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -124,10 +124,10 @@ public class CreeperUnit extends Creeper implements Unit, AttackerUnit {
             SynchedEntityData.defineId(CreeperUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-                this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+                builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -176,7 +176,7 @@ public class CreeperUnit extends Creeper implements Unit, AttackerUnit {
     @Override
     public void explodeCreeper() {
         if (!this.level().isClientSide) {
-            Level.ExplosionInteraction explosion$blockinteraction = ForgeEventFactory.getMobGriefingEvent(this.level(), this) ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE;
+            Level.ExplosionInteraction explosion$blockinteraction = EventHooks.canEntityGrief(this.level(), this) ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE;
             float radius = this.isPowered() ? CHARGED_EXPLOSION_RADIUS : EXPLOSION_RADIUS;
             this.dead = true;
             this.level().explode(this, this.getX(), this.getY(), this.getZ(), radius, explosion$blockinteraction);

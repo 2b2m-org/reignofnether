@@ -21,9 +21,11 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Blaze;
 import net.minecraft.world.entity.projectile.Fireball;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.List;
@@ -39,7 +41,7 @@ public class MoltenBombProjectile extends Fireball {
     }
 
     public MoltenBombProjectile(Level pLevel, LivingEntity pShooter, double offsetX, double offsetY, double offsetZ) {
-        super(EntityRegistrar.MOLTEN_BOMB_PROJECTILE.get(), pShooter, offsetX, offsetY, offsetZ, pLevel);
+        super(EntityRegistrar.MOLTEN_BOMB_PROJECTILE.get(), pShooter, new Vec3(offsetX, offsetY, offsetZ), pLevel);
     }
 
     public void setMaxTicks(int ticks) {
@@ -64,7 +66,7 @@ public class MoltenBombProjectile extends Fireball {
     }
 
     @Override
-    public boolean ignoreExplosion() {
+    public boolean ignoreExplosion(Explosion explosion) {
         return true;
     }
 
@@ -111,7 +113,7 @@ public class MoltenBombProjectile extends Fireball {
         for (Mob mob : mobs) {
             mob.hurt(damageSources().mobProjectile(this, (LivingEntity) this.getOwner()), 0.5f);
             if (random.nextBoolean())
-                mob.setSecondsOnFire(5);
+                mob.igniteForSeconds(5);
             if (this.getOwner() instanceof LivingEntity le && le.hasEffect(MobEffectRegistrar.SOULS_AFLAME)) {
                 mob.addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME, 120, 0, false, false));
             }

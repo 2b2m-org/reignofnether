@@ -153,10 +153,10 @@ public class EvokerUnit extends Evoker implements Unit, AttackerUnit, RangedAtta
             SynchedEntityData.defineId(EvokerUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -440,7 +440,7 @@ public class EvokerUnit extends Evoker implements Unit, AttackerUnit, RangedAtta
             Vex vex = EntityType.VEX.create(this.level());
             if (vex != null) {
                 vex.moveTo(blockpos, 0.0F, 0.0F);
-                vex.finalizeSpawn((ServerLevel) this.level(), this.level().getCurrentDifficultyAt(blockpos), MobSpawnType.MOB_SUMMONED, null, null);
+            vex.finalizeSpawn((ServerLevel) this.level(), this.level().getCurrentDifficultyAt(blockpos), MobSpawnType.MOB_SUMMONED, null);
                 vex.setOwner(this);
                 vex.setBoundOrigin(blockpos);
                 vex.setLimitedLife(CastSummonVexes.VEX_DURATION_SECONDS * ResourceCost.TICKS_PER_SECOND);
@@ -490,7 +490,7 @@ public class EvokerUnit extends Evoker implements Unit, AttackerUnit, RangedAtta
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 

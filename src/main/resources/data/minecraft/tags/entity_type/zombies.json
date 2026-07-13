@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "reignofnether:zombie_villager_unit",
+    "reignofnether:zombie_unit",
+    "reignofnether:husk_unit",
+    "reignofnether:drowned_unit",
+    "reignofnether:zombie_piglin_unit",
+    "reignofnether:zoglin_unit"
+  ]
+}

@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.mixin;
 
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -39,11 +40,11 @@ public abstract class ThrownTridentMixin extends Projectile {
 
         Entity $$1 = pResult.getEntity();
         float $$2 = 8.0F;
-        if ($$1 instanceof LivingEntity $$3) {
-            $$2 += EnchantmentHelper.getDamageBonus(this.tridentItem, $$3.getMobType());
-        }
         Entity $$4 = this.getOwner();
         DamageSource $$5 = this.damageSources().trident(this, $$4 == null ? this : $$4);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            $$2 = EnchantmentHelper.modifyDamage(serverLevel, this.tridentItem, $$1, $$5, $$2);
+        }
         SoundEvent $$6 = SoundEvents.TRIDENT_HIT;
         if ($$1.hurt($$5, $$2)) {
             if ($$1.getType() == EntityType.ENDERMAN) {
@@ -63,4 +64,3 @@ public abstract class ThrownTridentMixin extends Projectile {
         this.playSound($$6, 1.0F, 1.0F);
     }
 }
-

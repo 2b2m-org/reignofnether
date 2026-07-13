@@ -141,10 +141,10 @@ public class RavagerUnit extends Ravager implements Unit, AttackerUnit {
             SynchedEntityData.defineId(RavagerUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -318,8 +318,8 @@ public class RavagerUnit extends Ravager implements Unit, AttackerUnit {
 
                 Vec3 vec3 = this.getBoundingBox().getCenter();
 
-                this.playSound(SoundEvents.GENERIC_EXPLODE, 1.0F, 1.0F);
-                this.gameEvent(GameEvent.ENTITY_ROAR);
+                this.playSound(SoundEvents.GENERIC_EXPLODE.value(), 1.0F, 1.0F);
+                this.gameEvent(GameEvent.ENTITY_ACTION);
                 this.level().explode(null, null, null,
                         vec3.x, vec3.y, vec3.z,
                         2.0f,
@@ -335,7 +335,7 @@ public class RavagerUnit extends Ravager implements Unit, AttackerUnit {
                     double d2 = this.random.nextGaussian() * 0.2;
                     this.level().addParticle(ParticleTypes.POOF, vec3.x, vec3.y, vec3.z, d0, d1, d2);
                 }
-                this.playSound(SoundEvents.GENERIC_EXPLODE, 1.0F, 1.0F);
+                this.playSound(SoundEvents.GENERIC_EXPLODE.value(), 1.0F, 1.0F);
             }
         }
     }

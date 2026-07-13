@@ -19,6 +19,7 @@ import com.solegendary.reignofnether.unit.units.monsters.PhantomSummon;
 import com.solegendary.reignofnether.util.MiscUtil;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -40,7 +41,7 @@ import net.minecraft.world.entity.projectile.ThrownPotion;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potion;
-import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -130,10 +131,10 @@ public class WitchUnit extends Witch implements Unit, RangeIndicator {
             SynchedEntityData.defineId(WitchUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -191,13 +192,13 @@ public class WitchUnit extends Witch implements Unit, RangeIndicator {
     @Override
     public boolean removeWhenFarAway(double d) { return false; }
 
-    public void throwPotion(Vec3 targetBp, Potion potion) {
+    public void throwPotion(Vec3 targetBp, Holder<Potion> potion) {
         ThrownPotion thrownPotion = new ThrownPotion(this.level(), this);
 
         if (potion == Potions.STRONG_HARMING || potion == Potions.STRONG_REGENERATION)
-            thrownPotion.setItem(PotionUtils.setPotion(new ItemStack(Items.LINGERING_POTION), potion));
+            thrownPotion.setItem(PotionContents.createItemStack(Items.LINGERING_POTION, potion));
         else
-            thrownPotion.setItem(PotionUtils.setPotion(new ItemStack(Items.SPLASH_POTION), potion));
+            thrownPotion.setItem(PotionContents.createItemStack(Items.SPLASH_POTION, potion));
 
         Vec3 dMove = targetBp.subtract(this.getEyePosition())
                 .multiply(1,0,1)

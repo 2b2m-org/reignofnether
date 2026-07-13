@@ -178,10 +178,10 @@ public class WildfireUnit extends Blaze implements Unit, AttackerUnit, RangedAtt
             SynchedEntityData.defineId(WildfireUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -633,7 +633,7 @@ public class WildfireUnit extends Blaze implements Unit, AttackerUnit, RangedAtt
         if (hasEffect(MobEffectRegistrar.SOULS_AFLAME)) {
             targetEntity.addEffect(new MobEffectInstance(MobEffectRegistrar.SCORCHING_FIRE, durationTicks + 20, 0, true, true));
         }
-        targetEntity.setSecondsOnFire(getScorchingGaze().durationSeconds);
+        targetEntity.igniteForSeconds(getScorchingGaze().durationSeconds);
         if (targetEntity instanceof Unit unit)
             unit.aggroToEnemyIfIdle(this);
     }

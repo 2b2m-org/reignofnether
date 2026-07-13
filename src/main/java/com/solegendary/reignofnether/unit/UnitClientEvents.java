@@ -58,6 +58,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -1448,7 +1449,7 @@ ticksToNextVisCheck -= 1;
 
     public static void syncMobEffect(int entityId, int effectId, int amplifier, int duration) {
         for (LivingEntity entity : getAllUnits()) {
-            MobEffect effect = MobEffect.byId(effectId);
+            Holder<MobEffect> effect = BuiltInRegistries.MOB_EFFECT.getHolder(effectId).orElse(null);
             if (effect != null && entityId == entity.getId() && entity instanceof Unit) {
                 if (duration > 0) {
                     entity.addEffect(new MobEffectInstance(effect, duration, amplifier));

@@ -30,6 +30,7 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.monster.Vex;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
@@ -49,17 +50,17 @@ public interface AttackerUnit {
     public boolean getAggressiveWhenIdle();
     public default float getBaseAttacksPerSecond() {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.ATTACKS_PER_SECOND);
-        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.ATTACKS_PER_SECOND.getDefaultValue());
+        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.ATTACKS_PER_SECOND.value().getDefaultValue());
     }
     public default float getAggroRange() {
         float attackRange = getAttackRange();
         AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.AGGRO_RANGE);
-        float aggroRange = (float) (attr != null ?  attr.getValue() : AttributeRegistrar.AGGRO_RANGE.getDefaultValue());
+        float aggroRange = (float) (attr != null ?  attr.getValue() : AttributeRegistrar.AGGRO_RANGE.value().getDefaultValue());
         return Math.max(attackRange, aggroRange);
     }
     public default float getAttackRange() {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.ATTACK_RANGE);
-        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.ATTACK_RANGE.getDefaultValue());
+        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.ATTACK_RANGE.value().getDefaultValue());
     }
     public default float getUnitAttackDamage() {
         float bonus = 0;
@@ -67,7 +68,7 @@ public interface AttackerUnit {
             bonus = heroUnit.getAttackBonusPerLevel() * heroUnit.getHeroLevel();
         }
         AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.ATTACK_DAMAGE);
-        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.ATTACK_DAMAGE.getDefaultValue()) + bonus;
+        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.ATTACK_DAMAGE.value().getDefaultValue()) + bonus;
     }
     public BlockPos getAttackMoveTarget();
     public boolean canAttackBuildings();
@@ -312,10 +313,16 @@ public interface AttackerUnit {
     static double getWeaponDamageModifier(AttackerUnit attackerUnit) {
         ItemStack itemStack = ((LivingEntity) attackerUnit).getItemBySlot(EquipmentSlot.MAINHAND);
 
-        if (!itemStack.isEmpty())
-            for(AttributeModifier attr : itemStack.getAttributeModifiers(EquipmentSlot.MAINHAND).get(Attributes.ATTACK_DAMAGE))
-                if (attr.getOperation() == AttributeModifier.Operation.ADD_VALUE)
-                    return attr.getAmount();
+        if (!itemStack.isEmpty()) {
+            for (ItemAttributeModifiers.Entry entry : itemStack.getAttributeModifiers().modifiers()) {
+                AttributeModifier modifier = entry.modifier();
+                if (entry.slot().test(EquipmentSlot.MAINHAND)
+                        && entry.attribute().equals(Attributes.ATTACK_DAMAGE)
+                        && modifier.operation() == AttributeModifier.Operation.ADD_VALUE) {
+                    return modifier.amount();
+                }
+            }
+        }
         return 0;
     }
 

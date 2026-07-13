@@ -172,10 +172,10 @@ public class WretchedWraithUnit extends Monster implements Unit, AttackerUnit, H
             SynchedEntityData.defineId(WretchedWraithUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     // combat stats
@@ -344,7 +344,9 @@ public class WretchedWraithUnit extends Monster implements Unit, AttackerUnit, H
     @Override
     public double getUnitPhysicalArmorPercentage() {
         double dmgAfterAbsorb = CombatRules.getDamageAfterAbsorb(
+                this,
                 1,
+                damageSources().generic(),
                 getArmorValue() + (isBlizzardInProgress() ? 13 : 0),
                 (float)getAttributeValue(Attributes.ARMOR_TOUGHNESS));
         dmgAfterAbsorb += getDamageTakenIncrease();
@@ -510,10 +512,6 @@ public class WretchedWraithUnit extends Monster implements Unit, AttackerUnit, H
 
     public SoundAction getAttackSound() {
         return SoundAction.WRETCHED_WRAITH_ATTACK_QUIET;
-    }
-
-    public MobType getMobType() {
-        return MobType.UNDEAD;
     }
 
     public void initialiseGoals() {

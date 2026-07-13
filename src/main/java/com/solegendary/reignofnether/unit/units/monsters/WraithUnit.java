@@ -149,10 +149,10 @@ public class WraithUnit extends Monster implements Unit, AttackerUnit, KeyframeA
             SynchedEntityData.defineId(WraithUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     @Nullable
@@ -269,11 +269,6 @@ public class WraithUnit extends Monster implements Unit, AttackerUnit, KeyframeA
     }
 
     @Override
-    protected boolean onSoulSpeedBlock() {
-        return false;
-    }
-
-    @Override
     public boolean removeWhenFarAway(double d) { return false; }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -355,11 +350,6 @@ public class WraithUnit extends Monster implements Unit, AttackerUnit, KeyframeA
     }
 
     @Override
-    public MobType getMobType() {
-        return MobType.UNDEAD;
-    }
-
-    @Override
     protected boolean isSunBurnTick() {
         return NightUtils.isSunBurnTick(this);
     }
@@ -368,7 +358,7 @@ public class WraithUnit extends Monster implements Unit, AttackerUnit, KeyframeA
     public void aiStep() {
         super.aiStep();
         if (isSunBurnTick())
-            this.setSecondsOnFire(8);
+            this.igniteForSeconds(8);
     }
 
     @Override

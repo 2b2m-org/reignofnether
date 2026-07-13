@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.units.piglins;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
@@ -32,6 +33,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -131,10 +133,10 @@ public class MarauderUnit extends PiglinBrute implements Unit, AttackerUnit, Key
             SynchedEntityData.defineId(MarauderUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     @Nullable
@@ -242,11 +244,6 @@ public class MarauderUnit extends PiglinBrute implements Unit, AttackerUnit, Key
     }
 
     @Override
-    protected boolean onSoulSpeedBlock() {
-        return false;
-    }
-
-    @Override
     public boolean removeWhenFarAway(double d) { return false; }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -294,7 +291,7 @@ public class MarauderUnit extends PiglinBrute implements Unit, AttackerUnit, Key
     public boolean doHurtTarget(@NotNull Entity pEntity) {
         boolean result;
         if (isNextHitBig()) {
-            this.getAttribute(Attributes.ATTACK_KNOCKBACK).addTransientModifier(new AttributeModifier("knockback", 1.5f, AttributeModifier.Operation.ADD_VALUE));
+            this.getAttribute(Attributes.ATTACK_KNOCKBACK).addTransientModifier(new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "knockback"), 1.5f, AttributeModifier.Operation.ADD_VALUE));
             result = super.doHurtTarget(pEntity);
             if (pEntity instanceof LivingEntity le) {
                 le.addEffect(new MobEffectInstance(MobEffectRegistrar.STUN, 40));

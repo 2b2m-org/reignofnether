@@ -118,10 +118,10 @@ public class ZoglinUnit extends Zoglin implements Unit, AttackerUnit {
             SynchedEntityData.defineId(ZoglinUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
     }
 
     @Nullable
@@ -233,7 +233,7 @@ public class ZoglinUnit extends Zoglin implements Unit, AttackerUnit {
         AttackerUnit.tick(this);
 
         if (isSunBurnTick())
-            this.setSecondsOnFire(8); // zoglins dont normally burn so do this manually
+            this.igniteForSeconds(8); // zoglins dont normally burn so do this manually
     }
 
     @Override

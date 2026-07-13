@@ -190,13 +190,13 @@ public class RoyalGuardUnit extends Vindicator implements AttackerUnit, HeroUnit
             SynchedEntityData.defineId(RoyalGuardUnit.class, EntityDataSerializers.INT);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ownerDataAccessor, "");
-        this.entityData.define(scenarioRoleDataAccessor, -1);
-        this.entityData.define(avatarTicksLeftAccessor, 0);
-        this.entityData.define(avatarScalingStartedAccessor, false);
-        this.entityData.define(avatarScaleTicksAccessor, 0);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ownerDataAccessor, "");
+        builder.define(scenarioRoleDataAccessor, -1);
+        builder.define(avatarTicksLeftAccessor, 0);
+        builder.define(avatarScalingStartedAccessor, false);
+        builder.define(avatarScaleTicksAccessor, 0);
     }
 
     // combat stats
@@ -578,7 +578,7 @@ public class RoyalGuardUnit extends Vindicator implements AttackerUnit, HeroUnit
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         return pSpawnData;
     }
 
