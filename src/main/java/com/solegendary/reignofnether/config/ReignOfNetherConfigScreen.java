@@ -45,7 +45,6 @@ public class ReignOfNetherConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
-        this.renderDirtBackground(pGuiGraphics);
         super.render(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
     }
 

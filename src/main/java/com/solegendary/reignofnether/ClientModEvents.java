@@ -16,7 +16,6 @@ import com.solegendary.reignofnether.particles.BigSoulFlameParticle;
 import com.solegendary.reignofnether.registrars.*;
 import com.solegendary.reignofnether.unit.modelling.models.*;
 import com.solegendary.reignofnether.unit.modelling.renderers.*;
-import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.model.SkullModel;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -32,6 +31,7 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 
@@ -131,7 +131,6 @@ public class ClientModEvents {
     @OnlyIn(Dist.CLIENT)
     public static void onClientSetupEvent(FMLClientSetupEvent evt) {
         evt.enqueueWork(() -> {
-            MenuScreens.register(ContainerRegistrar.TOPDOWNGUI_CONTAINER.get(), TopdownGui::new);
             ItemBlockRenderTypes.setRenderLayer(
                     BlockRegistrar.UNEXTINGUISHABLE_SOUL_FIRE.get(),
                     RenderType.cutout()
@@ -171,6 +170,11 @@ public class ClientModEvents {
         BlockEntityType.SKULL.validBlocks.add(BlockRegistrar.HUSK_WALL_HEAD.get());
         BlockEntityType.SKULL.validBlocks.add(BlockRegistrar.STRAY_WALL_SKULL.get());
         BlockEntityType.SKULL.validBlocks.add(BlockRegistrar.BOGGED_WALL_SKULL.get());
+    }
+
+    @SubscribeEvent
+    public static void registerMenuScreens(RegisterMenuScreensEvent evt) {
+        evt.register(ContainerRegistrar.TOPDOWNGUI_CONTAINER.get(), TopdownGui::new);
     }
 
     @SubscribeEvent

@@ -103,7 +103,7 @@ public class MatchEndScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         // tiled dirt, but only inside the popup - the battlefield stays visible around it
         g.setColor(0.25F, 0.25F, 0.25F, 1.0F);
-        g.blit(BACKGROUND_LOCATION, panelL, panelT, 0, panelL, panelT, panelW, panelH, 32, 32);
+        g.blit(MENU_BACKGROUND, panelL, panelT, 0, panelL, panelT, panelW, panelH, 32, 32);
         g.setColor(1.0F, 1.0F, 1.0F, 1.0F);
         MyRenderer.renderFrameWithBg(g, panelL, panelT, panelW, panelH, BG_PANEL);
 

@@ -45,7 +45,7 @@ public class BlockRegistrar {
     }
 
     public static final DeferredHolder<Block, Block> DECAYABLE_NETHER_WART_BLOCK = registerBlock("decayable_nether_wart_block",
-            () -> new LeavesBlock(BlockBehaviour.Properties.copy(Blocks.ACACIA_LEAVES).mapColor(MapColor.COLOR_RED)
+            () -> new LeavesBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.ACACIA_LEAVES).mapColor(MapColor.COLOR_RED)
                     .strength(1.0F)
                     .randomTicks()
                     .mapColor(MapColor.COLOR_RED)
@@ -54,7 +54,7 @@ public class BlockRegistrar {
     );
 
     public static final DeferredHolder<Block, Block> DECAYABLE_WARPED_WART_BLOCK = registerBlock("decayable_warped_wart_block",
-            () -> new LeavesBlock(BlockBehaviour.Properties.copy(Blocks.ACACIA_LEAVES).mapColor(MapColor.WARPED_WART_BLOCK)
+            () -> new LeavesBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.ACACIA_LEAVES).mapColor(MapColor.WARPED_WART_BLOCK)
                     .strength(1.0F)
                     .randomTicks()
                     .mapColor(MapColor.WARPED_WART_BLOCK)
@@ -100,7 +100,7 @@ public class BlockRegistrar {
     );
     public static final DeferredHolder<Block, Block> WALKABLE_MAGMA_BLOCK = registerBlock("walkable_magma_block", () ->
                     new WalkableMagmaBlock(BlockBehaviour
-                            .Properties.copy(Blocks.STONE).mapColor(MapColor.NETHER)
+                            .Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.NETHER)
                             .requiresCorrectToolForDrops()
                             .lightLevel((p_50828_) -> 3)
                             .randomTicks().strength(0.5F)
@@ -122,67 +122,67 @@ public class BlockRegistrar {
             CreativeModeTabs.BUILDING_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_BLUE = registerBlock("rts_start_block_blue", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_BLUE)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_BLUE)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_YELLOW = registerBlock("rts_start_block_yellow", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_YELLOW)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_YELLOW)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_GREEN = registerBlock("rts_start_block_green", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_GREEN)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_GREEN)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_RED = registerBlock("rts_start_block_red", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_RED)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_RED)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_ORANGE = registerBlock("rts_start_block_orange", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_ORANGE)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_ORANGE)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_CYAN = registerBlock("rts_start_block_cyan", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_CYAN)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_CYAN)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_MAGENTA = registerBlock("rts_start_block_magenta", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_MAGENTA)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_MAGENTA)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_BROWN = registerBlock("rts_start_block_brown", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_BROWN)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_BROWN)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_WHITE = registerBlock("rts_start_block_white", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.SNOW)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.SNOW)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_BLACK = registerBlock("rts_start_block_black", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_BLACK)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_BLACK)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_LIGHT_BLUE = registerBlock("rts_start_block_light_blue", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_LIGHT_BLUE)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_LIGHT_BLUE)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_LIME = registerBlock("rts_start_block_lime", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_LIGHT_GREEN)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_LIGHT_GREEN)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_LIGHT_GRAY = registerBlock("rts_start_block_light_gray", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_LIGHT_GRAY)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_LIGHT_GRAY)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_GRAY = registerBlock("rts_start_block_gray", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_GRAY)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_GRAY)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_PURPLE = registerBlock("rts_start_block_purple", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_PURPLE)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_PURPLE)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_START_BLOCK_PINK = registerBlock("rts_start_block_pink", () ->
-            new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_PINK)
+            new RTSStartBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.COLOR_PINK)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);
 
     public static final DeferredHolder<Block, Block> RTS_STRUCTURE_BLOCK = registerBlock("rts_structure_block", () ->

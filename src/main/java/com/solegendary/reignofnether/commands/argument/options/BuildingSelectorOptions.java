@@ -53,7 +53,8 @@ public class BuildingSelectorOptions {
 			register("distance", (p_121421_) -> {
 				int i = p_121421_.getReader().getCursor();
 				MinMaxBounds.Doubles minmaxbounds$doubles = MinMaxBounds.Doubles.fromReader(p_121421_.getReader());
-				if ((minmaxbounds$doubles.getMin() == null || !(minmaxbounds$doubles.getMin() < 0.0D)) && (minmaxbounds$doubles.getMax() == null || !(minmaxbounds$doubles.getMax() < 0.0D))) {
+				if (minmaxbounds$doubles.min().map(value -> value >= 0.0D).orElse(true)
+						&& minmaxbounds$doubles.max().map(value -> value >= 0.0D).orElse(true)) {
 					p_121421_.setDistance(minmaxbounds$doubles);
 				} else {
 					p_121421_.getReader().setCursor(i);

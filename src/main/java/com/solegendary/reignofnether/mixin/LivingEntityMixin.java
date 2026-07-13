@@ -32,9 +32,8 @@ import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.neoforged.neoforge.common.ForgeHooks;
 import net.neoforged.neoforge.common.util.BlockSnapshot;
-import net.neoforged.neoforge.event.ForgeEventFactory;
+import net.neoforged.neoforge.event.EventHooks;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -104,7 +103,7 @@ public abstract class LivingEntityMixin extends Entity {
                 BlockState iceState = Blocks.FROSTED_ICE.defaultBlockState();
                 if (blockstate2.getFluidState().is(FluidTags.WATER) && isFull && iceState.canSurvive(pLevel, blockpos) &&
                         pLevel.isUnobstructed(iceState, blockpos, CollisionContext.empty()) &&
-                        !ForgeEventFactory.onBlockPlace(pLiving, BlockSnapshot.create(pLevel.dimension(), pLevel, blockpos), Direction.UP)) {
+                        !EventHooks.onBlockPlace(pLiving, BlockSnapshot.create(pLevel.dimension(), pLevel, blockpos), Direction.UP)) {
 
                     pLevel.setBlockAndUpdate(blockpos, iceState);
                     pLevel.scheduleTick(blockpos, Blocks.FROSTED_ICE, Mth.nextInt(pLiving.getRandom(), 60, 120));
@@ -114,7 +113,7 @@ public abstract class LivingEntityMixin extends Entity {
                 BlockState magmaState = Blocks.NETHERRACK.defaultBlockState();
                 if (blockstate2.getFluidState().is(FluidTags.LAVA) && isFull && magmaState.canSurvive(pLevel, blockpos) &&
                         pLevel.isUnobstructed(magmaState, blockpos, CollisionContext.empty()) &&
-                        !ForgeEventFactory.onBlockPlace(pLiving, BlockSnapshot.create(pLevel.dimension(), pLevel, blockpos), Direction.UP)) {
+                        !EventHooks.onBlockPlace(pLiving, BlockSnapshot.create(pLevel.dimension(), pLevel, blockpos), Direction.UP)) {
 
                     pLevel.setBlockAndUpdate(blockpos, magmaState);
                     pLevel.scheduleTick(blockpos, Blocks.NETHERRACK, Mth.nextInt(pLiving.getRandom(), 60, 120));
@@ -123,87 +122,8 @@ public abstract class LivingEntityMixin extends Entity {
         }
     }
 
-    @Shadow public float getDamageAfterArmorAbsorb(DamageSource pDamageSource, float pDamageAmount) { return 0f; }
-    @Shadow public float getDamageAfterMagicAbsorb(DamageSource pDamageSource, float pDamageAmount) { return 0f; }
-    @Shadow public float getAbsorptionAmount() { return 0f; }
-    @Shadow public void setAbsorptionAmount(float pAbsorptionAmount) { }
-    @Shadow public CombatTracker getCombatTracker() { return null; }
-    @Shadow public float getHealth() { return 0f; }
-    @Shadow public void setHealth(float pHealth) { }
-
-    @Inject(
-            method = "actuallyHurt",
-            at = @At("HEAD"),
-            cancellable = true
-    )
-    protected void actuallyHurt(DamageSource pDamageSource, float pDamageAmount, CallbackInfo ci) {
-
-
-        // ensure projectiles from units do the damage of the unit, not the item,
-        // and that armour and anti-armour effects are considered through absorption
-        if ((pDamageSource.is(DamageTypeTags.IS_PROJECTILE) ||
-            (!pDamageSource.is(DamageTypeTags.WITCH_RESISTANT_TO) &&
-            !pDamageSource.is(DamageTypeTags.BYPASSES_SHIELD) &&
-            !pDamageSource.is(DamageTypeTags.BYPASSES_ARMOR) &&
-            !pDamageSource.is(DamageTypeTags.BYPASSES_RESISTANCE) &&
-            pDamageSource.is(DamageTypes.MOB_ATTACK))) &&
-            pDamageSource.getEntity() instanceof AttackerUnit attackerUnit) {
-
-            ci.cancel();
-
-            boolean isHuntableAnimal = ResourceSources.isHuntableAnimal((LivingEntity) (Object) this);
-
-            float dmg = attackerUnit.getUnitAttackDamage();
-            boolean isMelee = pDamageSource.is(DamageTypes.MOB_ATTACK) && !pDamageSource.is(DamageTypeTags.IS_PROJECTILE);
-            if (isMelee && !(pDamageSource.getEntity() instanceof WorkerUnit))
-                dmg += AttackerUnit.getWeaponDamageModifier(attackerUnit);
-
-            if (isHuntableAnimal) {
-                if (pDamageSource.getEntity() instanceof MilitiaUnit)
-                    dmg = 1f;
-                else if (pDamageSource.getEntity() instanceof VillagerUnit vUnit &&
-                        vUnit.getUnitProfession() == VillagerUnitProfession.HUNTER) {
-                    dmg = vUnit.isVeteran() ? 2f : 1.5f;
-                } else if (!(pDamageSource.getEntity() instanceof WorkerUnit)) {
-                    dmg *= 0.5f;
-                }
-            }
-
-            if (this instanceof Unit unit) {
-                dmg *= (1 - unit.getUnitPhysicalArmorPercentage());
-                if (pDamageSource.is(DamageTypeTags.IS_PROJECTILE))
-                    dmg *= (1 - unit.getUnitRangedArmorPercentage());
-                dmg *= (1 - unit.getUnitResistPercentage());
-            }
-
-            if (!this.isInvulnerableTo(pDamageSource)) {
-                dmg = ForgeHooks.onLivingHurt((LivingEntity) (Object) this, pDamageSource, dmg);
-                if (dmg <= 0.0F) {
-                    return;
-                }
-                dmg = this.getDamageAfterMagicAbsorb(pDamageSource, dmg);
-                float f1 = Math.max(dmg - this.getAbsorptionAmount(), 0.0F);
-                this.setAbsorptionAmount(this.getAbsorptionAmount() - (dmg - f1));
-                float f = dmg - f1;
-                if (f > 0.0F && f < 3.4028235E37F) {
-                    Entity entity = pDamageSource.getEntity();
-                    if (entity instanceof ServerPlayer) {
-                        ServerPlayer serverplayer = (ServerPlayer)entity;
-                        serverplayer.awardStat(Stats.DAMAGE_DEALT_ABSORBED, Math.round(f * 10.0F));
-                    }
-                }
-                ForgeHooks.onLivingDamage((LivingEntity) (Object) this, pDamageSource, f1);
-                if (f1 != 0.0F) {
-                    this.setHealth(this.getHealth() - f1);
-                    this.getCombatTracker().recordDamage(pDamageSource, f1);
-                    this.gameEvent(GameEvent.ENTITY_DAMAGE);
-                }
-            }
-        }
-    }
-
-    @Shadow public boolean hasEffect(MobEffect pEffect) { return true; }
-    @Shadow public MobEffectInstance getEffect(MobEffect pEffect) { return null; }
+    @Shadow public boolean hasEffect(net.minecraft.core.Holder<MobEffect> pEffect) { return true; }
+    @Shadow public MobEffectInstance getEffect(net.minecraft.core.Holder<MobEffect> pEffect) { return null; }
 
     @Inject(
             method = "baseTick",

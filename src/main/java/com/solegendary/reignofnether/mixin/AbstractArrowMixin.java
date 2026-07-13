@@ -12,6 +12,7 @@ import com.solegendary.reignofnether.unit.units.villagers.PillagerUnit;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.Mth;
@@ -20,10 +21,8 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -31,7 +30,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -133,11 +131,11 @@ public abstract class AbstractArrowMixin extends Projectile {
     @Shadow private double baseDamage;
     @Shadow public boolean isCritArrow() { return false; }
     @Shadow public AbstractArrow.Pickup pickup;
-    @Shadow private int knockback;
     @Shadow protected abstract ItemStack getPickupItem();
+    @Shadow public abstract ItemStack getWeaponItem();
+    @Shadow protected abstract void doKnockback(LivingEntity target, DamageSource damageSource);
     @Shadow protected void doPostHurtEffects(LivingEntity pTarget) { }
     @Shadow public boolean shotFromCrossbow() { return false; }
-    @Shadow(remap = false) @Final private IntOpenHashSet ignoredEntities;
 
     @Unique
     private boolean reignofnether$collidedWithUntargetedAlly(Entity entity) {
@@ -167,7 +165,6 @@ public abstract class AbstractArrowMixin extends Projectile {
     protected boolean canHitEntity(Entity entity) {
         return super.canHitEntity(entity) &&
                 (this.piercingIgnoreEntityIds == null || !this.piercingIgnoreEntityIds.contains(entity.getId())) &&
-                !this.ignoredEntities.contains(entity.getId()) &&
                 !reignofnether$collidedWithUntargetedAlly(entity) &&
                 !reignofnether$boggedArrowCollidedWithPoisonedEnemy(entity);
     }
@@ -184,8 +181,18 @@ public abstract class AbstractArrowMixin extends Projectile {
 
         super.onHitEntity(pResult);
 
-        float f = (float)this.getDeltaMovement().length();
-        int i = Mth.ceil(Mth.clamp((double)f * this.baseDamage, 0.0, 2.147483647E9));
+        float speed = (float)this.getDeltaMovement().length();
+        double damage = this.baseDamage;
+        Entity owner = this.getOwner();
+        AbstractArrow arrow = (AbstractArrow)(Object)this;
+        DamageSource damageSource = this.damageSources().arrow(arrow, owner != null ? owner : arrow);
+        if (this.getWeaponItem() != null && this.level() instanceof ServerLevel serverLevel) {
+            damage = EnchantmentHelper.modifyDamage(
+                    serverLevel, this.getWeaponItem(), entity, damageSource, (float)damage
+            );
+        }
+
+        int damageAmount = Mth.ceil(Mth.clamp((double)speed * damage, 0.0, 2.147483647E9));
         if (this.getPierceLevel() > 0) {
             if (this.piercingIgnoreEntityIds == null) {
                 this.piercingIgnoreEntityIds = new IntOpenHashSet(5);
@@ -201,62 +208,49 @@ public abstract class AbstractArrowMixin extends Projectile {
         }
 
         if (this.isCritArrow()) {
-            long j = (long)this.random.nextInt(i / 2 + 2);
-            i = (int)Math.min(j + (long)i, 2147483647L);
+            long criticalBonus = this.random.nextInt(damageAmount / 2 + 2);
+            damageAmount = (int)Math.min(criticalBonus + (long)damageAmount, 2147483647L);
         }
 
-        Entity entity1 = this.getOwner();
-        DamageSource damagesource;
-        if (entity1 == null) {
-            damagesource = damageSources().arrow(new Arrow(this.level(), this.xo, this.yo, this.zo), this);//DamageSource.arrow(this, this);
-        } else {
-            damagesource = damageSources().arrow(new Arrow(this.level(), this.xo, this.yo, this.zo), entity1);
-            if (entity1 instanceof LivingEntity) {
-                ((LivingEntity)entity1).setLastHurtMob(entity);
-            }
+        if (owner instanceof LivingEntity livingOwner) {
+            livingOwner.setLastHurtMob(entity);
         }
 
-        boolean flag = entity.getType() == EntityType.ENDERMAN;
-        int k = entity.getRemainingFireTicks();
-        if (this.isOnFire() && !flag) {
-            entity.igniteForSeconds(5);
+        boolean isEnderman = entity.getType() == EntityType.ENDERMAN;
+        if (this.isOnFire() && !isEnderman) {
+            entity.igniteForSeconds(5.0F);
         }
 
-        if (entity.hurt(damagesource, (float)i)) {
-            if (flag) {
+        if (entity.hurt(damageSource, (float)damageAmount)) {
+            if (isEnderman) {
                 return;
             }
 
-            if (entity instanceof LivingEntity) {
-                LivingEntity livingentity = (LivingEntity)entity;
+            if (entity instanceof LivingEntity livingentity) {
                 if (!this.level().isClientSide && this.getPierceLevel() <= 0) {
                     livingentity.setArrowCount(livingentity.getArrowCount() + 1);
                 }
 
-                if (this.knockback > 0) {
-                    double d0 = Math.max(0.0, 1.0 - livingentity.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
-                    Vec3 vec3 = this.getDeltaMovement().multiply(1.0, 0.0, 1.0).normalize().scale((double)this.knockback * 0.6 * d0);
-                    if (vec3.lengthSqr() > 0.0) {
-                        livingentity.push(vec3.x, 0.1, vec3.z);
-                    }
-                }
-
-                if (!this.level().isClientSide && entity1 instanceof LivingEntity) {
-                    EnchantmentHelper.doPostHurtEffects(livingentity, entity1);
-                    EnchantmentHelper.doPostDamageEffects((LivingEntity)entity1, livingentity);
+                this.doKnockback(livingentity, damageSource);
+                if (this.level() instanceof ServerLevel serverLevel) {
+                    EnchantmentHelper.doPostAttackEffectsWithItemSource(
+                            serverLevel, livingentity, damageSource, this.getWeaponItem()
+                    );
                 }
 
                 this.doPostHurtEffects(livingentity);
-                if (entity1 != null && livingentity != entity1 && livingentity instanceof Player && entity1 instanceof ServerPlayer && !this.isSilent()) {
-                    ((ServerPlayer)entity1).connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.ARROW_HIT_PLAYER, 0.0F));
+                if (livingentity != owner && livingentity instanceof Player
+                        && owner instanceof ServerPlayer serverPlayer && !this.isSilent()) {
+                    serverPlayer.connection.send(
+                            new ClientboundGameEventPacket(ClientboundGameEventPacket.ARROW_HIT_PLAYER, 0.0F)
+                    );
                 }
 
                 if (!entity.isAlive() && this.piercedAndKilledEntities != null) {
                     this.piercedAndKilledEntities.add(livingentity);
                 }
 
-                if (!this.level().isClientSide && entity1 instanceof ServerPlayer) {
-                    ServerPlayer serverplayer = (ServerPlayer)entity1;
+                if (!this.level().isClientSide && owner instanceof ServerPlayer serverplayer) {
                     if (this.piercedAndKilledEntities != null && this.shotFromCrossbow()) {
                         CriteriaTriggers.KILLED_BY_CROSSBOW.trigger(serverplayer, this.piercedAndKilledEntities);
                     } else if (!entity.isAlive() && this.shotFromCrossbow()) {
@@ -285,7 +279,7 @@ public abstract class AbstractArrowMixin extends Projectile {
 
         if (this.getOwner() instanceof PillagerUnit pUnit &&
             !pUnit.level().isClientSide() && pUnit.isPassenger()) {
-            pUnit.level().explode(this.getOwner(), damagesource, null,
+            pUnit.level().explode(this.getOwner(), damageSource, null,
                     pResult.getEntity().getEyePosition().x,
                     pResult.getEntity().getEyePosition().y,
                     pResult.getEntity().getEyePosition().z,
@@ -312,4 +306,3 @@ public abstract class AbstractArrowMixin extends Projectile {
         }
     }
 }
-

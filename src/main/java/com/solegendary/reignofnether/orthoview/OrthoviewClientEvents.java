@@ -58,6 +58,15 @@ import static net.minecraft.util.Mth.sign;
  */
 public class OrthoviewClientEvents {
 
+    private static final int CHAT_VERTICAL_OFFSET = 55;
+
+    @SubscribeEvent
+    public static void moveChatAboveHotkeys(CustomizeGuiOverlayEvent.Chat evt) {
+        if (isEnabled()) {
+            evt.setPosY(evt.getPosY() - CHAT_VERTICAL_OFFSET);
+        }
+    }
+
 
     public enum LeafHideMethod {
         NONE, AROUND_UNITS_AND_CURSOR, // requires threaded video option
@@ -526,7 +535,7 @@ long windowHandle = MC.getWindow().getWindow();
             return;
         }
         if (Keybindings.altMod.isDown()) {
-            zoomCam((float) sign(evt.getScrollDelta()) * -ZOOM_STEP_SCROLL);
+            zoomCam((float) sign(evt.getScrollDeltaY()) * -ZOOM_STEP_SCROLL);
         }
     }
 
@@ -664,7 +673,7 @@ long windowHandle = MC.getWindow().getWindow();
             cameraMovingByMouse = true;
 
             // Normalize drag delta by frame time to prevent drift when Vsync is off
-            float frameTimeNormalizer = Math.min((float) MC.getDeltaFrameTime(), 5.0f);
+            float frameTimeNormalizer = Math.min(MC.getTimer().getRealtimeDeltaTicks(), 5.0f);
             if (frameTimeNormalizer <= 0) frameTimeNormalizer = 1.0f;
             float normalizedX = (float) evt.getDragX() / frameTimeNormalizer;
             float normalizedZ = (float) evt.getDragY() / frameTimeNormalizer;

@@ -58,6 +58,6 @@ public abstract class ModelBlockRendererMixin {
         float br = FogOfWarClientEvents.getPosBrightness(pPos);
 
         pConsumer.putBulkData(pPose, pQuad, new float[]{pBrightness0 * br, pBrightness1 * br, pBrightness2 * br, pBrightness3 * br},
-                f, f1, f2, new int[]{pLightmap0, pLightmap1, pLightmap2, pLightmap3}, pPackedOverlay, true);
+                f, f1, f2, 1.0F, new int[]{pLightmap0, pLightmap1, pLightmap2, pLightmap3}, pPackedOverlay, true);
     }
 }

@@ -24,7 +24,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
@@ -169,7 +168,6 @@ public class WildfireRenderer extends MobRenderer<WildfireUnit, WildfireModel<Wi
 
         PoseStack.Pose pose = poseStack.last();
         Matrix4f matrix = pose.pose();
-        Matrix3f normal = pose.normal();
 
         float pulse = MiscUtil.getOscillatingFloat(0, 1.0f);
         pulse = (float) Math.pow(pulse, 0.4f);
@@ -192,37 +190,37 @@ public class WildfireRenderer extends MobRenderer<WildfireUnit, WildfireModel<Wi
             float x2 = Mth.cos(angle2) * radius;
             float z2 = Mth.sin(angle2) * radius;
 
-            vertexConsumer.vertex(matrix, x1, 0.0F, z1)
-                    .color(r, g, b, alpha)
-                    .uv(0.0F, vEnd)
-                    .overlayCoords(OverlayTexture.NO_OVERLAY)
-                    .uv2(LightTexture.pack(15, 15))
-                    .normal(normal, 0, 1, 0)
-                    .endVertex();
+            vertexConsumer.addVertex(matrix, x1, 0.0F, z1)
+                    .setColor(r, g, b, alpha)
+                    .setUv(0.0F, vEnd)
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(LightTexture.pack(15, 15))
+                    .setNormal(pose, 0, 1, 0)
+                    ;
 
-            vertexConsumer.vertex(matrix, x1, dist, z1)
-                    .color(r, g, b, alpha)
-                    .uv(0.0F, vStart)
-                    .overlayCoords(OverlayTexture.NO_OVERLAY)
-                    .uv2(LightTexture.pack(15, 15))
-                    .normal(normal, 0, 1, 0)
-                    .endVertex();
+            vertexConsumer.addVertex(matrix, x1, dist, z1)
+                    .setColor(r, g, b, alpha)
+                    .setUv(0.0F, vStart)
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(LightTexture.pack(15, 15))
+                    .setNormal(pose, 0, 1, 0)
+                    ;
 
-            vertexConsumer.vertex(matrix, x2, dist, z2)
-                    .color(r, g, b, alpha)
-                    .uv(1.0F, vStart)
-                    .overlayCoords(OverlayTexture.NO_OVERLAY)
-                    .uv2(LightTexture.pack(15, 15))
-                    .normal(normal, 0, 1, 0)
-                    .endVertex();
+            vertexConsumer.addVertex(matrix, x2, dist, z2)
+                    .setColor(r, g, b, alpha)
+                    .setUv(1.0F, vStart)
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(LightTexture.pack(15, 15))
+                    .setNormal(pose, 0, 1, 0)
+                    ;
 
-            vertexConsumer.vertex(matrix, x2, 0.0F, z2)
-                    .color(r, g, b, alpha)
-                    .uv(1.0F, vEnd)
-                    .overlayCoords(OverlayTexture.NO_OVERLAY)
-                    .uv2(LightTexture.pack(15, 15))
-                    .normal(normal, 0, 1, 0)
-                    .endVertex();
+            vertexConsumer.addVertex(matrix, x2, 0.0F, z2)
+                    .setColor(r, g, b, alpha)
+                    .setUv(1.0F, vEnd)
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(LightTexture.pack(15, 15))
+                    .setNormal(pose, 0, 1, 0)
+                    ;
         }
 
         poseStack.popPose();

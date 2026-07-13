@@ -14,7 +14,7 @@ public class ClientModConfigs {
 
         modContainer.registerExtensionPoint(
                 IConfigScreenFactory.class,
-                ReignOfNetherClientConfigs::createConfigScreen
+                ReignOfNetherClientConfigs.createConfigScreen()
         );
     }
 }

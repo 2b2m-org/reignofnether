@@ -25,6 +25,6 @@ public class BoggedClothingLayer<T extends Mob & RangedAttackMob, M extends Enti
     }
 
     public void render(PoseStack pPoseStack, MultiBufferSource pBuffer, int pPackedLight, T pLivingEntity, float pLimbSwing, float pLimbSwingAmount, float pPartialTicks, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
-        coloredCutoutModelCopyLayerRender(this.getParentModel(), this.layerModel, BOGGED_CLOTHES_LOCATION, pPoseStack, pBuffer, pPackedLight, pLivingEntity, pLimbSwing, pLimbSwingAmount, pAgeInTicks, pNetHeadYaw, pHeadPitch, pPartialTicks, 1.0F, 1.0F, 1.0F);
+        coloredCutoutModelCopyLayerRender(this.getParentModel(), this.layerModel, BOGGED_CLOTHES_LOCATION, pPoseStack, pBuffer, pPackedLight, pLivingEntity, pLimbSwing, pLimbSwingAmount, pAgeInTicks, pNetHeadYaw, pHeadPitch, pPartialTicks, -1);
     }
 }

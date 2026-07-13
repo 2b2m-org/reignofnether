@@ -217,7 +217,7 @@ if (songTicksLeft > 0) {
     // sounds which shouldn't follow the ClientLevelMixin rules of being changed to the location of what is selected
     // and is always audible while in orthoview mode
     public static List<SoundEvent> STATIC_SOUNDS = List.of(
-            SoundEvents.AMBIENT_CAVE.get(),
+            SoundEvents.AMBIENT_CAVE.value(),
             SoundRegistrar.ALLY.get(),
             SoundRegistrar.CHAT.get(),
             SoundRegistrar.ENEMY.get()
@@ -227,7 +227,7 @@ if (songTicksLeft > 0) {
 
     static {
         SOUND_MAP.put(SoundAction.USE_PORTAL, SoundEvents.ENDERMAN_TELEPORT);
-        SOUND_MAP.put(SoundAction.RANDOM_CAVE_AMBIENCE, SoundEvents.AMBIENT_CAVE.get());
+        SOUND_MAP.put(SoundAction.RANDOM_CAVE_AMBIENCE, SoundEvents.AMBIENT_CAVE.value());
         SOUND_MAP.put(SoundAction.ALLY, SoundRegistrar.ALLY.get());
         SOUND_MAP.put(SoundAction.CHAT, SoundRegistrar.CHAT.get());
         SOUND_MAP.put(SoundAction.ENEMY, SoundRegistrar.ENEMY.get());

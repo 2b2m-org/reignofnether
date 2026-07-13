@@ -17,7 +17,7 @@ import com.solegendary.reignofnether.unit.units.piglins.GhastUnit;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.Model;
-import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -77,7 +77,7 @@ public class FogOfWarClientEvents {
     // this is so we chunks that were explored while not in frustum have lighting updated correctly
     public static Set<ChunkPos> chunksToRefresh = new HashSet<>();
 
-    public static ObjectArrayList<LevelRenderer.RenderChunkInfo> renderChunksInFrustum = new ObjectArrayList<>();
+    public static ObjectArrayList<SectionRenderDispatcher.RenderSection> renderChunksInFrustum = new ObjectArrayList<>();
 
 
 
@@ -378,7 +378,7 @@ public class FogOfWarClientEvents {
             return;
 
         Set<ChunkPos> chunksInFrustum = renderChunksInFrustum.stream()
-                .map(rci -> MC.level.getChunk(rci.chunk.getOrigin()).getPos())
+                .map(renderSection -> new ChunkPos(renderSection.getOrigin()))
                 .collect(Collectors.toSet());
 
         if (!chunksInFrustum.contains(cpos)) {

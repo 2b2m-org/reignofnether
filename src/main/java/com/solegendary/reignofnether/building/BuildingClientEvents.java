@@ -734,7 +734,7 @@ public class BuildingClientEvents {
     public static void onMouseScroll(ScreenEvent.MouseScrolled.Post evt) {
         if (buildingToPlace != null) {
             if (buildingToPlace instanceof AbstractBridge bridge) {
-                bridgePlaceState += evt.getScrollDelta() > 0 ? 1 : -1;
+                bridgePlaceState += evt.getScrollDeltaY() > 0 ? 1 : -1;
                 if (bridgePlaceState < 0) {
                     bridgePlaceState = 3;
                 } else if (bridgePlaceState > 3) {
@@ -756,7 +756,7 @@ public class BuildingClientEvents {
                 blocksToDraw.replaceAll(buildingBlock -> buildingBlock.rotate(MC.level, rotationDelta));
             } else {
                 Rotation rotationDelta =
-                    evt.getScrollDelta() > 0 ? Rotation.CLOCKWISE_90 : Rotation.COUNTERCLOCKWISE_90;
+                    evt.getScrollDeltaY() > 0 ? Rotation.CLOCKWISE_90 : Rotation.COUNTERCLOCKWISE_90;
                 buildingRotation = buildingRotation.getRotated(rotationDelta);
                 blocksToDraw.replaceAll(buildingBlock -> buildingBlock.rotate(MC.level, rotationDelta));
             }

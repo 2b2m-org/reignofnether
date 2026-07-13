@@ -4,7 +4,7 @@ import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
 
@@ -52,11 +52,11 @@ public class RtsDebugClientEvents {
     }
 
     @SubscribeEvent
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Pre evt) {
+    public static void onRenderOverlay(RenderGuiEvent.Pre evt) {
         if (displayMode == DebugDisplayMode.NONE)
             return;
 
-        int x = evt.getWindow().getGuiScaledWidth() - (displayMode == DebugDisplayMode.NONE ? 85 : 95);
+        int x = MC.getWindow().getGuiScaledWidth() - (displayMode == DebugDisplayMode.NONE ? 85 : 95);
         int y = 25;
         int lineH = 10;
 

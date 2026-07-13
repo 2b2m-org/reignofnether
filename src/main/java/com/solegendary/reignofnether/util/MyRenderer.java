@@ -43,7 +43,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.registries.BuiltInRegistries;
-import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
 import java.util.List;
@@ -129,8 +128,8 @@ public class MyRenderer {
         matrixStack.pushPose();
         matrixStack.translate(-d0, -d1, -d2); // because we start at 0,0,0 relative to camera
 
-        Matrix4f matrix4f = matrixStack.last().pose();
-        Matrix3f matrix3f = matrixStack.last().normal();
+        PoseStack.Pose pose = matrixStack.last();
+        Matrix4f matrix4f = pose.pose();
         float minX = (float) aabb.minX;
         float minY = (float) aabb.minY;
         float minZ = (float) aabb.minZ;
@@ -150,74 +149,74 @@ public class MyRenderer {
         if (rotX > -180 && rotX <= -90) {
             // closest: minX, maxY, maxZ
             // furthest: maxX, minY, minZ
-            vertexConsumer.vertex(matrix4f, minX, minY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, maxY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, minX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
             if (!excludeMaxY) {
-                vertexConsumer.vertex(matrix4f, maxX, maxY, minZ).color(r, g, b, a).normal(matrix3f, -1.0F, 0.0F, 0.0F).endVertex();
-                vertexConsumer.vertex(matrix4f, minX, maxY, minZ).color(r, g, b, a).normal(matrix3f, -1.0F, 0.0F, 0.0F).endVertex();
+                vertexConsumer.addVertex(matrix4f, maxX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, -1.0F, 0.0F, 0.0F);
+                vertexConsumer.addVertex(matrix4f, minX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, -1.0F, 0.0F, 0.0F);
             }
-            vertexConsumer.vertex(matrix4f, minX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, minX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
             if (!excludeMaxY) {
-                vertexConsumer.vertex(matrix4f, maxX, maxY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
-                vertexConsumer.vertex(matrix4f, maxX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
+                vertexConsumer.addVertex(matrix4f, maxX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
+                vertexConsumer.addVertex(matrix4f, maxX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
             }
         } else if (rotX > 90 && rotX <= 180) {
             // closest: maxX, maxY, maxZ
             // furthest: minX, minY, minZ
-            vertexConsumer.vertex(matrix4f, maxX, minY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, maxY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, maxX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
             if (!excludeMaxY) {
-                vertexConsumer.vertex(matrix4f, maxX, maxY, minZ).color(r, g, b, a).normal(matrix3f, -1.0F, 0.0F, 0.0F).endVertex();
-                vertexConsumer.vertex(matrix4f, minX, maxY, minZ).color(r, g, b, a).normal(matrix3f, -1.0F, 0.0F, 0.0F).endVertex();
-                vertexConsumer.vertex(matrix4f, minX, maxY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
-                vertexConsumer.vertex(matrix4f, minX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
+                vertexConsumer.addVertex(matrix4f, maxX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, -1.0F, 0.0F, 0.0F);
+                vertexConsumer.addVertex(matrix4f, minX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, -1.0F, 0.0F, 0.0F);
+                vertexConsumer.addVertex(matrix4f, minX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
+                vertexConsumer.addVertex(matrix4f, minX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
             }
-            vertexConsumer.vertex(matrix4f, minX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, -1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, -1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, -1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, -1.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, minX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, -1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, -1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, -1.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, -1.0F);
         } else if (rotX > 0 && rotX <= 90) {
             // closest: maxX, maxY, minZ
             // furthest: minX, minY, maxZ
-            vertexConsumer.vertex(matrix4f, minX, minY, minZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, minZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, maxY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, minX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
             if (!excludeMaxY) {
-                vertexConsumer.vertex(matrix4f, minX, maxY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
-                vertexConsumer.vertex(matrix4f, minX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
+                vertexConsumer.addVertex(matrix4f, minX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
+                vertexConsumer.addVertex(matrix4f, minX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
             }
-            vertexConsumer.vertex(matrix4f, maxX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, -1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, -1.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, maxX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, -1.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, -1.0F);
             if (!excludeMaxY) {
-                vertexConsumer.vertex(matrix4f, minX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-                vertexConsumer.vertex(matrix4f, maxX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
+                vertexConsumer.addVertex(matrix4f, minX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+                vertexConsumer.addVertex(matrix4f, maxX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
             }
-            vertexConsumer.vertex(matrix4f, maxX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, maxX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
         } else if (rotX > -90 && rotX <= 0) {
             // closest: minX, maxY, minZ
             // furthest: maxX, minY, maxZ
-            vertexConsumer.vertex(matrix4f, minX, minY, minZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, minZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, maxY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, -1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, -1.0F, 0.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, minX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, -1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, -1.0F, 0.0F);
             if (!excludeMaxY) {
-                vertexConsumer.vertex(matrix4f, minX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-                vertexConsumer.vertex(matrix4f, maxX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-                vertexConsumer.vertex(matrix4f, maxX, maxY, minZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
-                vertexConsumer.vertex(matrix4f, maxX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
+                vertexConsumer.addVertex(matrix4f, minX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+                vertexConsumer.addVertex(matrix4f, maxX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 1.0F, 0.0F, 0.0F);
+                vertexConsumer.addVertex(matrix4f, maxX, maxY, minZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
+                vertexConsumer.addVertex(matrix4f, maxX, maxY, maxZ).setColor(r, g, b, a).setNormal(pose, 0.0F, 0.0F, 1.0F);
             }
         }
         matrixStack.popPose();
@@ -303,8 +302,8 @@ public class MyRenderer {
 
         matrixStack.pushPose();
         matrixStack.translate(-d0, -d1, -d2); // because we start at 0,0,0 relative to camera
-        Matrix4f matrix4f = matrixStack.last().pose();
-        Matrix3f matrix3f = matrixStack.last().normal();
+        PoseStack.Pose pose = matrixStack.last();
+        Matrix4f matrix4f = pose.pose();
 
         float minX = (float) aabb.minX;
         float minY = (float) aabb.minY;
@@ -314,7 +313,7 @@ public class MyRenderer {
         float maxZ = (float) aabb.maxZ;
 
         // Note that error: 'not filled all elements of vertex' means the vertex needs more elements,
-        // eg. ENTITY_TRANSLUCENT needs vertex(x,y,z).color(rgba).uv(0,0).overlayCoords(0,0).uv2(light).normal(x,y,z)
+        // eg. ENTITY_TRANSLUCENT needs vertex(x,y,z).setColor(rgba).setUv(0,0).setOverlay(0,0).setLight(light).setNormal(x,y,z)
         // you can trace this all the way back to the DefaultVertexFormat class where these vertex elements are defined
         // normal is the vector perpendicular to the plane, if not used all quads will always be flat facing
 
@@ -332,45 +331,45 @@ public class MyRenderer {
 
         // +y top face
         if (dir == null || dir == Direction.UP) {
-            vertexConsumer.vertex(matrix4f, minX, maxY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, maxY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, maxY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, maxY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 1.0F, 0.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, minX, maxY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, maxY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, maxY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, maxY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
         }
         // +x side face
         if (dir == null || dir == Direction.EAST) {
-            vertexConsumer.vertex(matrix4f, maxX, minY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, maxY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, maxY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 1.0F, 0.0F, 0.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, maxX, minY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, maxY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, maxY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 1.0F, 0.0F, 0.0F);
         }
         // +z side face
         if (dir == null || dir == Direction.SOUTH) {
-            vertexConsumer.vertex(matrix4f, maxX, minY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, maxY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, maxY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, maxX, minY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, maxY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+            vertexConsumer.addVertex(matrix4f, minX, maxY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
         }
         // -x side face
         if (dir == null || dir == Direction.WEST) {
-            vertexConsumer.vertex(matrix4f, minX, minY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, -1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, maxY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, -1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, maxY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, -1.0F, 0.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, -1.0F, 0.0F, 0.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, minX, minY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, -1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, maxY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, -1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, maxY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, -1.0F, 0.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, -1.0F, 0.0F, 0.0F);
         }
         // -z side face
         if (dir == null || dir == Direction.NORTH) {
-            vertexConsumer.vertex(matrix4f, minX, minY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 0.0F, -1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, maxY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 0.0F, -1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, maxY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 0.0F, -1.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, 0.0F, -1.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, minX, minY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, -1.0F);
+            vertexConsumer.addVertex(matrix4f, minX, maxY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, -1.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, maxY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, -1.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, -1.0F);
         }
         // -y bottom face
         if (dir == null || dir == Direction.DOWN) {
-            vertexConsumer.vertex(matrix4f, minX, minY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, -1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, minX, minY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, -1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, minZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, -1.0F, 0.0F).endVertex();
-            vertexConsumer.vertex(matrix4f, maxX, minY, maxZ).color(r, g, b, a).uv(0, 0).overlayCoords(0, 10).uv2(light).normal(matrix3f, 0.0F, -1.0F, 0.0F).endVertex();
+            vertexConsumer.addVertex(matrix4f, minX, minY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, -1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, minX, minY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, -1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, minZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, -1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix4f, maxX, minY, maxZ).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, -1.0F, 0.0F);
         }
         matrixStack.popPose();
     }
@@ -417,16 +416,16 @@ public class MyRenderer {
 
         matrixStack.pushPose();
         matrixStack.translate(-d0, -d1, -d2); // because we start at 0,0,0 relative to camera
-        Matrix4f matrix4f = matrixStack.last().pose();
-        Matrix3f matrix3f = matrixStack.last().normal();
+        PoseStack.Pose pose = matrixStack.last();
+        Matrix4f matrix4f = pose.pose();
 
         VertexConsumer vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.LINES);
 
         // draw two lines on inverse normals so they're visible from any angle
-        vertexConsumer.vertex(matrix4f, (float) startPos.x(), (float) startPos.y(), (float) startPos.z()).color(r, g, b, a).normal(matrix3f, 1.0f, 0, 0).endVertex();
-        vertexConsumer.vertex(matrix4f, (float) endPos.x(), (float) endPos.y(), (float) endPos.z()).color(r, g, b, a).normal(matrix3f, 1.0f, 0, 0).endVertex();
-        vertexConsumer.vertex(matrix4f, (float) startPos.x(), (float) startPos.y(), (float) startPos.z()).color(r, g, b, a).normal(matrix3f, 0, 0, 1.0f).endVertex();
-        vertexConsumer.vertex(matrix4f, (float) endPos.x(), (float) endPos.y(), (float) endPos.z()).color(r, g, b, a).normal(matrix3f, 0, 0, 1.0f).endVertex();
+        vertexConsumer.addVertex(matrix4f, (float) startPos.x(), (float) startPos.y(), (float) startPos.z()).setColor(r, g, b, a).setNormal(pose, 1.0f, 0, 0);
+        vertexConsumer.addVertex(matrix4f, (float) endPos.x(), (float) endPos.y(), (float) endPos.z()).setColor(r, g, b, a).setNormal(pose, 1.0f, 0, 0);
+        vertexConsumer.addVertex(matrix4f, (float) startPos.x(), (float) startPos.y(), (float) startPos.z()).setColor(r, g, b, a).setNormal(pose, 0, 0, 1.0f);
+        vertexConsumer.addVertex(matrix4f, (float) endPos.x(), (float) endPos.y(), (float) endPos.z()).setColor(r, g, b, a).setNormal(pose, 0, 0, 1.0f);
 
         matrixStack.popPose();
     }
@@ -574,7 +573,7 @@ public class MyRenderer {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(pX + (9 * scale), pY + (9 * scale), (float)(150));
             try {
-                guiGraphics.pose().mulPoseMatrix((new Matrix4f()).scaling(1.0F, -1.0F, 1.0F));
+                guiGraphics.pose().mulPose((new Matrix4f()).scaling(1.0F, -1.0F, 1.0F));
                 guiGraphics.pose().scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
                 boolean flag = !bakedmodel.usesBlockLight();
                 if (flag) {
@@ -604,10 +603,10 @@ public class MyRenderer {
         if (MC.level != null) {
             for (AbstractClientPlayer player : MC.level.players()) {
                 if (player.getName().getString().equals(playerName))
-                    return player.getSkinTextureLocation();
+                    return player.getSkin().texture();
             }
         }
-        return DefaultPlayerSkin.getDefaultSkin(MC.player.getUUID());
+        return DefaultPlayerSkin.get(MC.player.getUUID()).texture();
     }
 
     public static void drawScaledString(GuiGraphics guiGraphics, Font font, String text, int x, int y, int color, float scale) {
@@ -643,8 +642,8 @@ public class MyRenderer {
                 }
             }
         }
-        if (p != null && p.isSkinLoaded()) {
-            ResourceLocation skin = p.getSkinTextureLocation();
+        if (p != null) {
+            ResourceLocation skin = p.getSkin().texture();
             g.blit(skin, x, y, iconSize, iconSize, 8.0f, 8.0f, 8, 8, 64, 64);
             g.blit(skin, x, y, iconSize, iconSize, 40.0f, 8.0f, 8, 8, 64, 64);
         } else if (fallbackRl != null) {

@@ -2089,7 +2089,7 @@ if (OrthoviewClientEvents.isEnabled()) {
     }
 
     @SubscribeEvent
-    public static void onRenderOverLay(RenderGuiOverlayEvent.Pre evt) {
+    public static void onRenderOverLay(RenderGuiEvent.Pre evt) {
         if (MC.screen != null && MC.level != null && SandboxClientEvents.isSandboxPlayer() && showPreselectedBlockInfo) {
             int y = 5;
             for (ControlGroup controlGroup : controlGroups) {

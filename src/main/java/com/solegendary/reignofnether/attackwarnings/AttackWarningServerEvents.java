@@ -8,7 +8,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 public class AttackWarningServerEvents {
 
     @SubscribeEvent
-    public static void onLivingDamage(LivingDamageEvent evt)  {
+    public static void onLivingDamage(LivingDamageEvent.Post evt)  {
         if (evt.getEntity().level().isClientSide())
             return;
 

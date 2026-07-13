@@ -24,11 +24,9 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.client.ForgeHooksClient;
-import net.neoforged.neoforge.client.gui.TitleScreenModUpdateIndicator;
+import net.neoforged.neoforge.client.ClientHooks;
 import net.neoforged.neoforge.internal.BrandingControl;
 import org.lwjgl.opengl.GL11;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -50,10 +48,8 @@ public class TitleScreenMixin extends Screen {
     private static final ResourceLocation LILYPAD_TEXTURE =
             ResourceLocation.parse( "textures/gui/title/lilypad.png");
 
-    @Shadow @Final private PanoramaRenderer panorama;
-    @Shadow @Final private boolean fading;
+    @Shadow private boolean fading;
     @Shadow private long fadeInStart;
-    @Nullable @Shadow(remap = false) private TitleScreenModUpdateIndicator modUpdateNotification;
     private AbstractWidget lilypadButton;
     private AbstractWidget discordButton;
     private AbstractWidget mapsButton;
@@ -222,7 +218,13 @@ public class TitleScreenMixin extends Screen {
                 ? (float) (Util.getMillis() - this.fadeInStart) / 1000.0F
                 : 1.0F;
 
-        TitleClientEvents.getPanorama().render(pPartialTick, Mth.clamp(fadeProgress, 0.0F, 1.0F));
+        TitleClientEvents.getPanorama().render(
+                guiGraphics,
+                this.width,
+                this.height,
+                Mth.clamp(fadeProgress, 0.0F, 1.0F),
+                pPartialTick
+        );
         int logoX = this.width / 2 - 137;
 
         float alpha = this.fading ? Mth.clamp(fadeProgress - 1.0F, 0.0F, 1.0F) : 1.0F;
@@ -246,7 +248,7 @@ public class TitleScreenMixin extends Screen {
             guiGraphics.blit(MINECRAFT_EDITION, logoX + 44,  editionY, 0.0F, 0.0F, 186, 14, 186, 16);
 
             // Render main menu elements and splash text
-            ForgeHooksClient.renderMainMenu((TitleScreen) Minecraft.getInstance().screen,
+            ClientHooks.renderMainMenu((TitleScreen) Minecraft.getInstance().screen,
                     guiGraphics, this.font, this.width, this.height, alphaMask);
 
             if (TitleClientEvents.splash != null) {
@@ -283,11 +285,6 @@ public class TitleScreenMixin extends Screen {
 
             // Call the superclass render
             super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
-
-            // Render mod update notification
-            if (alpha >= 1.0F && this.modUpdateNotification != null) {
-                this.modUpdateNotification.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
-            }
 
             // Disable blending after rendering
             RenderSystem.disableBlend();

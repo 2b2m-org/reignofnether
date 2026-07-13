@@ -214,7 +214,7 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
             hasBanner = true;
             entity.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
         }
-        drawEntityOnScreen(guiGraphics.pose(), entity, drawX, drawY, sizeFinal);
+        drawEntityOnScreen(guiGraphics, entity, drawX, drawY, sizeFinal);
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0,0,2000);
         name = WordUtils.capitalize(name);
@@ -327,9 +327,7 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
     private void renderStatText(List<String> texts, LivingEntity entity, int x, int y, GuiGraphics guiGraphics) {
         // need to render like this instead of GuiComponent.drawCenteredString, so it's layered above the portrait entity
         Minecraft MC = Minecraft.getInstance();
-        MultiBufferSource.BufferSource multibuffersource$buffersource =
-                MultiBufferSource.immediate(Tesselator.getInstance()
-                        .getBuilder());
+        MultiBufferSource.BufferSource multibuffersource$buffersource = MC.renderBuffers().bufferSource();
 
         for (int i = 0; i < texts.size(); i++) {
             FormattedCharSequence pTooltips = FormattedCharSequence.forward(texts.get(i), Style.EMPTY);
@@ -646,15 +644,13 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
         return RectZone.getZoneByLW(x, y, statsWidth, statsHeight);
     }
 
-    private void drawEntityOnScreen(PoseStack poseStack, LivingEntity entity, int x, int y, int size) {
+    private void drawEntityOnScreen(GuiGraphics guiGraphics, LivingEntity entity, int x, int y, int size) {
         float f = (float) Math.atan(-lookX / 40F);
         float g = (float) Math.atan(-lookY / 40F);
-        PoseStack poseStackModel = RenderSystem.getModelViewStack();
-        poseStackModel.pushPose();
-        poseStackModel.translate(x, y, 1050.0D);
-        poseStackModel.scale(1.0F, 1.0F, -1.0F);
-        RenderSystem.applyModelViewMatrix();
+        PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
+        poseStack.translate(x, y, 1050.0D);
+        poseStack.scale(1.0F, 1.0F, -1.0F);
         poseStack.translate(0.0D, 0.0D, 10.0D);
         poseStack.scale((float) size, (float) size, (float) size);
         float h = entity.yBodyRot; // bodyYaw;
@@ -683,9 +679,9 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
         // spectator mode
         RenderSystem.runAsFancy(() -> {
             try {
-                MultiBufferSource.BufferSource immediate = Minecraft.getInstance().renderBuffers().bufferSource();
+                MultiBufferSource.BufferSource immediate = guiGraphics.bufferSource();
                 entityrenderdispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, poseStack, immediate, 15728880);
-                immediate.endBatch();
+                guiGraphics.flush();
             } catch (ReportedException e) {
                 //System.out.println("Caught reportedException: " + e);
             }
@@ -699,9 +695,7 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
             entity.yHeadRotO = k;
             entity.yHeadRot = l;
         }
-        poseStackModel.popPose();
         poseStack.popPose();
-        RenderSystem.applyModelViewMatrix();
         Lighting.setupFor3DItems();
     }
 }

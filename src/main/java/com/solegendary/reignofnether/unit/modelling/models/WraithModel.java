@@ -19,7 +19,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 
 public class WraithModel<T extends Entity> extends KeyframeHierarchicalModel<T> {
 	// This layer location should be baked with EntityRendererProvider.Context in the entity renderer and passed into this model's constructor
-	public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(ReignOfNether.MOD_ID, "wraith_layer"), "main");
+	public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wraith_layer"), "main");
 	private final ModelPart bodyrotation;
 	private final ModelPart body;
 	private final ModelPart head;
@@ -99,7 +99,7 @@ public class WraithModel<T extends Entity> extends KeyframeHierarchicalModel<T> 
 	}
 
 	@Override
-	public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
-		bodyrotation.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
+	public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int packedColor) {
+		bodyrotation.render(poseStack, vertexConsumer, packedLight, packedOverlay, packedColor);
 	}
 }

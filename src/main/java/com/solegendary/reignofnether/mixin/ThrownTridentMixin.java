@@ -50,13 +50,16 @@ public abstract class ThrownTridentMixin extends Projectile {
             if ($$1.getType() == EntityType.ENDERMAN) {
                 return;
             }
+            if (this.level() instanceof ServerLevel serverLevel) {
+                EnchantmentHelper.doPostAttackEffectsWithItemSource(
+                        serverLevel, $$1, $$5, this.tridentItem
+                );
+            }
             if ($$1 instanceof LivingEntity) {
                 LivingEntity $$7 = (LivingEntity)$$1;
                 if ($$4 instanceof LivingEntity) {
                     this.dealtDamage = true;
                     this.setDeltaMovement(this.getDeltaMovement().multiply(-0.01, -0.1, -0.01));
-                    EnchantmentHelper.doPostHurtEffects($$7, $$4);
-                    EnchantmentHelper.doPostDamageEffects((LivingEntity)$$4, $$7);
                 }
             }
         }

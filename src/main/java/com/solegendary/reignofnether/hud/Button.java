@@ -270,11 +270,11 @@ public class Button {
 
         if (isMouseOver(mouseX, mouseY) && MC.player != null) {
             if (leftClick && this.onLeftClick != null) {
-                MC.player.playSound(SoundEvents.UI_BUTTON_CLICK.get(), 0.2f, 1.0f);
+                MC.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.2f, 1.0f);
                 this.onLeftClick.run();
             }
             else if (!leftClick && this.onRightClick != null) {
-                MC.player.playSound(SoundEvents.UI_BUTTON_CLICK.get(), 0.2f, 1.0f);
+                MC.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.2f, 1.0f);
                 this.onRightClick.run();
             }
         }
@@ -287,7 +287,7 @@ public class Button {
 
         if (hotkey != null && hotkey.getKey() == key) {
             if (MC.player != null)
-                MC.player.playSound(SoundEvents.UI_BUTTON_CLICK.get(), 0.2f, 1.0f);
+                MC.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.2f, 1.0f);
             this.onLeftClick.run();
         }
     }

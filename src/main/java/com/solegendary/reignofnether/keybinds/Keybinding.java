@@ -7,7 +7,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.settings.IKeyConflictContext;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
-import net.neoforged.fml.DistExecutor;
 
 public class Keybinding {
     private KeyMapping mapping;        // null for raw GLFW bindings or on serverside
@@ -63,7 +62,7 @@ public class Keybinding {
         if (!mappingInitialised) {
             mappingInitialised = true;
             if (translationKey != null && ctx != null && category != null) {
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::initMapping);
+                initMapping();
             }
         }
         return mapping;

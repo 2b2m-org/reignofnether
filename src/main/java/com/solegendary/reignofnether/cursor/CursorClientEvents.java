@@ -41,7 +41,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.*;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderHighlightEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
@@ -324,7 +325,7 @@ public class CursorClientEvents {
 
     // draw box selection rectangle
     @SubscribeEvent
-    public static void renderOverlay(RenderGuiOverlayEvent.Post evt) {
+    public static void renderOverlay(RenderGuiEvent.Post evt) {
 
         if (leftClickDown && !Keybindings.altMod.isDown()) {
             evt.getGuiGraphics().fill( // x1,y1, x2,y2,
@@ -503,7 +504,8 @@ public class CursorClientEvents {
         // clip() returns the point of clip, not the clipped block giving off-by-one errors so move slightly to compensate
         HitResult hitResult = null;
         if (MC.level != null) {
-            hitResult = clip(MC.level, new ClipContext(vectorNear, vectorFar, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, null));
+            hitResult = clip(MC.level, new ClipContext(vectorNear, vectorFar, ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.ANY, CollisionContext.empty()));
         }
 
         if (hitResult != null)
@@ -604,5 +606,3 @@ public class CursorClientEvents {
         return bestBp;
     }
 }
-
-

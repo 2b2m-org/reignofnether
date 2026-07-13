@@ -9,6 +9,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FenceBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.level.pathfinder.PathfindingContext;
 import net.minecraft.world.level.pathfinder.NodeEvaluator;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import static net.minecraft.world.level.pathfinder.WalkNodeEvaluator.getBlockPathTypeStatic;
+import static net.minecraft.world.level.pathfinder.WalkNodeEvaluator.getPathTypeStatic;
 
 @Mixin(WalkNodeEvaluator.class)
 public abstract class WalkNodeEvaluatorMixin extends NodeEvaluator {
@@ -25,13 +26,15 @@ public abstract class WalkNodeEvaluatorMixin extends NodeEvaluator {
     }
 
     @Inject(
-            method = "getBlockPathType(Lnet/minecraft/world/level/BlockGetter;III)Lnet/minecraft/world/level/pathfinder/PathType;",
+            method = "getPathType(Lnet/minecraft/world/level/pathfinder/PathfindingContext;III)Lnet/minecraft/world/level/pathfinder/PathType;",
             at = @At("HEAD"),
             cancellable = true
     )
-    public void getBlockPathType(BlockGetter pLevel, int pX, int pY, int pZ, CallbackInfoReturnable<PathType> cir) {
+    public void getBlockPathType(PathfindingContext context, int pX, int pY, int pZ, CallbackInfoReturnable<PathType> cir) {
         if (!(this.mob instanceof Unit))
             return;
+
+        BlockGetter pLevel = context.level();
 
         BlockState blockStateBelow = pLevel.getBlockState(new BlockPos(pX, pY, pZ).below());
         Block blockBelow = blockStateBelow.getBlock();
@@ -46,7 +49,7 @@ public abstract class WalkNodeEvaluatorMixin extends NodeEvaluator {
         else if (BlockUtils.isLeafBlock(blockStateBelow))
             cir.setReturnValue(PathType.DAMAGE_FIRE);
         else {
-            PathType bpt = getBlockPathTypeStatic(pLevel, new BlockPos.MutableBlockPos(pX, pY, pZ));
+            PathType bpt = getPathTypeStatic(context, new BlockPos.MutableBlockPos(pX, pY, pZ));
             cir.setReturnValue(bpt);
         }
     }

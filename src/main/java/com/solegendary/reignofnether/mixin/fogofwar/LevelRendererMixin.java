@@ -14,13 +14,14 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.ParticleStatus;
 import net.minecraft.client.PrioritizeChunkUpdates;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.renderer.*;
-import net.minecraft.client.renderer.chunk.ChunkRenderDispatcher;
+import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.client.renderer.chunk.RenderRegionCache;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.resources.model.ModelBakery;
@@ -29,7 +30,6 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.level.BlockDestructionProgress;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.model.data.ModelData;
@@ -39,14 +39,12 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.*;
 
@@ -54,24 +52,18 @@ import static com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.*;
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin {
 
-    @Final @Shadow private ObjectArrayList<LevelRenderer.RenderChunkInfo> renderChunksInFrustum;
-    @Final @Shadow private final AtomicReference<LevelRenderer.RenderChunkStorage> renderChunkStorage = new AtomicReference<>();
+    @Final @Shadow private ObjectArrayList<SectionRenderDispatcher.RenderSection> visibleSections;
     @Final @Shadow private Minecraft minecraft;
     @Final @Shadow private RenderBuffers renderBuffers;
     @Final @Shadow private Long2ObjectMap<SortedSet<BlockDestructionProgress>> destructionProgress;
 
-    @Shadow private ChunkRenderDispatcher chunkRenderDispatcher;
+    @Shadow private SectionRenderDispatcher sectionRenderDispatcher;
+    @Shadow private ViewArea viewArea;
     @Shadow private ClientLevel level;
 
-    private static final ObjectArrayList<LevelRenderer.RenderChunkInfo> lastRenderChunksInFrustum = new ObjectArrayList<>();
+    private static final ObjectArrayList<SectionRenderDispatcher.RenderSection> lastVisibleSections = new ObjectArrayList<>();
 
     private List<Pair<BlockPos, Integer>> chunksToReDirty = new ArrayList<>();
-
-    private int distToChunk(ChunkPos chunkPos) {
-        if (minecraft.player == null)
-            return 0;
-        return minecraft.player.chunkPosition().getChessboardDistance(chunkPos);
-    }
 
     @Inject(
             method = "applyFrustum(Lnet/minecraft/client/renderer/culling/Frustum;)V",
@@ -88,45 +80,37 @@ public abstract class LevelRendererMixin {
             throw new IllegalStateException("applyFrustum called from wrong thread: " + Thread.currentThread().getName());
         } else {
             this.minecraft.getProfiler().push("apply_frustum");
-            this.renderChunksInFrustum.clear();
+            this.visibleSections.clear();
             Set<ChunkPos> chunksToRefreshDone = new HashSet<>();
 
-            int chunksDirtied = 0;
-
-            for (LevelRenderer.RenderChunkInfo chunkInfo : this.renderChunkStorage.get().renderChunks) {
-                if (pFrustum.isVisible(chunkInfo.chunk.getBoundingBox())) {
-                    this.renderChunksInFrustum.add(chunkInfo);
+            for (SectionRenderDispatcher.RenderSection renderSection : this.viewArea.sections) {
+                if (pFrustum.isVisible(renderSection.getBoundingBox())) {
+                    this.visibleSections.add(renderSection);
                 }
                 if (minecraft.level != null) {
-                    ChunkPos cpos = minecraft.level.getChunk(chunkInfo.chunk.getOrigin()).getPos();
+                    ChunkPos cpos = new ChunkPos(renderSection.getOrigin());
                     if (FogOfWarClientEvents.chunksToRefresh.contains(cpos)) {
-                        chunkInfo.chunk.setDirty(true);
+                        renderSection.setDirty(true);
                         chunksToRefreshDone.add(cpos);
-                        chunksDirtied += 1;
                     }
                 }
             }
-            // if (chunksDirtied > 0)
-            //    System.out.println("set renderChunks dirty: " + chunksDirtied);
 
             FogOfWarClientEvents.chunksToRefresh.removeAll(chunksToRefreshDone);
 
-            //if (chunksToRefreshDone.size() > 0)
-            //    System.out.println("refreshed " + chunksToRefreshDone.size() + " chunks, " + FogOfWarClientEvents.chunksToRefresh.size() + " remaining");
-
             FogOfWarClientEvents.renderChunksInFrustum.clear();
-            FogOfWarClientEvents.renderChunksInFrustum.addAll(renderChunksInFrustum);
+            FogOfWarClientEvents.renderChunksInFrustum.addAll(visibleSections);
 
             this.minecraft.getProfiler().pop();
         }
     }
 
     @Inject(
-            method = "compileChunks(Lnet/minecraft/client/Camera;)V",
+            method = "compileSections(Lnet/minecraft/client/Camera;)V",
             at = @At("HEAD"),
             cancellable = true
     )
-    private void compileChunks(Camera pCamera, CallbackInfo ci) {
+    private void compileSections(Camera pCamera, CallbackInfo ci) {
 
         // hiding leaves around cursor
         if (OrthoviewClientEvents.hideLeavesMethod == OrthoviewClientEvents.LeafHideMethod.AROUND_UNITS_AND_CURSOR &&
@@ -135,8 +119,8 @@ public abstract class LevelRendererMixin {
             if (UnitClientEvents.windowUpdateTicks <= 0) {
                 UnitClientEvents.windowUpdateTicks = UnitClientEvents.WINDOW_UPDATE_TICKS_MAX;
                 Vec3 centrePos = MiscUtil.getOrthoviewCentreWorldPos(Minecraft.getInstance());
-                for(LevelRenderer.RenderChunkInfo chunkInfo : this.renderChunksInFrustum) {
-                    BlockPos chunkCentreBp = chunkInfo.chunk.getOrigin().offset((int) 8.5d, (int) 8.5d, (int) 8.5d);
+                for (SectionRenderDispatcher.RenderSection renderSection : this.visibleSections) {
+                    BlockPos chunkCentreBp = renderSection.getOrigin().offset(8, 8, 8);
 
                     List<Pair<BlockPos, Integer>> newChunksToReDirty = new ArrayList<>();
 
@@ -144,8 +128,8 @@ public abstract class LevelRendererMixin {
                     synchronized (UnitClientEvents.windowPositions) {
                         for (Pair<BlockPos, Integer> pair : chunksToReDirty) {
                             int times = pair.getSecond();
-                            if (pair.getFirst().equals(chunkInfo.chunk.getOrigin())) {
-                                chunkInfo.chunk.setDirty(true);
+                            if (pair.getFirst().equals(renderSection.getOrigin())) {
+                                renderSection.setDirty(true);
                                 times -= 1;
                             }
                             if (times > 0)
@@ -156,8 +140,8 @@ public abstract class LevelRendererMixin {
 
                         UnitClientEvents.windowPositions.forEach(bp -> {
                             if (chunkCentreBp.distSqr(bp) < 625) {
-                                chunkInfo.chunk.setDirty(true);
-                                chunksToReDirty.add(new Pair<>(chunkInfo.chunk.getOrigin(), 10));
+                                renderSection.setDirty(true);
+                                chunksToReDirty.add(new Pair<>(renderSection.getOrigin().immutable(), 10));
                             }
                         });
                     }
@@ -172,16 +156,16 @@ public abstract class LevelRendererMixin {
 
 
         // determine which renderChunks are new - enforce frozenChunks on those
-        ObjectArrayList<LevelRenderer.RenderChunkInfo> newRenderChunksInFrustum = new ObjectArrayList<>();
-        newRenderChunksInFrustum.addAll(renderChunksInFrustum);
-        newRenderChunksInFrustum.removeAll(lastRenderChunksInFrustum);
+        ObjectArrayList<SectionRenderDispatcher.RenderSection> newVisibleSections = new ObjectArrayList<>();
+        newVisibleSections.addAll(visibleSections);
+        newVisibleSections.removeAll(lastVisibleSections);
 
         // load saved blocks into unexplored frozen chunks (don't repeat this for overlapping chunks)
         ArrayList<BlockPos> loadedFcOrigins = new ArrayList<>();
         for (FrozenChunk frozenChunk : frozenChunks) {
             if (frozenChunk.hasFakeBlocks) continue;
-            for (LevelRenderer.RenderChunkInfo newRenderChunk : newRenderChunksInFrustum) {
-                if (newRenderChunk.chunk.getOrigin().equals(frozenChunk.origin) &&
+            for (SectionRenderDispatcher.RenderSection newRenderSection : newVisibleSections) {
+                if (newRenderSection.getOrigin().equals(frozenChunk.origin) &&
                     !isInBrightChunk(frozenChunk.origin) &&
                     !loadedFcOrigins.contains(frozenChunk.origin)) {
                     if (!frozenChunk.unsaved) {
@@ -194,8 +178,8 @@ public abstract class LevelRendererMixin {
         // rerun for any faked chunks, only run them if they were not already loaded
         for (FrozenChunk frozenChunk : frozenChunks) {
             if (!frozenChunk.hasFakeBlocks) continue;
-            for (LevelRenderer.RenderChunkInfo newRenderChunk : newRenderChunksInFrustum) {
-                if (newRenderChunk.chunk.getOrigin().equals(frozenChunk.origin) &&
+            for (SectionRenderDispatcher.RenderSection newRenderSection : newVisibleSections) {
+                if (newRenderSection.getOrigin().equals(frozenChunk.origin) &&
                     !isInBrightChunk(frozenChunk.origin) &&
                     !loadedFcOrigins.contains(frozenChunk.origin)) {
                     if (!frozenChunk.unsaved) {
@@ -210,13 +194,13 @@ public abstract class LevelRendererMixin {
         LevelLightEngine levellightengine = this.level.getLightEngine();
         RenderRegionCache renderregioncache = new RenderRegionCache();
         BlockPos blockpos = pCamera.getBlockPosition();
-        List<ChunkRenderDispatcher.RenderChunk> list = Lists.newArrayList();
+        List<SectionRenderDispatcher.RenderSection> sectionsToCompile = Lists.newArrayList();
         Set<ChunkPos> rerenderChunksToRemove = ConcurrentHashMap.newKeySet();
         Set<ChunkPos> enemyOccupiedChunks = FogOfWarClientEvents.getEnemyOccupiedChunks();
         outerLoop:
-        for(LevelRenderer.RenderChunkInfo chunkInfo : this.renderChunksInFrustum) {
+        for (SectionRenderDispatcher.RenderSection renderSection : this.visibleSections) {
 
-            BlockPos originPos = chunkInfo.chunk.getOrigin();
+            BlockPos originPos = renderSection.getOrigin();
             ChunkPos chunkPos = new ChunkPos(originPos);
 
             if (rerenderChunks.contains(chunkPos)) {
@@ -232,96 +216,104 @@ public abstract class LevelRendererMixin {
                 if (OrthoviewClientEvents.isEnabled() || enemyOccupiedChunks.contains(chunkPos))
                     semiFrozenChunks.add(originPos);
             }
-            ChunkRenderDispatcher.RenderChunk renderChunk = chunkInfo.chunk;
-            SectionPos sectionpos = SectionPos.of(renderChunk.getOrigin());
-            if (renderChunk.isDirty() && levellightengine.lightOnInSection(sectionpos)) {
+            SectionPos sectionpos = SectionPos.of(renderSection.getOrigin());
+            if (renderSection.isDirty() && levellightengine.lightOnInSection(sectionpos)) {
                 boolean flag = false;
-                if (this.minecraft.options.prioritizeChunkUpdates().get() != PrioritizeChunkUpdates.NEARBY) {
-                    if (this.minecraft.options.prioritizeChunkUpdates().get() == PrioritizeChunkUpdates.PLAYER_AFFECTED) {
-                        flag = renderChunk.isDirtyFromPlayer();
-                    }
-                } else {
-                    BlockPos blockpos1 = renderChunk.getOrigin().offset(8, 8, 8);
-                    flag = !net.neoforged.neoforge.common.ForgeConfig.CLIENT.alwaysSetupTerrainOffThread.get() && (blockpos1.distSqr(blockpos) < 768.0D || renderChunk.isDirtyFromPlayer());
+                if (this.minecraft.options.prioritizeChunkUpdates().get() == PrioritizeChunkUpdates.NEARBY) {
+                    BlockPos blockpos1 = renderSection.getOrigin().offset(8, 8, 8);
+                    flag = blockpos1.distSqr(blockpos) < 768.0D || renderSection.isDirtyFromPlayer();
+                } else if (this.minecraft.options.prioritizeChunkUpdates().get() == PrioritizeChunkUpdates.PLAYER_AFFECTED) {
+                    flag = renderSection.isDirtyFromPlayer();
                 }
 
                 if (flag) {
                     this.minecraft.getProfiler().push("build_near_sync");
-                    this.chunkRenderDispatcher.rebuildChunkSync(renderChunk, renderregioncache);
-                    renderChunk.setNotDirty();
+                    this.sectionRenderDispatcher.rebuildSectionSync(renderSection, renderregioncache);
+                    renderSection.setNotDirty();
                     this.minecraft.getProfiler().pop();
                 } else {
-                    list.add(renderChunk);
+                    sectionsToCompile.add(renderSection);
                 }
             }
         }
         rerenderChunks.removeAll(rerenderChunksToRemove);
 
         this.minecraft.getProfiler().popPush("upload");
-        this.chunkRenderDispatcher.uploadAllPendingUploads();
+        this.sectionRenderDispatcher.uploadAllPendingUploads();
         this.minecraft.getProfiler().popPush("schedule_async_compile");
 
-        for(ChunkRenderDispatcher.RenderChunk renderChunk1 : list) {
-            renderChunk1.rebuildChunkAsync(this.chunkRenderDispatcher, renderregioncache);
-            renderChunk1.setNotDirty();
+        for (SectionRenderDispatcher.RenderSection renderSection : sectionsToCompile) {
+            renderSection.rebuildSectionAsync(this.sectionRenderDispatcher, renderregioncache);
+            renderSection.setNotDirty();
         }
         this.minecraft.getProfiler().pop();
 
-        lastRenderChunksInFrustum.clear();
-        lastRenderChunksInFrustum.addAll(renderChunksInFrustum);
+        lastVisibleSections.clear();
+        lastVisibleSections.addAll(visibleSections);
     }
 
-    @Shadow @Final private final AtomicBoolean needsFrustumUpdate = new AtomicBoolean(false);
-
     // always recheck chunks being in frustum - without this normally only checks when the camera moves
-    @Inject(
+    @Redirect(
             method = "setupRender(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/culling/Frustum;ZZ)V",
-            at = @At("HEAD")
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/SectionOcclusionGraph;consumeFrustumUpdate()Z"
+            )
     )
-    private void setupRender(Camera pCamera, Frustum pFrustum, boolean pHasCapturedFrustum, boolean pIsSpectator, CallbackInfo ci) {
-        if (!isEnabled())
-            return;
-
-        if (!OrthoviewClientEvents.isEnabled())
-            return;
-
-        needsFrustumUpdate.set(true);
+    private boolean reignofnether$alwaysRefreshOrthoviewFrustum(SectionOcclusionGraph graph) {
+        return graph.consumeFrustumUpdate() || isEnabled() && OrthoviewClientEvents.isEnabled();
     }
 
     // rerun blockDestroyProgress overlays but with range extended to between 32-256 blocks
     @Inject(
             method = "renderLevel",
-            at = @At("TAIL")
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/RenderBuffers;crumblingBufferSource()Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;",
+                    ordinal = 2
+            )
     )
-    private void renderLevel(PoseStack pPoseStack, float pPartialTick, long pFinishNanoTime,
-                             boolean pRenderBlockOutline, Camera pCamera, GameRenderer pGameRenderer,
-                             LightTexture pLightTexture, Matrix4f pProjectionMatrix, CallbackInfo ci) {
+    private void renderDistantBlockBreaking(
+            DeltaTracker deltaTracker,
+            boolean renderBlockOutline,
+            Camera camera,
+            GameRenderer gameRenderer,
+            LightTexture lightTexture,
+            Matrix4f frustumMatrix,
+            Matrix4f projectionMatrix,
+            CallbackInfo ci
+    ) {
+        PoseStack poseStack = new PoseStack();
+        Vec3 cameraPosition = camera.getPosition();
+        double cameraX = cameraPosition.x();
+        double cameraY = cameraPosition.y();
+        double cameraZ = cameraPosition.z();
 
-        Vec3 vec3 = pCamera.getPosition();
-        double d0 = vec3.x();
-        double d1 = vec3.y();
-        double d2 = vec3.z();
-
-        ObjectIterator var42 = this.destructionProgress.long2ObjectEntrySet().iterator();
-
-        while (var42.hasNext()) {
-            Long2ObjectMap.Entry<SortedSet<BlockDestructionProgress>> entry = (Long2ObjectMap.Entry) var42.next();
-            BlockPos blockpos2 = BlockPos.of(entry.getLongKey());
-            double d3 = (double) blockpos2.getX() - d0;
-            double d4 = (double) blockpos2.getY() - d1;
-            double d5 = (double) blockpos2.getZ() - d2;
-            double distSqr = d3 * d3 + d4 * d4 + d5 * d5;
-            if ((distSqr > 1024.0 && distSqr < 65536)) {
-                SortedSet<BlockDestructionProgress> sortedset1 = (SortedSet) entry.getValue();
-                if (sortedset1 != null && !sortedset1.isEmpty()) {
-                    int k1 = (sortedset1.last()).getProgress();
-                    pPoseStack.pushPose();
-                    pPoseStack.translate((double) blockpos2.getX() - d0, (double) blockpos2.getY() - d1, (double) blockpos2.getZ() - d2);
-                    PoseStack.Pose posestack$pose = pPoseStack.last();
-                    VertexConsumer vertexconsumer1 = new SheetedDecalTextureGenerator(this.renderBuffers.crumblingBufferSource().getBuffer((RenderType) ModelBakery.DESTROY_TYPES.get(k1)), posestack$pose.pose(), posestack$pose.normal(), 1);
-                    ModelData modelData = this.level.getModelDataManager().getAt(blockpos2);
-                    this.minecraft.getBlockRenderer().renderBreakingTexture(this.level.getBlockState(blockpos2), blockpos2, this.level, pPoseStack, vertexconsumer1, modelData == null ? ModelData.EMPTY : modelData);
-                    pPoseStack.popPose();
+        ObjectIterator<Long2ObjectMap.Entry<SortedSet<BlockDestructionProgress>>> entries =
+                this.destructionProgress.long2ObjectEntrySet().iterator();
+        while (entries.hasNext()) {
+            Long2ObjectMap.Entry<SortedSet<BlockDestructionProgress>> entry = entries.next();
+            BlockPos pos = BlockPos.of(entry.getLongKey());
+            double x = pos.getX() - cameraX;
+            double y = pos.getY() - cameraY;
+            double z = pos.getZ() - cameraZ;
+            double distanceSquared = x * x + y * y + z * z;
+            if (distanceSquared > 1024.0 && distanceSquared < 65536.0) {
+                SortedSet<BlockDestructionProgress> progress = entry.getValue();
+                if (progress != null && !progress.isEmpty()) {
+                    int stage = progress.last().getProgress();
+                    poseStack.pushPose();
+                    poseStack.translate(x, y, z);
+                    VertexConsumer vertexConsumer = new SheetedDecalTextureGenerator(
+                            this.renderBuffers.crumblingBufferSource().getBuffer(ModelBakery.DESTROY_TYPES.get(stage)),
+                            poseStack.last(),
+                            1.0F
+                    );
+                    ModelData modelData = this.level.getModelData(pos);
+                    this.minecraft.getBlockRenderer().renderBreakingTexture(
+                            this.level.getBlockState(pos), pos, this.level, poseStack, vertexConsumer, modelData
+                    );
+                    poseStack.popPose();
                 }
             }
         }
@@ -329,8 +321,6 @@ public abstract class LevelRendererMixin {
 
     // increase render distance for particles
     @Shadow private ParticleStatus calculateParticleLevel(boolean pDecreased) { return null; }
-
-    @Shadow @Nullable private PostChain entityEffect;
 
     @Inject(
             method = "addParticleInternal(Lnet/minecraft/core/particles/ParticleOptions;ZZDDDDDD)Lnet/minecraft/client/particle/Particle;",

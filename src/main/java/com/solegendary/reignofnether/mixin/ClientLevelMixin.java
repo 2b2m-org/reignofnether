@@ -52,20 +52,20 @@ public class ClientLevelMixin {
             cancellable = true
     )
     public void playSeededSound(Player pPlayer, double pX, double pY, double pZ, Holder<SoundEvent> pSound, SoundSource pSource, float pVolume, float pPitch, long pSeed, CallbackInfo ci) {
-        if (!OrthoviewClientEvents.isEnabled() || SoundClientEvents.STATIC_SOUNDS.contains(pSound.get()))
+        if (!OrthoviewClientEvents.isEnabled() || SoundClientEvents.STATIC_SOUNDS.contains(pSound.value()))
             return;
 
         ci.cancel();
-        if (pSound.get().equals(SoundEvents.WARDEN_HEARTBEAT))
+        if (pSound.value().equals(SoundEvents.WARDEN_HEARTBEAT))
             return;
 
         float volumeMult = 0.5f;
-        if (isWardenSound(pSound.get()))
+        if (isWardenSound(pSound.value()))
             volumeMult = 0.2f;
-        else if (isGhastHurt(pSound.get()))
+        else if (isGhastHurt(pSound.value()))
             volumeMult = 0.1f;
 
-        this.playSoundActual(pX, pY, pZ, pSound.get(), pSource, pVolume * volumeMult, pPitch, false, pSeed);
+        this.playSoundActual(pX, pY, pZ, pSound.value(), pSource, pVolume * volumeMult, pPitch, false, pSeed);
     }
 
     // plays sounds for orthoview players as though they were on the ground near their selected units/buildings

@@ -50,6 +50,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -73,6 +74,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import net.neoforged.neoforge.event.entity.*;
 import net.neoforged.neoforge.event.entity.living.*;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -923,6 +925,49 @@ saveTicks += 1;
             }
         }
         return entities;
+    }
+
+    @SubscribeEvent
+    public static void onUnitIncomingDamage(LivingIncomingDamageEvent evt) {
+        DamageSource source = evt.getSource();
+        if (!(source.getEntity() instanceof AttackerUnit attackerUnit)
+                || !(source.is(DamageTypeTags.IS_PROJECTILE)
+                || (!source.is(DamageTypeTags.WITCH_RESISTANT_TO)
+                && !source.is(DamageTypeTags.BYPASSES_SHIELD)
+                && !source.is(DamageTypeTags.BYPASSES_ARMOR)
+                && !source.is(DamageTypeTags.BYPASSES_RESISTANCE)
+                && source.is(DamageTypes.MOB_ATTACK)))) {
+            return;
+        }
+
+        float damage = attackerUnit.getUnitAttackDamage();
+        boolean isMelee = source.is(DamageTypes.MOB_ATTACK)
+                && !source.is(DamageTypeTags.IS_PROJECTILE);
+        if (isMelee && !(source.getEntity() instanceof WorkerUnit)) {
+            damage += AttackerUnit.getWeaponDamageModifier(attackerUnit);
+        }
+
+        if (ResourceSources.isHuntableAnimal(evt.getEntity())) {
+            if (source.getEntity() instanceof MilitiaUnit) {
+                damage = 1.0F;
+            } else if (source.getEntity() instanceof VillagerUnit villager
+                    && villager.getUnitProfession() == VillagerUnitProfession.HUNTER) {
+                damage = villager.isVeteran() ? 2.0F : 1.5F;
+            } else if (!(source.getEntity() instanceof WorkerUnit)) {
+                damage *= 0.5F;
+            }
+        }
+
+        if (evt.getEntity() instanceof Unit unit) {
+            damage *= 1.0F - unit.getUnitPhysicalArmorPercentage();
+            if (source.is(DamageTypeTags.IS_PROJECTILE)) {
+                damage *= 1.0F - unit.getUnitRangedArmorPercentage();
+            }
+            damage *= 1.0F - unit.getUnitResistPercentage();
+        }
+
+        evt.setAmount(damage);
+        evt.addReductionModifier(DamageContainer.Reduction.ARMOR, (container, reduction) -> 0.0F);
     }
 
     @SubscribeEvent

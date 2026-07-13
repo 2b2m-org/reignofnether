@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.common.extensions.IForgeBlockEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -40,7 +39,7 @@ public class FrustumMixin {
     )
     public void isVisible(AABB aabb, CallbackInfoReturnable<Boolean> cir) {
         // aabb is infinite only for some block entities: structure, beacon, end portal
-        boolean infAABB = aabb.equals(IForgeBlockEntity.INFINITE_EXTENT_AABB);
+        boolean infAABB = aabb.equals(AABB.INFINITE);
 
         Player player = Minecraft.getInstance().player;
         float zoom = Math.max(30, OrthoviewClientEvents.getZoom()) * 2;

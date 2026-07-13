@@ -56,7 +56,7 @@ public class HealthBarClientEvents {
             return;
 
         Camera camera = MC.gameRenderer.getMainCamera();
-        renderBarsInWorld(evt.getPartialTick(), evt.getPoseStack(), camera);
+        renderBarsInWorld(evt.getPartialTick().getGameTimeDeltaPartialTick(false), evt.getPoseStack(), camera);
     }
     @SubscribeEvent
     public static void playerTick(PlayerTickEvent.Post evt) {
@@ -69,12 +69,12 @@ public class HealthBarClientEvents {
         return entity instanceof LivingEntity && !(entity instanceof ArmorStand) &&
                    (!entity.isInvisibleTo(client.player) || entity.isCurrentlyGlowing() || entity.isOnFire() ||
                    entity instanceof Creeper && ((Creeper) entity).isPowered() ||
-                   hasAnyEquippedItem(entity)) &&
+                   hasAnyEquippedItem((LivingEntity) entity)) &&
                  entity != client.player &&
                 !entity.isSpectator();
     }
 
-    private static boolean hasAnyEquippedItem(Entity entity) {
+    private static boolean hasAnyEquippedItem(LivingEntity entity) {
         for (var stack : entity.getAllSlots())
             if (!stack.isEmpty())
                 return true;
@@ -258,19 +258,17 @@ public class HealthBarClientEvents {
 
         float zOffsetAmount = renderMode == RenderMode.IN_WORLD_FIRST_PERSON || renderMode == RenderMode.IN_WORLD_ORTHOVIEW ? -0.1F : 0.1F;
 
-        Tesselator tessellator = Tesselator.getInstance();
-        BufferBuilder buffer = tessellator.getBuilder();
-        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
 
-        buffer.vertex(matrix4f, (float) (-half + x), (float) y, zOffset * zOffsetAmount)
-                .uv(u * c, v * c).endVertex();
-        buffer.vertex(matrix4f, (float) (-half + x), (float) (h + y), zOffset * zOffsetAmount)
-                .uv(u * c, (v + vh) * c).endVertex();
-        buffer.vertex(matrix4f, (float) (-half + size + x), (float) (h + y), zOffset * zOffsetAmount)
-                .uv((u + uw) * c, (v + vh) * c).endVertex();
-        buffer.vertex(matrix4f, (float) (-half + size + x), (float) y, zOffset * zOffsetAmount)
-                .uv(((u + uw) * c), v * c).endVertex();
-        tessellator.end();
+        buffer.addVertex(matrix4f, (float) (-half + x), (float) y, zOffset * zOffsetAmount)
+                .setUv(u * c, v * c);
+        buffer.addVertex(matrix4f, (float) (-half + x), (float) (h + y), zOffset * zOffsetAmount)
+                .setUv(u * c, (v + vh) * c);
+        buffer.addVertex(matrix4f, (float) (-half + size + x), (float) (h + y), zOffset * zOffsetAmount)
+                .setUv((u + uw) * c, (v + vh) * c);
+        buffer.addVertex(matrix4f, (float) (-half + size + x), (float) y, zOffset * zOffsetAmount)
+                .setUv(((u + uw) * c), v * c);
+        BufferUploader.drawWithShader(buffer.buildOrThrow());
 
         // reset color
         RenderSystem.setShaderColor(1,1,1,1);

@@ -118,23 +118,23 @@ public class NetherBlocks {
 
     private static Block getRandomPlantForBiome(Level level, BlockPos overworldBp) {
         int randInt = random.nextInt(100);
-        Biome biome = level.getBiome(overworldBp).get();
+        Biome biome = level.getBiome(overworldBp).value();
 
         if (biome.getBaseTemperature() >= 2.0f &&
             level.getBlockState(overworldBp.below()).getBlock() == Blocks.SAND) {
             return Blocks.DEAD_BUSH;
         } else if (biome.getBaseTemperature() >= 1.0f) {
-            return Blocks.GRASS;
+            return Blocks.SHORT_GRASS;
         }  else if (biome.getBaseTemperature() >= 0) {
             if (randInt < 10)
                 return FLOWERS.get(random.nextInt(FLOWERS.size()));
             else
-                return Blocks.GRASS;
+                return Blocks.SHORT_GRASS;
         } else {
             if (randInt < 20)
                 return Blocks.FERN;
             else
-                return Blocks.GRASS;
+                return Blocks.SHORT_GRASS;
         }
     }
 
@@ -349,7 +349,7 @@ public class NetherBlocks {
             ));
         PLANT_MAPPINGS.put(Blocks.CRIMSON_ROOTS,
             List.of(
-                Blocks.GRASS,
+                Blocks.SHORT_GRASS,
                 Blocks.TALL_GRASS
             ));
         PLANT_MAPPINGS.put(Blocks.WEEPING_VINES_PLANT,

@@ -42,7 +42,9 @@ public class CustomBuildingMenu {
                 () -> building.cycleIconAndPortrait(true),
                 List.of(fcs(I18n.get("sandbox.reignofnether.custom_buildings.change_icon.tooltip1")))
         );
-        portraitRendererBuilding.drawBlockOnScreen(x + 2, y - 22, building.portraitBlock, 4.0f);
+        portraitRendererBuilding.drawBlockOnScreen(
+                evt.getGuiGraphics(), x + 2, y - 22, building.portraitBlock, 4.0f
+        );
         evt.getGuiGraphics().drawString(MC.font, fcs(building.name, true), x + 52, y, 0xFFFFFF);
         renderButton(iconButton, x - 8, y - 8, evt);
         return iconButton;

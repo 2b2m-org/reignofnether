@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.mixin;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.FastColor;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.block.entity.BeaconBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -35,20 +36,20 @@ public class BeaconBlockEntityMixin extends BlockEntity {
 
         if (beacon != null && beacon.getUpgradeLevel() > 0 && worldPosition.equals(beacon.beaconPos)) {
             if (beacon.isBeaconActive()) {
-                float[] colour;
+                int colour;
 
                 if (beacon.getAuraEffect() == MobEffects.LUCK)
-                    colour = new float[] { 110/255f, 255/255f, 129/255f }; // pale green
+                    colour = FastColor.ARGB32.color(110, 255, 129); // pale green
                 else if (beacon.getAuraEffect() == MobEffects.DIG_SPEED)
-                    colour = new float[] { 255/255f, 232/255f, 102/255f }; // pale yellow
+                    colour = FastColor.ARGB32.color(255, 232, 102); // pale yellow
                 else if (beacon.getAuraEffect() == MobEffects.REGENERATION)
-                    colour = new float[] { 240/255f, 91/255f, 153/255f }; // pink
+                    colour = FastColor.ARGB32.color(240, 91, 153); // pink
                 else if (beacon.getAuraEffect() == MobEffects.DAMAGE_BOOST)
-                    colour = new float[] { 245/255f, 170/255f, 95/255f }; // bronze
+                    colour = FastColor.ARGB32.color(245, 170, 95); // bronze
                 else if (beacon.getAuraEffect() == MobEffects.DAMAGE_RESISTANCE)
-                    colour = new float[] { 180/255f, 180/255f, 180/255f }; // silver
+                    colour = FastColor.ARGB32.color(180, 180, 180); // silver
                 else
-                    colour = new float[] { 1.0f, 1.0f, 1.0f }; // white
+                    colour = -1; // white
 
                 BeaconBlockEntity.BeaconBeamSection beam = new BeaconBlockEntity.BeaconBeamSection(colour);
                 cir.setReturnValue(List.of(beam));

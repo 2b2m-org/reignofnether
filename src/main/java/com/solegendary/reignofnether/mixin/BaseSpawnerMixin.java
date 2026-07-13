@@ -17,8 +17,8 @@ import net.minecraft.world.level.SpawnData;
 import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.event.ForgeEventFactory;
-import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
+import net.neoforged.neoforge.event.EventHooks;
+import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -139,9 +139,9 @@ public class BaseSpawnerMixin {
                         d1 = j >= 2 ? listtag.getDouble(1) : (double) (pPos.getY() + randomsource.nextInt(3) - 1);
                         d2 = j >= 3 ? listtag.getDouble(2) : (double) pPos.getZ() + (randomsource.nextDouble() - randomsource.nextDouble()) * (double) SPAWN_RANGE + 0.5;
                         collisionRetries += 1;
-                    } while (!pServerLevel.noCollision(optional.get().getAABB(d0, d1, d2)) && collisionRetries < 5);
+                    } while (!pServerLevel.noCollision(optional.get().getSpawnAABB(d0, d1, d2)) && collisionRetries < 5);
 
-                    if (pServerLevel.noCollision(optional.get().getAABB(d0, d1, d2))) {
+                    if (pServerLevel.noCollision(optional.get().getSpawnAABB(d0, d1, d2))) {
                         label105:
                         {
                             BlockPos blockpos = BlockPos.containing(d0, d1, d2);
@@ -196,13 +196,20 @@ public class BaseSpawnerMixin {
                     if (entity instanceof Mob mob) {
                         // if the mob is classed as a monster, this will check for light levels
                         if (entity instanceof Unit unit && unit.getSunlightEffect() == Unit.SunlightEffect.FIRE) {
-                            if (!ForgeEventFactory.checkSpawnPositionSpawner(mob, pServerLevel, MobSpawnType.SPAWNER, spawndata, (BaseSpawner)(Object)this)) {
+                            if (!EventHooks.checkSpawnPositionSpawner(mob, pServerLevel, MobSpawnType.SPAWNER, spawndata, (BaseSpawner)(Object)this)) {
                                 continue;
                             }
                         }
-                        MobSpawnEvent.FinalizeSpawn event = ForgeEventFactory.onFinalizeSpawnSpawner(mob, pServerLevel, pServerLevel.getCurrentDifficultyAt(entity.blockPosition()), (SpawnGroupData) null, compoundtag, (BaseSpawner)(Object)this);
-                        if (event != null && !event.isSpawnCancelled()) {
-                            ((Mob) entity).finalizeSpawn(pServerLevel, event.getDifficulty(), event.getSpawnType(), event.getSpawnData(), event.getSpawnTag());
+                        FinalizeSpawnEvent event = EventHooks.finalizeMobSpawnSpawner(
+                                mob,
+                                pServerLevel,
+                                pServerLevel.getCurrentDifficultyAt(entity.blockPosition()),
+                                MobSpawnType.SPAWNER,
+                                null,
+                                (BaseSpawner)(Object)this,
+                                true
+                        );
+                        if (!event.isCanceled()) {
                             if (entity instanceof Unit unit)
                                 unit.setAnchor(entity.getOnPos());
                         }

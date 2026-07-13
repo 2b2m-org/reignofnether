@@ -1014,7 +1014,8 @@ ticksToNextVisCheck -= 1;
             // render items in front of face for eating units
             for (LivingEntity entity : getAllUnits()) {
                 if (entity instanceof Unit unit && unit.isEatingFood()) {
-                    MyRenderer.renderItemInFrontOfEntityFace(evt.getPoseStack(), entity, evt.getPartialTick(), new ItemStack(unit.getFoodBeingEaten()));
+                    MyRenderer.renderItemInFrontOfEntityFace(evt.getPoseStack(), entity,
+                            evt.getPartialTick().getGameTimeDeltaPartialTick(false), new ItemStack(unit.getFoodBeingEaten()));
                 }
             }
         }

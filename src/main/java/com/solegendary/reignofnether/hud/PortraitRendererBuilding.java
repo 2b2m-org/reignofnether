@@ -82,7 +82,7 @@ public class PortraitRendererBuilding {
                 frameHeight,
                 bgCol);
 
-        drawBlockOnScreen(x, y, building.getBuilding().portraitBlock, 5.5f);
+        drawBlockOnScreen(guiGraphics, x, y, building.getBuilding().portraitBlock, 5.5f);
 
         // draw health bar and write min/max hp
         HealthBarClientEvents.renderForBuilding(guiGraphics.pose(), building,
@@ -99,35 +99,31 @@ public class PortraitRendererBuilding {
         return RectZone.getZoneByLW(x, y, frameWidth, frameHeight);
     }
 
-    public void drawBlockOnScreen(int x, int y, Block block, float blockScale) {
+    public void drawBlockOnScreen(GuiGraphics guiGraphics, int x, int y, Block block, float blockScale) {
         ItemStack item = new ItemStack(block);
 
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        PoseStack poseStack = RenderSystem.getModelViewStack();
+        PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
         poseStack.translate(x+xBlock, y+yBlock, 100.0F);
         poseStack.scale(blockScale, -blockScale, blockScale);
-        RenderSystem.applyModelViewMatrix();
 
         float angle = (System.currentTimeMillis() / 100) % 360;
         Quaternionf quaternion = Axis.XP.rotationDegrees(25);
         Quaternionf quaternion2 = Axis.YP.rotationDegrees(angle);
         quaternion.mul(quaternion2);
-        PoseStack blockPoseStack = new PoseStack();
-        blockPoseStack.pushPose();
-        blockPoseStack.mulPose(quaternion);
-        blockPoseStack.scale(8, 8, 8);
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        poseStack.mulPose(quaternion);
+        poseStack.scale(8, 8, 8);
+        MultiBufferSource.BufferSource bufferSource = guiGraphics.bufferSource();
 
         Minecraft.getInstance().getItemRenderer().renderStatic(
                 item, ItemDisplayContext.FIXED,
                 15728880, OverlayTexture.NO_OVERLAY,
-                blockPoseStack, bufferSource, null, 0);
-        bufferSource.endBatch();
+                poseStack, bufferSource, null, 0);
+        guiGraphics.flush();
 
         poseStack.popPose();
-        RenderSystem.applyModelViewMatrix();
     }
 }

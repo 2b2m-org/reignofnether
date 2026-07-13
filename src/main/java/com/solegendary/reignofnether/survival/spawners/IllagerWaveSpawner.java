@@ -169,7 +169,7 @@ public class IllagerWaveSpawner {
                     Entity entityPassenger = UnitServerEvents.spawnMob(EntityRegistrar.PILLAGER_UNIT.get(),
                             level, bp.above(), ENEMY_OWNER_NAME);
                     if (entityPassenger instanceof Unit unit) {
-                        entityPassenger.setItemSlot(
+                        ((LivingEntity) entityPassenger).setItemSlot(
                                 EquipmentSlot.HEAD,
                                 Raid.getLeaderBannerInstance(level.registryAccess().lookupOrThrow(Registries.BANNER_PATTERN))
                         );

@@ -25,7 +25,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
@@ -109,7 +109,7 @@ public class TimeClientEvents {
 
     // render directly above the minimap
     @SubscribeEvent
-    public static void renderOverlay(RenderGuiOverlayEvent.Post evt) {
+    public static void renderOverlay(RenderGuiEvent.Post evt) {
         if (!OrthoviewClientEvents.isEnabled() || MC.isPaused() || !HudClientEvents.enabled
             || !TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK) || MC.screen instanceof MatchStartScreen) {
             return;
@@ -237,7 +237,6 @@ public class TimeClientEvents {
         }
     }
 }
-
 
 
 
