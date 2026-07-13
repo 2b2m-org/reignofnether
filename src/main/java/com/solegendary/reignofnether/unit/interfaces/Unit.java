@@ -34,6 +34,7 @@ import com.solegendary.reignofnether.unit.units.piglins.GhastUnit;
 import com.solegendary.reignofnether.faction.Faction;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import com.solegendary.reignofnether.util.MiscUtil;
+import com.solegendary.reignofnether.util.EnchantmentUtil;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
@@ -60,7 +61,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.state.BlockState;
@@ -393,7 +393,10 @@ public interface Unit {
         }
 
         if (unitMob.tickCount % 80 == 0) {
-            int fortifyingLevel = unitMob.getItemBySlot(EquipmentSlot.CHEST).getEnchantmentLevel(EnchantmentRegistrar.FORTYIFYING.get());
+            int fortifyingLevel = EnchantmentUtil.getLevel(
+                unitMob.getItemBySlot(EquipmentSlot.CHEST),
+                EnchantmentRegistrar.FORTIFYING
+            );
             float absorbHp = unitMob.getAbsorptionAmount();
             if (fortifyingLevel > 0 && absorbHp < fortifyingLevel * ProtectiveEnchantment.MAX_ABSORB_HP)
                 unitMob.setAbsorptionAmount(absorbHp + 1);
@@ -517,7 +520,7 @@ public interface Unit {
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             ItemStack itemStack = ((LivingEntity) this).getItemBySlot(slot);
             if (itemStack.getItem() != Items.AIR)
-                pCompound.put(slot.name() + "Item", itemStack.serializeNBT());
+                pCompound.put(slot.name() + "Item", itemStack.save(((LivingEntity) this).registryAccess()));
         }
     }
 
@@ -541,7 +544,10 @@ public interface Unit {
             if (pCompound.contains(keyName)) {
                 CompoundTag itemNbt = (CompoundTag) pCompound.get(keyName);
                 if (itemNbt != null) {
-                    ((LivingEntity) this).setItemSlot(slot, ItemStack.of(itemNbt));
+                    ((LivingEntity) this).setItemSlot(
+                        slot,
+                        ItemStack.parseOptional(((LivingEntity) this).registryAccess(), itemNbt)
+                    );
                 }
             }
         }
@@ -806,10 +812,8 @@ public interface Unit {
         LivingEntity entity = (LivingEntity) this;
         for (EnchantmentIcon enchantIcon : PassiveIcons.ENCHANTMENT_ICONS) {
             ItemStack itemStack = entity.getItemBySlot(enchantIcon.slot);
-            for (Enchantment enchant : itemStack.getAllEnchantments().keySet()) {
-                if (enchant == enchantIcon.enchantment) {
-                    icons.add(enchantIcon);
-                }
+            if (EnchantmentUtil.has(itemStack, enchantIcon.enchantment)) {
+                icons.add(enchantIcon);
             }
         }
         if (((LivingEntity) this).hasEffect(MobEffectRegistrar.TEMPORARY_EFFICIENCY)) {
@@ -835,8 +839,8 @@ public interface Unit {
     }
 
     default boolean hasAnyEnchants() {
-        return !(((LivingEntity) this).getMainHandItem().getAllEnchantments().isEmpty()) ||
-               !(((LivingEntity) this).getItemBySlot(EquipmentSlot.CHEST).getAllEnchantments().isEmpty());
+        return ((LivingEntity) this).getMainHandItem().isEnchanted() ||
+               ((LivingEntity) this).getItemBySlot(EquipmentSlot.CHEST).isEnchanted();
     }
 
     default boolean uninterruptable() {

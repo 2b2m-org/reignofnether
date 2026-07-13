@@ -4,11 +4,11 @@ import com.solegendary.reignofnether.blocks.WalkableMagmaBlock;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.piglins.GruntUnit;
+import com.solegendary.reignofnether.util.EnchantmentUtil;
 import com.solegendary.reignofnether.faction.Faction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.MagmaBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -34,7 +34,7 @@ public abstract class MagmaBlockMixin {
         if (!pEntity.isSteppingCarefully() &&
             pEntity instanceof LivingEntity &&
             !(pEntity instanceof GruntUnit) &&
-            !EnchantmentHelper.hasFrostWalker((LivingEntity)pEntity) &&
+            !EnchantmentUtil.hasFrostWalker((LivingEntity)pEntity) &&
             !piglinImmunity && isDamageTick) {
             pEntity.hurt(pEntity.damageSources().hotFloor(), WalkableMagmaBlock.DAMAGE);
         }

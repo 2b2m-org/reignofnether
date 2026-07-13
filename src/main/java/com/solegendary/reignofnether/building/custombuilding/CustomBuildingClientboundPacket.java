@@ -10,6 +10,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -87,7 +88,7 @@ public class CustomBuildingClientboundPacket implements CustomPacketPayload {
                 return new CompoundTag();
             }
             byte[] data = buffer.readByteArray(len);
-            return NbtIo.readCompressed(new ByteArrayInputStream(data));
+            return NbtIo.readCompressed(new ByteArrayInputStream(data), NbtAccounter.unlimitedHeap());
         } catch (Exception e) {
             return new CompoundTag();
         }

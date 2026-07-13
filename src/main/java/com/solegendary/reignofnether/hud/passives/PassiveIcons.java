@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.ability.abilities.EnchantMaiming;
 import com.solegendary.reignofnether.ability.abilities.EnchantVigor;
 import com.solegendary.reignofnether.registrars.EnchantmentRegistrar;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
@@ -22,7 +23,7 @@ public class PassiveIcons {
 
     private static ItemStack getEnchantedItemStack(Item item) {
         ItemStack itemStack = new ItemStack(item);
-        itemStack.enchant(Enchantments.UNBREAKING, 1);
+        itemStack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
         return itemStack;
     }
 
@@ -45,7 +46,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon MAIMING = new EnchantmentIcon(
-            EnchantmentRegistrar.MAIMING.get(),
+            EnchantmentRegistrar.MAIMING,
             EquipmentSlot.MAINHAND,
             getEnchantedItemStack(Items.IRON_AXE),
             List.of(
@@ -63,7 +64,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon VIGOR = new EnchantmentIcon(
-            EnchantmentRegistrar.VIGOR.get(),
+            EnchantmentRegistrar.VIGOR,
             EquipmentSlot.MAINHAND,
             getEnchantedItemStack(Items.STICK),
             List.of(
@@ -81,7 +82,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon FORTIFYING = new EnchantmentIcon(
-            EnchantmentRegistrar.FORTYIFYING.get(),
+            EnchantmentRegistrar.FORTIFYING,
             EquipmentSlot.CHEST,
             getEnchantedItemStack(Items.IRON_CHESTPLATE),
             List.of(
@@ -99,7 +100,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon ZEAL = new EnchantmentIcon(
-            EnchantmentRegistrar.ZEAL.get(),
+            EnchantmentRegistrar.ZEAL,
             EquipmentSlot.MAINHAND,
             getEnchantedItemStack(Items.NETHER_STAR),
             List.of(
@@ -108,7 +109,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon GUST = new EnchantmentIcon(
-            EnchantmentRegistrar.GUST.get(),
+            EnchantmentRegistrar.GUST,
             EquipmentSlot.MAINHAND,
             ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/abilities/gust.png"),
             List.of(
@@ -126,7 +127,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon LONGSHOT = new EnchantmentIcon(
-            EnchantmentRegistrar.LONGSHOT.get(),
+            EnchantmentRegistrar.LONGSHOT,
             EquipmentSlot.MAINHAND,
             getEnchantedItemStack(Items.SPYGLASS),
             List.of(
@@ -144,7 +145,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon BREACHING = new EnchantmentIcon(
-            EnchantmentRegistrar.BREACHING.get(),
+            EnchantmentRegistrar.BREACHING,
             EquipmentSlot.MAINHAND,
             getEnchantedItemStack(Items.DIAMOND_AXE),
             List.of(

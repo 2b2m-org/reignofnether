@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.villagers;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.abilities.ToggleFlying;
@@ -320,7 +322,7 @@ public class WindcallerUnit extends Pillager implements Unit, AttackerUnit, Rang
 
     protected boolean hasLongshot() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getEnchantmentLevel(EnchantmentRegistrar.LONGSHOT.get()) > 0;
+        return EnchantmentUtil.has(itemStack, EnchantmentRegistrar.LONGSHOT);
     }
 
     @Override
@@ -527,7 +529,7 @@ public class WindcallerUnit extends Pillager implements Unit, AttackerUnit, Rang
 
     public int getPunchLevel() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getEnchantmentLevel(Enchantments.PUNCH);
+        return EnchantmentUtil.getLevel(itemStack, Enchantments.PUNCH);
     }
 
     @Override

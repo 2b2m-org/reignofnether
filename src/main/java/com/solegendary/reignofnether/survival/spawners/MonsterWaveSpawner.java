@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.survival.spawners;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
@@ -112,9 +114,9 @@ public class MonsterWaveSpawner {
                 entity.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.CHAINMAIL_BOOTS));
             }
             if (tier >= 6) {
-                entity.getItemBySlot(EquipmentSlot.CHEST).enchant(Enchantments.PROTECTION, 1);
-                entity.getItemBySlot(EquipmentSlot.LEGS).enchant(Enchantments.PROTECTION, 1);
-                entity.getItemBySlot(EquipmentSlot.FEET).enchant(Enchantments.PROTECTION, 1);
+                EnchantmentUtil.enchant(entity.getItemBySlot(EquipmentSlot.CHEST), entity.registryAccess(), Enchantments.PROTECTION, 1);
+                EnchantmentUtil.enchant(entity.getItemBySlot(EquipmentSlot.LEGS), entity.registryAccess(), Enchantments.PROTECTION, 1);
+                EnchantmentUtil.enchant(entity.getItemBySlot(EquipmentSlot.FEET), entity.registryAccess(), Enchantments.PROTECTION, 1);
             }
         }
     }

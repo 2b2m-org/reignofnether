@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.startpos;
 
+import net.minecraft.core.HolderLookup;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -28,7 +30,7 @@ public class StartPosSaveData extends SavedData {
         }
         return server.overworld()
                 .getDataStorage()
-                .computeIfAbsent(StartPosSaveData::load, StartPosSaveData::create, "saved-start-pos-data");
+                .computeIfAbsent(new SavedData.Factory<>(StartPosSaveData::create, (tag, provider) -> StartPosSaveData.load(tag)), "saved-start-pos-data");
     }
 
     public static StartPosSaveData load(CompoundTag tag) {
@@ -52,7 +54,7 @@ public class StartPosSaveData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         //ReignOfNether.LOGGER.info("StartPosSaveData.save");
 
         ListTag list = new ListTag();

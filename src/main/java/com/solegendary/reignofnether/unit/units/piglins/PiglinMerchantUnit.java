@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.piglins;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
@@ -583,7 +585,7 @@ public class PiglinMerchantUnit extends Piglin implements Unit, AttackerUnit, He
                         items.add(new ItemStack(Items.NETHERITE_CHESTPLATE));
                     else if (i > 0 && !bruteUnit.hasEnchantedNetheriteSword()) {
                         ItemStack itemStack = new ItemStack(Items.NETHERITE_SWORD);
-                        itemStack.enchant(Enchantments.FIRE_ASPECT, 1);
+                        EnchantmentUtil.enchant(itemStack, registryAccess(), Enchantments.FIRE_ASPECT, 1);
                         items.add(itemStack);
                     } else {
                         items.add(new ItemStack(Items.ENCHANTED_GOLDEN_APPLE));
@@ -594,8 +596,8 @@ public class PiglinMerchantUnit extends Piglin implements Unit, AttackerUnit, He
                         items.add(new ItemStack(Items.NETHERITE_CHESTPLATE));
                     else if (i > 0 && !headhunterUnit.hasFlameTrident()) {
                         ItemStack itemStack = new ItemStack(Items.TRIDENT);
-                        itemStack.enchant(Enchantments.FLAME, 1);
-                        itemStack.enchant(Enchantments.PUNCH, 1);
+                        EnchantmentUtil.enchant(itemStack, registryAccess(), Enchantments.FLAME, 1);
+                        EnchantmentUtil.enchant(itemStack, registryAccess(), Enchantments.PUNCH, 1);
                         items.add(itemStack);
                     } else {
                         items.add(new ItemStack(Items.ENCHANTED_GOLDEN_APPLE));

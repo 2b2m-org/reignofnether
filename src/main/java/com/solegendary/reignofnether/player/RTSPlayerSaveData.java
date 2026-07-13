@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.player;
 
+import net.minecraft.core.HolderLookup;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.TradeAction;
 import com.solegendary.reignofnether.ability.abilities.TradeResources;
@@ -32,7 +34,7 @@ public class RTSPlayerSaveData extends SavedData {
         }
         return server.overworld()
             .getDataStorage()
-            .computeIfAbsent(RTSPlayerSaveData::load, RTSPlayerSaveData::create, "saved-rtsplayer-data");
+            .computeIfAbsent(new SavedData.Factory<>(RTSPlayerSaveData::create, (tag, provider) -> RTSPlayerSaveData.load(tag)), "saved-rtsplayer-data");
     }
 
     public static RTSPlayerSaveData load(CompoundTag tag) {
@@ -70,7 +72,7 @@ public class RTSPlayerSaveData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         //ReignOfNether.LOGGER.info("RTSPlayerSaveData.save");
 
         ListTag list = new ListTag();

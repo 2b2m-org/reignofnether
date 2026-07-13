@@ -868,11 +868,11 @@
     "research.reignofnether.research_bogged": "مرداب‌زاد",
     "research.reignofnether.research_bogged.tooltip1": "امکان تولید مرداب‌زادها را در قبرستان فراهم می‌کند؛",
     "research.reignofnether.research_bogged.tooltip2": "اسکلت‌هایی که تیرهای زهرآلود شلیک می‌کنند.",
-    "research.reignofnether.research_bogged.tooltip3": "یک قبرستان مورد نیاز است."
+    "research.reignofnether.research_bogged.tooltip3": "یک قبرستان مورد نیاز است.",
     "research.reignofnether.research_overflowing_graveyard": "گورستان انباشته",
     "research.reignofnether.research_overflowing_graveyard.tooltip1": "به این قبرستان اجازه می‌دهد تا حداکثر %d نیرو را",
     "research.reignofnether.research_overflowing_graveyard.tooltip2": "ذخیره کند و پس از آزاد شدن ظرفیت جمعیت، آن‌ها را فوراً احضار کند.",
-    "research.reignofnether.research_overflowing_graveyard.tooltip3": "یک دژ مورد نیاز است."
+    "research.reignofnether.research_overflowing_graveyard.tooltip3": "یک دژ مورد نیاز است.",
     "research.reignofnether.research_mass_burials": "دفن گسترده",
     "research.reignofnether.research_mass_burials.tooltip1": "گورستان های انباشته اکنون می‌توانند هرکدام تا %d نیرو را نگهداری کنند.",
     "research.reignofnether.research_mass_burials.tooltip2": "یک دژ مورد نیاز است.",
@@ -1309,7 +1309,7 @@
     "block.reignofnether.drowned_wall_head": "سر غرق‌شده دیواری",
     "block.reignofnether.husk_wall_head": "سر هاسک دیواری",
     "block.reignofnether.stray_wall_skull": "جمجمه دیواری سرگردان",
-    "block.reignofnether.bogged_wall_skull": "جمجمه دیواری مرداب‌زاد"
+    "block.reignofnether.bogged_wall_skull": "جمجمه دیواری مرداب‌زاد",
 
     "block.reignofnether.rts_start_block_black": "سیاه RTS استارت بلاک",
     "block.reignofnether.rts_start_block_blue": "آبی RTS استارت بلاک",

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.villagers;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
 import com.solegendary.reignofnether.ReignOfNether;
@@ -57,7 +59,6 @@ import net.minecraft.world.item.BannerItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -69,7 +70,6 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import static com.solegendary.reignofnether.unit.units.villagers.VillagerUnitProfession.*;
@@ -384,9 +384,9 @@ public class VillagerUnit extends Vindicator implements Unit, WorkerUnit, Attack
             this.callToArmsGoal.tick();
 
             if (tickCount % 20 == 0) {
-                if (getMainHandItem().getAllEnchantments().containsKey(Enchantments.EFFICIENCY) &&
+                if (EnchantmentUtil.has(getMainHandItem(), Enchantments.EFFICIENCY) &&
                     !hasEffectWithDuration(MobEffectRegistrar.TEMPORARY_EFFICIENCY)) {
-                    EnchantmentHelper.setEnchantments(new HashMap<>(), getMainHandItem());
+                    EnchantmentUtil.clear(getMainHandItem());
                 }
             }
         }
@@ -449,7 +449,7 @@ public class VillagerUnit extends Vindicator implements Unit, WorkerUnit, Attack
                 mUnit.hunterExp = this.hunterExp;
                 ItemStack chest = new ItemStack(this.chestplate);
                 if (chestplateEnchanted && chest.getItem() != Items.AIR) {
-                    chest.enchant(EnchantmentRegistrar.FORTYIFYING.get(), 1);
+                    EnchantmentUtil.enchant(chest, registryAccess(), EnchantmentRegistrar.FORTIFYING, 1);
                 }
                 mUnit.setItemSlot(EquipmentSlot.CHEST, chest);
                 mUnit.swordEnchanted = swordEnchanted;
@@ -578,7 +578,7 @@ public class VillagerUnit extends Vindicator implements Unit, WorkerUnit, Attack
     public void setItemSlot(EquipmentSlot pSlot, ItemStack pStack) {
         if (pStack.getItem() != Items.AIR && pSlot == EquipmentSlot.MAINHAND &&
             this.hasEffectWithDuration(MobEffectRegistrar.TEMPORARY_EFFICIENCY)) {
-            pStack.enchant(Enchantments.EFFICIENCY, 1);
+            EnchantmentUtil.enchant(pStack, registryAccess(), Enchantments.EFFICIENCY, 1);
         }
         super.setItemSlot(pSlot, pStack);
     }

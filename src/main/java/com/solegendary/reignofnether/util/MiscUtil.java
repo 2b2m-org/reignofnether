@@ -35,6 +35,7 @@ import com.solegendary.reignofnether.unit.units.piglins.WitherSkeletonUnit;
 import com.solegendary.reignofnether.unit.units.villagers.VillagerUnit;
 import com.solegendary.reignofnether.unit.units.villagers.VillagerUnitProfession;
 import com.solegendary.reignofnether.unit.units.villagers.WindcallerUnit;
+import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -42,11 +43,9 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.SimpleParticleType;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.IntArrayTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -70,6 +69,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.FireworkExplosion;
+import net.minecraft.world.item.component.Fireworks;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -107,43 +108,34 @@ public class MiscUtil {
     };
 
     public static void shootFirework(Level level, Vec3 vec3) {
-        CompoundTag explosion = new CompoundTag();
         int color = DYE_COLORS[level.random.nextInt(DYE_COLORS.length)];
-        explosion.put("Colors", new IntArrayTag(new int[]{color}));
-        explosion.putByte("Type", (byte) 0);
-        ListTag explosions = new ListTag();
-        explosions.add(explosion);
-        CompoundTag explosionsAndFlight = new CompoundTag();
-        explosionsAndFlight.put("Explosions", explosions);
-        explosionsAndFlight.putByte("Flight", (byte) 0b1);
-        CompoundTag fireworks = new CompoundTag();
-        fireworks.put("Fireworks", explosionsAndFlight);
-        ItemStack itemStack = new ItemStack(Items.FIREWORK_ROCKET);
-        itemStack.setTag(fireworks);
+        ItemStack itemStack = createFirework(color, FireworkExplosion.Shape.SMALL_BALL);
         FireworkRocketEntity entity = new FireworkRocketEntity(level, null, vec3.x, vec3.y(), vec3.z, itemStack);
         level.addFreshEntity(entity);
         entity.moveTo(vec3);
     }
 
     public static void doRandomFireworkExplosion(Level level, Vec3 vec3) {
-        CompoundTag explosion = new CompoundTag();
         int color = DYE_COLORS[level.random.nextInt(DYE_COLORS.length)];
-        explosion.put("Colors", new IntArrayTag(new int[]{color}));
-        byte type = (byte) level.random.nextInt(5);
-        explosion.putByte("Type", type);
-        ListTag explosions = new ListTag();
-        explosions.add(explosion);
-        CompoundTag explosionsAndFlight = new CompoundTag();
-        explosionsAndFlight.put("Explosions", explosions);
-        explosionsAndFlight.putByte("Flight", (byte) 0b1);
-        CompoundTag fireworks = new CompoundTag();
-        fireworks.put("Fireworks", explosionsAndFlight);
-        ItemStack itemStack = new ItemStack(Items.FIREWORK_ROCKET);
-        itemStack.setTag(fireworks);
+        FireworkExplosion.Shape shape = FireworkExplosion.Shape.byId(level.random.nextInt(5));
+        ItemStack itemStack = createFirework(color, shape);
         FireworkRocketEntity entity = new FireworkRocketEntity(level, null, vec3.x, vec3.y(), vec3.z, itemStack);
         level.addFreshEntity(entity);
         entity.moveTo(vec3);
         entity.lifetime = 0;
+    }
+
+    private static ItemStack createFirework(int color, FireworkExplosion.Shape shape) {
+        FireworkExplosion explosion = new FireworkExplosion(
+            shape,
+            IntList.of(color),
+            IntList.of(),
+            false,
+            false
+        );
+        ItemStack itemStack = new ItemStack(Items.FIREWORK_ROCKET);
+        itemStack.set(DataComponents.FIREWORKS, new Fireworks(1, List.of(explosion)));
+        return itemStack;
     }
 
     // prevent flying mobs from floating above trees and buildings (or they're effectively unreachable)

@@ -15,14 +15,15 @@ import com.solegendary.reignofnether.unit.units.villagers.EvokerUnit;
 import com.solegendary.reignofnether.unit.units.villagers.PillagerUnit;
 import com.solegendary.reignofnether.unit.units.villagers.RavagerUnit;
 import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
+import com.solegendary.reignofnether.util.EnchantmentUtil;
 import com.solegendary.reignofnether.faction.Faction;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 
 import java.util.*;
@@ -95,10 +96,10 @@ public class IllagerWaveSpawner {
     }
 
     public static void checkAndApplyEnchants(LivingEntity entity, int tier) {
-        Enchantment enchantment = null;
+        ResourceKey<Enchantment> enchantment = null;
 
         if (entity instanceof VindicatorUnit vUnit && (tier == 2 || tier == 3)) {
-            enchantment = EnchantmentRegistrar.MAIMING.get();
+            enchantment = EnchantmentRegistrar.MAIMING;
         }
         else if (entity instanceof VindicatorUnit vUnit && (tier == 4 || tier == 5)) {
             enchantment = Enchantments.SHARPNESS;
@@ -110,13 +111,18 @@ public class IllagerWaveSpawner {
             enchantment = Enchantments.MULTISHOT;
         }
         else if (entity instanceof EvokerUnit vUnit && tier >= 6) {
-            enchantment = EnchantmentRegistrar.VIGOR.get();
+            enchantment = EnchantmentRegistrar.VIGOR;
         }
 
         ItemStack item = entity.getItemBySlot(EquipmentSlot.MAINHAND);
         if (enchantment != null && item != ItemStack.EMPTY) {
-            EnchantmentHelper.setEnchantments(new HashMap<>(), item);
-            item.enchant(enchantment, enchantment == Enchantments.SHARPNESS ? 2 : 1);
+            EnchantmentUtil.clear(item);
+            EnchantmentUtil.enchant(
+                item,
+                entity.registryAccess(),
+                enchantment,
+                enchantment == Enchantments.SHARPNESS ? 2 : 1
+            );
         }
     }
 

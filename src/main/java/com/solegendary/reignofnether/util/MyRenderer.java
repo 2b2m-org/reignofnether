@@ -591,7 +591,7 @@ public class MyRenderer {
                 crashreportcategory.setDetail("Item Type", () -> String.valueOf(pStack.getItem()));
                 crashreportcategory.setDetail("Registry Name", () -> String.valueOf(BuiltInRegistries.ITEM.getKey(pStack.getItem())));
                 crashreportcategory.setDetail("Item Damage", () -> String.valueOf(pStack.getDamageValue()));
-                crashreportcategory.setDetail("Item NBT", () -> String.valueOf(pStack.getTag()));
+                crashreportcategory.setDetail("Item components", () -> pStack.getComponentsPatch().toString());
                 crashreportcategory.setDetail("Item Foil", () -> String.valueOf(pStack.hasFoil()));
                 throw new ReportedException(crashreport);
             }

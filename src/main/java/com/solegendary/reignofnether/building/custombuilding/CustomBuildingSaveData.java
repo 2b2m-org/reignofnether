@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.building.custombuilding;
 
+import net.minecraft.core.HolderLookup;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.Resources;
@@ -33,7 +35,7 @@ public class CustomBuildingSaveData extends SavedData {
         }
         return server.overworld()
             .getDataStorage()
-            .computeIfAbsent(CustomBuildingSaveData::load, CustomBuildingSaveData::create, "saved-custom-building-data");
+            .computeIfAbsent(new SavedData.Factory<>(CustomBuildingSaveData::create, (tag, provider) -> CustomBuildingSaveData.load(tag)), "saved-custom-building-data");
     }
 
     public static CustomBuildingSaveData load(CompoundTag tag) {
@@ -65,7 +67,7 @@ public class CustomBuildingSaveData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         ListTag list = new ListTag();
         this.customBuildings.forEach(b -> {
             CompoundTag cTag = new CompoundTag();

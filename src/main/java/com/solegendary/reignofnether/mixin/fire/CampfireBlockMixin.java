@@ -1,9 +1,9 @@
 package com.solegendary.reignofnether.mixin.fire;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.BaseFireBlock;
@@ -31,7 +31,7 @@ public abstract class CampfireBlockMixin extends BaseEntityBlock {
     )
     public void entityInside(BlockState pState, Level pLevel, BlockPos pPos, Entity pEntity, CallbackInfo ci) {
         ci.cancel();
-        if (pState.getValue(CampfireBlock.LIT) && pEntity instanceof LivingEntity && !EnchantmentHelper.hasFrostWalker((LivingEntity)pEntity) &&
+        if (pState.getValue(CampfireBlock.LIT) && pEntity instanceof LivingEntity && !EnchantmentUtil.hasFrostWalker((LivingEntity)pEntity) &&
             pEntity.tickCount % DAMAGE_DELAY == 0) {
             pEntity.hurt(pLevel.damageSources().inFire(), pState.getBlock() == Blocks.SOUL_CAMPFIRE ? 2 : 1);
         }

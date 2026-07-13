@@ -5,7 +5,6 @@
 
 package com.solegendary.reignofnether.unit.modelling.layers;
 
-import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import java.util.Map;
@@ -20,8 +19,7 @@ import net.minecraft.client.renderer.blockentity.SkullBlockRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -29,6 +27,7 @@ import net.minecraft.world.entity.WalkAnimationState;
 import net.minecraft.world.entity.monster.ZombieVillager;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.block.AbstractSkullBlock;
 import net.minecraft.world.level.block.SkullBlock;
 import net.neoforged.api.distmarker.Dist;
@@ -77,13 +76,7 @@ public class CustomUnitHeadLayer<T extends LivingEntity, M extends EntityModel<T
                     pPoseStack.translate(0.0F, 0.0625F, 0.0F);
                 }
 
-                GameProfile $$16 = null;
-                if ($$10.hasTag()) {
-                    CompoundTag $$17 = $$10.getTag();
-                    if ($$17.contains("SkullOwner", 10)) {
-                        $$16 = NbtUtils.readGameProfile($$17.getCompound("SkullOwner"));
-                    }
-                }
+                ResolvableProfile $$16 = $$10.get(DataComponents.PROFILE);
 
                 pPoseStack.translate(-0.5, 0.0, -0.5);
                 SkullBlock.Type $$18 = ((AbstractSkullBlock)((BlockItem)$$11).getBlock()).getType();

@@ -12,9 +12,11 @@ import com.solegendary.reignofnether.registrars.EnchantmentRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.units.villagers.EvokerUnit;
+import com.solegendary.reignofnether.util.EnchantmentUtil;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -34,8 +36,8 @@ public class EnchantVigor extends EnchantAbility {
     }
 
     @Override
-    public Enchantment getEnchantment() {
-        return EnchantmentRegistrar.VIGOR.get();
+    public ResourceKey<Enchantment> getEnchantment() {
+        return EnchantmentRegistrar.VIGOR;
     }
 
     @Override
@@ -77,11 +79,9 @@ public class EnchantVigor extends EnchantAbility {
     }
 
     @Override
-    public Enchantment getMutuallyExclusiveEnchant(LivingEntity entity) {
-        for (Enchantment enchantment : entity.getItemBySlot(equipmentSlot).getAllEnchantments().keySet()) {
-            if (enchantment == Enchantments.MULTISHOT || enchantment == getEnchantment())
-                return enchantment;
-        }
-        return null;
+    public ResourceKey<Enchantment> getMutuallyExclusiveEnchant(LivingEntity entity) {
+        return EnchantmentUtil.has(entity.getItemBySlot(equipmentSlot), Enchantments.MULTISHOT)
+            ? Enchantments.MULTISHOT
+            : null;
     }
 }

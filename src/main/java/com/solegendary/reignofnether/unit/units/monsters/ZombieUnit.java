@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.monsters;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.heroAbilities.necromancer.BloodMoon;
@@ -289,11 +291,11 @@ public class ZombieUnit extends Zombie implements Unit, AttackerUnit, Convertabl
 
     public int getThornsLevel() {
         int thornsLevel = 0;
-        if (this.getItemBySlot(EquipmentSlot.CHEST).getEnchantmentLevel(Enchantments.THORNS) > 0)
+        if (EnchantmentUtil.getLevel(this.getItemBySlot(EquipmentSlot.CHEST), Enchantments.THORNS) > 0)
             thornsLevel += 1;
-        if (this.getItemBySlot(EquipmentSlot.LEGS).getEnchantmentLevel(Enchantments.THORNS) > 0)
+        if (EnchantmentUtil.getLevel(this.getItemBySlot(EquipmentSlot.LEGS), Enchantments.THORNS) > 0)
             thornsLevel += 1;
-        if (this.getItemBySlot(EquipmentSlot.FEET).getEnchantmentLevel(Enchantments.THORNS) > 0)
+        if (EnchantmentUtil.getLevel(this.getItemBySlot(EquipmentSlot.FEET), Enchantments.THORNS) > 0)
             thornsLevel += 1;
         return thornsLevel;
     }

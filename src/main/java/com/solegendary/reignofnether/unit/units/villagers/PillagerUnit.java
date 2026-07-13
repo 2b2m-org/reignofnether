@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.villagers;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
@@ -38,7 +40,6 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.Vec3;
@@ -48,7 +49,6 @@ import org.joml.Vector3f;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 // despite being a RangedAttackerUnit we don't implement performRangedAttack as we override the Pillager crossbow attack instead
 // we just implement this for fog reveal methods
@@ -299,21 +299,11 @@ public class PillagerUnit extends Pillager implements Unit, AttackerUnit, Ranged
 
     @Override
     public void setupEquipmentAndUpgradesServer() {
-        if (!getMainHandItem().getAllEnchantments().isEmpty())
+        if (getMainHandItem().isEnchanted())
             return;
 
         ItemStack cbowStack = new ItemStack(Items.CROSSBOW);
         this.setItemSlot(EquipmentSlot.MAINHAND, cbowStack);
-    }
-
-    public Enchantment getEnchant() {
-        ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        Optional<Enchantment> enchant = Optional.empty();
-        for (Enchantment enchantment : itemStack.getAllEnchantments().keySet()) {
-            enchant = Optional.of(enchantment);
-            break;
-        }
-        return enchant.orElse(null);
     }
 
     // override to make inaccuracy 0

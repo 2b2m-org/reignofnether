@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.building;
 
+import net.minecraft.core.HolderLookup;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.buildings.monsters.*;
@@ -41,7 +43,7 @@ public class BuildingSaveData extends SavedData {
         }
         return server.overworld()
             .getDataStorage()
-            .computeIfAbsent(tag -> BuildingSaveData.load(tag, server), BuildingSaveData::create, "saved-building-data");
+            .computeIfAbsent(new SavedData.Factory<>(BuildingSaveData::create, (tag, provider) -> BuildingSaveData.load(tag, server)), "saved-building-data");
     }
 
     public static BuildingSaveData load(CompoundTag tag, MinecraftServer server) {
@@ -105,7 +107,7 @@ public class BuildingSaveData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         //ReignOfNether.LOGGER.info("BuildingSaveData.save");
 
         ListTag list = new ListTag();

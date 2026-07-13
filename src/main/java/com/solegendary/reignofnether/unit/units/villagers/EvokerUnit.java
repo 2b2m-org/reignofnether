@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.villagers;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
@@ -45,7 +47,6 @@ import net.minecraft.world.entity.monster.Evoker;
 import net.minecraft.world.entity.monster.Vex;
 import net.minecraft.world.entity.projectile.EvokerFangs;
 import net.minecraft.world.item.*;
-import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
@@ -55,7 +56,6 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class EvokerUnit extends Evoker implements Unit, AttackerUnit, RangedAttackerUnit {
     public static final Abilities ABILITIES = new Abilities();
@@ -170,7 +170,7 @@ public class EvokerUnit extends Evoker implements Unit, AttackerUnit, RangedAtta
     public float getAttackRange() {
         return isUsingLineFangs ? EvokerUnit.FANGS_RANGE_LINE : EvokerUnit.FANGS_RANGE_CIRCLE;
     }
-    public float getUnitAttackDamage() {return attackDamage + (getMainHandItem().getEnchantmentLevel(EnchantmentRegistrar.ZEAL.get()) * 2);}
+    public float getUnitAttackDamage() {return attackDamage + (EnchantmentUtil.getLevel(getMainHandItem(), EnchantmentRegistrar.ZEAL) * 2);}
     public boolean canAttackBuildings() {return getAttackBuildingGoal() != null;}
 
     @Nullable
@@ -480,22 +480,12 @@ public class EvokerUnit extends Evoker implements Unit, AttackerUnit, RangedAtta
 
     public boolean hasAnyEnchant() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return !itemStack.getAllEnchantments().isEmpty();
+        return itemStack.isEnchanted();
     }
 
     public int getVigorLevel() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getEnchantmentLevel(EnchantmentRegistrar.VIGOR.get());
-    }
-
-    public Enchantment getEnchant() {
-        ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        Optional<Enchantment> enchant = Optional.empty();
-        for (Enchantment enchantment : itemStack.getAllEnchantments().keySet()) {
-            enchant = Optional.of(enchantment);
-            break;
-        }
-        return enchant.orElse(null);
+        return EnchantmentUtil.getLevel(itemStack, EnchantmentRegistrar.VIGOR);
     }
 
     @Override

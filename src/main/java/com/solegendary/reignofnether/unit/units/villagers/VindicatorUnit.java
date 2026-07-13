@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.villagers;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.abilities.PromoteIllager;
@@ -36,7 +38,6 @@ import net.minecraft.world.entity.monster.Vindicator;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -45,7 +46,6 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
@@ -274,27 +274,17 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
 
     public boolean hasAnyEnchant() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return !itemStack.getAllEnchantments().isEmpty();
+        return itemStack.isEnchanted();
     }
 
     public int getMaimingLevel() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getEnchantmentLevel(EnchantmentRegistrar.MAIMING.get());
+        return EnchantmentUtil.getLevel(itemStack, EnchantmentRegistrar.MAIMING);
     }
 
     public int getSharpnessLevel() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getEnchantmentLevel(Enchantments.SHARPNESS);
-    }
-
-    public Enchantment getEnchant() {
-        ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        Optional<Enchantment> enchant = Optional.empty();
-        for (Enchantment enchantment : itemStack.getAllEnchantments().keySet()) {
-            enchant = Optional.of(enchantment);
-            break;
-        }
-        return enchant.orElse(null);
+        return EnchantmentUtil.getLevel(itemStack, Enchantments.SHARPNESS);
     }
 
     @Override

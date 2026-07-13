@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.research;
 
+import net.minecraft.core.HolderLookup;
+
 import com.mojang.datafixers.util.Pair;
 import com.solegendary.reignofnether.ReignOfNether;
 import net.minecraft.nbt.CompoundTag;
@@ -29,7 +31,7 @@ public class ResearchSaveData extends SavedData {
         }
         return server.overworld()
             .getDataStorage()
-            .computeIfAbsent(ResearchSaveData::load, ResearchSaveData::create, "saved-research-data");
+            .computeIfAbsent(new SavedData.Factory<>(ResearchSaveData::create, (tag, provider) -> ResearchSaveData.load(tag)), "saved-research-data");
     }
 
     public static ResearchSaveData load(CompoundTag tag) {
@@ -57,7 +59,7 @@ public class ResearchSaveData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         //ReignOfNether.LOGGER.info("ResearchSaveData.save");
 
         ListTag list = new ListTag();

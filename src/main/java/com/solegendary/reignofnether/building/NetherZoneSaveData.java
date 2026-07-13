@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.building;
 
+import net.minecraft.core.HolderLookup;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -28,7 +30,7 @@ public class NetherZoneSaveData extends SavedData {
         }
         return server.overworld()
             .getDataStorage()
-            .computeIfAbsent(NetherZoneSaveData::load, NetherZoneSaveData::create, "saved-netherzone-data");
+            .computeIfAbsent(new SavedData.Factory<>(NetherZoneSaveData::create, (tag, provider) -> NetherZoneSaveData.load(tag)), "saved-netherzone-data");
     }
 
     public static NetherZoneSaveData load(CompoundTag tag) {
@@ -61,7 +63,7 @@ public class NetherZoneSaveData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         //ReignOfNether.LOGGER.info("NetherZoneSaveData.save");
 
         ListTag list = new ListTag();

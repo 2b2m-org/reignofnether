@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit;
 
+import net.minecraft.core.HolderLookup;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
@@ -31,7 +33,7 @@ public class TargetResourcesSaveData extends SavedData {
         }
         return server.overworld()
             .getDataStorage()
-            .computeIfAbsent(TargetResourcesSaveData::load, TargetResourcesSaveData::create, "saved-target-resources-data");
+            .computeIfAbsent(new SavedData.Factory<>(TargetResourcesSaveData::create, (tag, provider) -> TargetResourcesSaveData.load(tag)), "saved-target-resources-data");
     }
 
     public static TargetResourcesSaveData load(CompoundTag tag) {
@@ -83,7 +85,7 @@ public class TargetResourcesSaveData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         //ReignOfNether.LOGGER.info("TargetResourcesSaveData.save");
 
         ListTag list = new ListTag();

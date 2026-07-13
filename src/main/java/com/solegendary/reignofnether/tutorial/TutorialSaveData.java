@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.tutorial;
 
+import net.minecraft.core.HolderLookup;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -24,7 +26,7 @@ public class TutorialSaveData extends SavedData {
         }
         return server.overworld()
             .getDataStorage()
-            .computeIfAbsent(TutorialSaveData::load, TutorialSaveData::create, "saved-tutorial-data");
+            .computeIfAbsent(new SavedData.Factory<>(TutorialSaveData::create, (tag, provider) -> TutorialSaveData.load(tag)), "saved-tutorial-data");
     }
 
     public static TutorialSaveData load(CompoundTag tag) {
@@ -35,7 +37,7 @@ public class TutorialSaveData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         //ReignOfNether.LOGGER.info("TutorialSaveData.save: " + stage);
         tag.putString("stage", this.stage.name());
         return tag;

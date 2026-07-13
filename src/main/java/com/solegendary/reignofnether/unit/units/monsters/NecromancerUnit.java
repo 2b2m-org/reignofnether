@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.monsters;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
@@ -564,12 +566,12 @@ public class NecromancerUnit extends Skeleton implements Unit, AttackerUnit, Ran
                     sword = new ItemStack(Items.IRON_SWORD);
                 }
                 if (soulRank >= 1)
-                    chestPlate.enchant(Enchantments.THORNS, 3);
+                    EnchantmentUtil.enchant(chestPlate, registryAccess(), Enchantments.THORNS, 3);
                 if (soulRank >= 2)
-                    leggings.enchant(Enchantments.THORNS, 3);
+                    EnchantmentUtil.enchant(leggings, registryAccess(), Enchantments.THORNS, 3);
                 if (soulRank >= 3) {
-                    boots.enchant(Enchantments.THORNS, 2);
-                    helmet.enchant(Enchantments.THORNS, 2);
+                    EnchantmentUtil.enchant(boots, registryAccess(), Enchantments.THORNS, 2);
+                    EnchantmentUtil.enchant(helmet, registryAccess(), Enchantments.THORNS, 2);
                 }
                 zombieUnit.setItemSlot(EquipmentSlot.HEAD, helmet);
                 zombieUnit.setItemSlot(EquipmentSlot.CHEST, chestPlate);

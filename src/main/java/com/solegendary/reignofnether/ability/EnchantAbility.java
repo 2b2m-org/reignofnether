@@ -8,22 +8,20 @@ import com.solegendary.reignofnether.resources.ResourcesClientEvents;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.util.EnchantmentUtil;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.Map;
 
 public abstract class EnchantAbility extends Ability {
 
@@ -47,7 +45,7 @@ public abstract class EnchantAbility extends Ability {
         this.equipmentSlot = equipmentSlot;
     }
 
-    public Enchantment getEnchantment() {
+    public ResourceKey<Enchantment> getEnchantment() {
         return null;
     }
 
@@ -72,19 +70,17 @@ public abstract class EnchantAbility extends Ability {
     }
 
     protected boolean hasSameEnchant(LivingEntity entity) {
-        return entity.getItemBySlot(equipmentSlot).getAllEnchantments().containsKey(getEnchantment());
+        return EnchantmentUtil.has(entity.getItemBySlot(equipmentSlot), getEnchantment());
     }
 
     protected void doEnchant(LivingEntity entity) {
         ItemStack item = entity.getItemBySlot(equipmentSlot);
-        Enchantment enchantToRemove = getMutuallyExclusiveEnchant(entity);
+        ResourceKey<Enchantment> enchantToRemove = getMutuallyExclusiveEnchant(entity);
         if (item != ItemStack.EMPTY) {
             if (enchantToRemove != null) {
-                Map<Enchantment, Integer> enchants = new HashMap<>(item.getAllEnchantments());
-                enchants.remove(enchantToRemove);
-                EnchantmentHelper.setEnchantments(enchants, item);
+                EnchantmentUtil.remove(item, enchantToRemove);
             }
-            item.enchant(getEnchantment(), enchantmentLevel);
+            EnchantmentUtil.enchant(item, entity.level().registryAccess(), getEnchantment(), enchantmentLevel);
         }
     }
 
@@ -131,7 +127,7 @@ public abstract class EnchantAbility extends Ability {
     }
 
     @Nullable
-    public Enchantment getMutuallyExclusiveEnchant(LivingEntity entity) {
+    public ResourceKey<Enchantment> getMutuallyExclusiveEnchant(LivingEntity entity) {
         return null;
     }
 }

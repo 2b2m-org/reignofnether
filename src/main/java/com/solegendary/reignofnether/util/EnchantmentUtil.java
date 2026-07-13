@@ -45,6 +45,10 @@ public final class EnchantmentUtil {
         return getLevel(stack, enchantment) > 0;
     }
 
+    public static boolean hasFrostWalker(LivingEntity entity) {
+        return has(entity.getItemBySlot(EquipmentSlot.FEET), Enchantments.FROST_WALKER);
+    }
+
     public static void enchant(
         ItemStack stack,
         RegistryAccess registryAccess,

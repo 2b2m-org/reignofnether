@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.villagers;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
@@ -32,6 +34,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -578,7 +581,7 @@ public class EnchanterUnit extends Vindicator implements AttackerUnit, HeroUnit,
         if (level().isClientSide) return;
 
         if (entity.getMainHandItem().getItem() != Items.AIR)
-            entity.getMainHandItem().enchant(Enchantments.EFFICIENCY, 1);
+            EnchantmentUtil.enchant(entity.getMainHandItem(), entity.registryAccess(), Enchantments.EFFICIENCY, 1);
         entity.addEffect(new MobEffectInstance(MobEffectRegistrar.TEMPORARY_EFFICIENCY, CivilEnchantment.DURATION_SECONDS * 20));
         playEnchantSound();
 
@@ -587,9 +590,9 @@ public class EnchanterUnit extends Vindicator implements AttackerUnit, HeroUnit,
     }
 
     public void enchantMilitary(LivingEntity entity) {
-        Enchantment enchantment = MartialEnchantment.getEnchantmentForUnit(entity);
+        ResourceKey<Enchantment> enchantment = MartialEnchantment.getEnchantmentForUnit(entity);
         if (enchantment != null) {
-            entity.getMainHandItem().enchant(enchantment, 1);
+            EnchantmentUtil.enchant(entity.getMainHandItem(), entity.registryAccess(), enchantment, 1);
             if (entity instanceof MilitiaUnit militiaUnit) {
                 if (militiaUnit.isUsingBow())
                     militiaUnit.bowEnchanted = true;
@@ -610,7 +613,7 @@ public class EnchanterUnit extends Vindicator implements AttackerUnit, HeroUnit,
     public void enchantArmour(LivingEntity entity) {
         if (level().isClientSide) return;
 
-        entity.getItemBySlot(EquipmentSlot.CHEST).enchant(EnchantmentRegistrar.FORTYIFYING.get(), 1);
+        EnchantmentUtil.enchant(entity.getItemBySlot(EquipmentSlot.CHEST), entity.registryAccess(), EnchantmentRegistrar.FORTIFYING, 1);
         playEnchantSound();
 
         if (getHeroLevel() < HeroUnit.MAX_NEUTRAL_EXP_LEVEL)

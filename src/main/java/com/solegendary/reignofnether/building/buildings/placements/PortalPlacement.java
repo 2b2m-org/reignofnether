@@ -124,7 +124,7 @@ public class PortalPlacement extends ProductionPlacement {
                     BlockEntity blockEntity = getLevel().getBlockEntity(block.getBlockPos());
                     if (blockEntity instanceof ChestBlockEntity chest) {
 
-                        for (int i = 0; i < chest.items.size(); i++) {
+                        for (int i = 0; i < chest.getContainerSize(); i++) {
                             ResourceSource resource = ResourceSources.getFromItem(chest.getItem(i).getItem());
                             if (resource != null) {
                                 int numItems = chest.getItem(i).getCount();

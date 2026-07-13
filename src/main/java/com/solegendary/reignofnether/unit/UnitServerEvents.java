@@ -1004,7 +1004,7 @@ saveTicks += 1;
             evt.getEntity().setSecondsOnFire(4);
 
         if (evt.getSource().getEntity() instanceof LivingEntity le) {
-            int breachLevel = le.getMainHandItem().getEnchantmentLevel(EnchantmentRegistrar.BREACHING.get());
+            int breachLevel = EnchantmentUtil.getLevel(le.getMainHandItem(), EnchantmentRegistrar.BREACHING);
             MobEffectInstance existingDmgIncrease = evt.getEntity().getEffect(MobEffectRegistrar.DAMAGE_TAKEN_INCREASE);
             if (breachLevel > 0) {
                 int amp = existingDmgIncrease != null ? (breachLevel * 2) + existingDmgIncrease.getAmplifier() : Math.max(0, (breachLevel * 2) - 1);
@@ -1012,13 +1012,13 @@ saveTicks += 1;
             }
         }
         if (evt.getSource().getEntity() instanceof Vex vex && vex.getOwner() instanceof EvokerUnit evokerUnit) {
-            int zealLevel = evokerUnit.getMainHandItem().getEnchantmentLevel(EnchantmentRegistrar.ZEAL.get());
+            int zealLevel = EnchantmentUtil.getLevel(evokerUnit.getMainHandItem(), EnchantmentRegistrar.ZEAL);
             if (zealLevel > 0) {
                 evt.setAmount(evt.getAmount() + zealLevel);
             }
         }
         if (evt.getSource().getEntity() instanceof EvokerUnit evokerUnit) {
-            int zealLevel = evokerUnit.getMainHandItem().getEnchantmentLevel(EnchantmentRegistrar.ZEAL.get());
+            int zealLevel = EnchantmentUtil.getLevel(evokerUnit.getMainHandItem(), EnchantmentRegistrar.ZEAL);
             if (zealLevel > 0) {
                 evt.setAmount(evt.getAmount() + zealLevel);
             }

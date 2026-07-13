@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.survival.spawners;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
@@ -102,9 +104,9 @@ public class PiglinWaveSpawner {
                 entity.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.GOLDEN_BOOTS));
             }
             if (tier >= 6) {
-                entity.getItemBySlot(EquipmentSlot.CHEST).enchant(Enchantments.PROTECTION, 1);
-                entity.getItemBySlot(EquipmentSlot.LEGS).enchant(Enchantments.PROTECTION, 1);
-                entity.getItemBySlot(EquipmentSlot.FEET).enchant(Enchantments.PROTECTION, 1);
+                EnchantmentUtil.enchant(entity.getItemBySlot(EquipmentSlot.CHEST), entity.registryAccess(), Enchantments.PROTECTION, 1);
+                EnchantmentUtil.enchant(entity.getItemBySlot(EquipmentSlot.LEGS), entity.registryAccess(), Enchantments.PROTECTION, 1);
+                EnchantmentUtil.enchant(entity.getItemBySlot(EquipmentSlot.FEET), entity.registryAccess(), Enchantments.PROTECTION, 1);
             }
         }
     }

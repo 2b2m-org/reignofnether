@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.piglins;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.abilities.WitherCloud;
@@ -365,7 +367,7 @@ public class WitherSkeletonUnit extends WitherSkeleton implements Unit, Attacker
 
     public int getSharpnessLevel() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getEnchantmentLevel(Enchantments.SHARPNESS);
+        return EnchantmentUtil.getLevel(itemStack, Enchantments.SHARPNESS);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit;
 
+import net.minecraft.core.HolderLookup;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -27,7 +29,7 @@ public class HeroUnitSaveData extends SavedData {
         }
         return server.overworld()
             .getDataStorage()
-            .computeIfAbsent(HeroUnitSaveData::load, HeroUnitSaveData::create, "saved-herounit-data");
+            .computeIfAbsent(new SavedData.Factory<>(HeroUnitSaveData::create, (tag, provider) -> HeroUnitSaveData.load(tag)), "saved-herounit-data");
     }
 
     public static HeroUnitSaveData load(CompoundTag tag) {
@@ -59,7 +61,7 @@ public class HeroUnitSaveData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         //ReignOfNether.LOGGER.info("UnitSaveData.save");
 
         ListTag list = new ListTag();

@@ -15,6 +15,7 @@ import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.villagers.EnchanterUnit;
+import com.solegendary.reignofnether.util.EnchantmentUtil;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -22,9 +23,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
@@ -143,7 +141,7 @@ public class ProtectiveEnchantment extends AbstractEnchantment {
     public boolean canEnchant(LivingEntity le) {
         return le instanceof Unit &&
                 !le.getItemBySlot(EquipmentSlot.CHEST).isEmpty() &&
-                !le.getItemBySlot(EquipmentSlot.CHEST).getAllEnchantments().containsKey(EnchantmentRegistrar.FORTYIFYING.get());
+                !EnchantmentUtil.has(le.getItemBySlot(EquipmentSlot.CHEST), EnchantmentRegistrar.FORTIFYING);
     }
 
     @Override
@@ -153,7 +151,7 @@ public class ProtectiveEnchantment extends AbstractEnchantment {
                 HudClientEvents.showTemporaryMessage(I18n.get("ability.reignofnether.enchant.error6"));
             return;
         }
-        if (targetEntity.getItemBySlot(EquipmentSlot.CHEST).getAllEnchantments().containsKey(EnchantmentRegistrar.FORTYIFYING.get())) {
+        if (EnchantmentUtil.has(targetEntity.getItemBySlot(EquipmentSlot.CHEST), EnchantmentRegistrar.FORTIFYING)) {
             if (level.isClientSide())
                 HudClientEvents.showTemporaryMessage(I18n.get("ability.reignofnether.enchant.error4"));
             return;

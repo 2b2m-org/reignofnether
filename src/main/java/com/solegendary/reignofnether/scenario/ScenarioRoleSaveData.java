@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.scenario;
 
+import net.minecraft.core.HolderLookup;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.resources.Resources;
@@ -29,7 +31,7 @@ public class ScenarioRoleSaveData extends SavedData {
         }
         return server.overworld()
             .getDataStorage()
-            .computeIfAbsent(ScenarioRoleSaveData::load, ScenarioRoleSaveData::create, "saved-scenario-data");
+            .computeIfAbsent(new SavedData.Factory<>(ScenarioRoleSaveData::create, (tag, provider) -> ScenarioRoleSaveData.load(tag)), "saved-scenario-data");
     }
 
     public static ScenarioRoleSaveData load(CompoundTag tag) {
@@ -50,7 +52,7 @@ public class ScenarioRoleSaveData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         ListTag list = new ListTag();
         this.scenarioRoleSaves.forEach(r -> {
             r.packNbt();

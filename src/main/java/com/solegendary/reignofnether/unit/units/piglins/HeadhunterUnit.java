@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.units.piglins;
 
+import com.solegendary.reignofnether.util.EnchantmentUtil;
+
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.abilities.Bloodlust;
@@ -301,7 +303,7 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
             tridentStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
 
             if (ResearchServerEvents.playerHasResearch(getOwnerName(), ProductionItems.RESEARCH_HEAVY_TRIDENTS))
-                tridentStack.enchant(Enchantments.PUNCH, 1);
+                EnchantmentUtil.enchant(tridentStack, registryAccess(), Enchantments.PUNCH, 1);
 
             this.setItemSlot(EquipmentSlot.MAINHAND, tridentStack);
         }
@@ -323,7 +325,7 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
 
     public boolean hasFlameTrident() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getAllEnchantments().containsKey(Enchantments.FLAME);
+        return EnchantmentUtil.has(itemStack, Enchantments.FLAME);
     }
 
     @Override
@@ -364,7 +366,7 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
 
     public int getPowerLevel() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getEnchantmentLevel(Enchantments.POWER);
+        return EnchantmentUtil.getLevel(itemStack, Enchantments.POWER);
     }
 
     @Override

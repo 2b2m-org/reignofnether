@@ -19,15 +19,15 @@ import com.solegendary.reignofnether.unit.units.piglins.BruteUnit;
 import com.solegendary.reignofnether.unit.units.piglins.HeadhunterUnit;
 import com.solegendary.reignofnether.unit.units.piglins.WitherSkeletonUnit;
 import com.solegendary.reignofnether.unit.units.villagers.*;
+import com.solegendary.reignofnether.util.EnchantmentUtil;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
@@ -143,17 +143,17 @@ public class MartialEnchantment extends AbstractEnchantment {
     }
 
     @Nullable
-    public static Enchantment getEnchantmentForUnit(LivingEntity unit) {
+    public static ResourceKey<Enchantment> getEnchantmentForUnit(LivingEntity unit) {
         if (unit instanceof MilitiaUnit militiaUnit)
             return militiaUnit.isUsingBow() ? Enchantments.POWER : Enchantments.SHARPNESS;
         if (unit instanceof VindicatorUnit)
-            return EnchantmentRegistrar.BREACHING.get();
+            return EnchantmentRegistrar.BREACHING;
         if (unit instanceof PillagerUnit)
             return Enchantments.PIERCING;
         if (unit instanceof EvokerUnit)
-            return EnchantmentRegistrar.ZEAL.get();
+            return EnchantmentRegistrar.ZEAL;
         if (unit instanceof WindcallerUnit)
-            return EnchantmentRegistrar.LONGSHOT.get();
+            return EnchantmentRegistrar.LONGSHOT;
         if (unit instanceof SkeletonUnit || unit instanceof StrayUnit || unit instanceof HeadhunterUnit)
             return Enchantments.POWER;
         if (unit instanceof BruteUnit || unit instanceof WitherSkeletonUnit)
@@ -180,10 +180,11 @@ public class MartialEnchantment extends AbstractEnchantment {
 
     @Override
     public boolean canEnchant(LivingEntity le) {
+        ResourceKey<Enchantment> enchantment = getEnchantmentForUnit(le);
         return getAllowedMobTypes().contains(le.getType()) &&
                 le instanceof Unit &&
                 !le.getItemBySlot(EquipmentSlot.MAINHAND).isEmpty() &&
-                !le.getItemBySlot(EquipmentSlot.MAINHAND).getAllEnchantments().containsKey(getEnchantmentForUnit(le));
+                (enchantment == null || !EnchantmentUtil.has(le.getItemBySlot(EquipmentSlot.MAINHAND), enchantment));
     }
 
     @Override
@@ -198,8 +199,8 @@ public class MartialEnchantment extends AbstractEnchantment {
                 HudClientEvents.showTemporaryMessage(I18n.get("ability.reignofnether.enchant.error7"));
             return;
         }
-        Enchantment enchantment = getEnchantmentForUnit(targetEntity);
-        if (enchantment != null && targetEntity.getItemBySlot(EquipmentSlot.MAINHAND).getAllEnchantments().containsKey(enchantment)) {
+        ResourceKey<Enchantment> enchantment = getEnchantmentForUnit(targetEntity);
+        if (enchantment != null && EnchantmentUtil.has(targetEntity.getItemBySlot(EquipmentSlot.MAINHAND), enchantment)) {
             if (level.isClientSide())
                 HudClientEvents.showTemporaryMessage(I18n.get("ability.reignofnether.enchant.error4"));
             return;
