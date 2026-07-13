@@ -7,7 +7,6 @@ import net.minecraft.client.sounds.MusicManager;
 import net.minecraft.core.Holder;
 import net.minecraft.sounds.Music;
 import net.minecraft.sounds.Musics;
-import net.minecraft.util.RandomSource;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -23,7 +22,6 @@ public class MusicManagerMixin {
     @Shadow private int nextSongDelay = 100;
     @Shadow @Final private Minecraft minecraft;
     @Nullable @Shadow private SoundInstance currentMusic;
-    @Shadow @Final private RandomSource random = RandomSource.create();
     @Shadow public void startPlaying(Music pSelector) {}
 
     @Inject(
