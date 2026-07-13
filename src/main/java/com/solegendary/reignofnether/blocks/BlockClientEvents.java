@@ -42,7 +42,7 @@ public class BlockClientEvents {
     // deals with block rendering jobs like range indicators
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
+        ResourceLocation rl = ResourceLocation.parse("neoforge:textures/white.png");
         var vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
             return;

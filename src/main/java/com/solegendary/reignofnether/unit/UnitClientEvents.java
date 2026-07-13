@@ -1023,7 +1023,7 @@ ticksToNextVisCheck -= 1;
         // AFTER_CUTOUT_BLOCKS lets us see checkpoints through leaves
         if (OrthoviewClientEvents.isEnabled() && evt.getStage() == stage) {
             VertexConsumer vertexConsumerLine = MC.renderBuffers().bufferSource().getBuffer(RenderType.LINE_STRIP);
-            ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
+            ResourceLocation rl = ResourceLocation.parse("neoforge:textures/white.png");
             VertexConsumer vertexConsumerEntityTranslucent = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
             // draw unit checkpoints
             for (LivingEntity entity : getSelectedUnits()) {
@@ -1052,7 +1052,7 @@ ticksToNextVisCheck -= 1;
                                         cp.isGreen ? 1 : 0,
                                         0,
                                         a,
-                                        ResourceLocation.parse("forge:textures/white.png")
+                                        ResourceLocation.parse("neoforge:textures/white.png")
                                 );
                             } else {
                                 MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumerEntityTranslucent, Direction.UP, cp.bp, cp.isGreen ? 0 : 1, cp.isGreen ? 1 : 0, 0, a);
@@ -1077,7 +1077,7 @@ ticksToNextVisCheck -= 1;
                                     aabb,
                                     Direction.UP,
                                     1, 1, 0, a,
-                                    ResourceLocation.parse("forge:textures/white.png")
+                                    ResourceLocation.parse("neoforge:textures/white.png")
                             );
                         } else {
                             MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumerEntityTranslucent, Direction.UP, ap, 1, 1, 0, a);
@@ -1106,7 +1106,7 @@ ticksToNextVisCheck -= 1;
                                         aabb,
                                         Direction.UP,
                                         1, 0, 0, MiscUtil.getOscillatingFloat(0.25f, 0.75f),
-                                        ResourceLocation.parse("forge:textures/white.png")
+                                        ResourceLocation.parse("neoforge:textures/white.png")
                                 );
                             }  else {
                                 MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumerEntityTranslucent, Direction.UP, blockTarget, 1, 0, 0, a);
@@ -1118,7 +1118,7 @@ ticksToNextVisCheck -= 1;
 
             if (FormationDragMove.isDragging()) {
                 VertexConsumer vertexConsumerLineFd = MC.renderBuffers().bufferSource().getBuffer(RenderType.LINES);
-                VertexConsumer vertexConsumerEntityTranslucentFd = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(ResourceLocation.parse("forge:textures/white.png")));
+                VertexConsumer vertexConsumerEntityTranslucentFd = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(ResourceLocation.parse("neoforge:textures/white.png")));
                 float a = 0.5f;
 
                 Vec3 lineStart = FormationDragMove.getLineStart();
@@ -1138,7 +1138,7 @@ ticksToNextVisCheck -= 1;
                                 1,
                                 0,
                                 a,
-                                ResourceLocation.parse("forge:textures/white.png")
+                                ResourceLocation.parse("neoforge:textures/white.png")
                         );
                     } else {
                         MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumerEntityTranslucentFd, Direction.UP, bp, 0, 1, 0, a);

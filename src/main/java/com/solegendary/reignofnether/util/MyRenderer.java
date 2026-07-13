@@ -234,7 +234,7 @@ public class MyRenderer {
     ) {
         AABB aabb = new AABB(bp);
         aabb = aabb.setMaxY(aabb.maxY + 0.01f);
-        drawSolidBox(matrixStack, vertexConsumer, aabb, null, r, g, b, a, ResourceLocation.parse("forge:textures/white.png"));
+        drawSolidBox(matrixStack, vertexConsumer, aabb, null, r, g, b, a, ResourceLocation.parse("neoforge:textures/white.png"));
     }
 
     public static void drawBlockFace(
@@ -249,7 +249,7 @@ public class MyRenderer {
     ) {
         AABB aabb = new AABB(bp);
         aabb = aabb.setMaxY(aabb.maxY + 0.01f);
-        drawSolidBox(matrixStack, vertexConsumer, aabb, dir, r, g, b, a, ResourceLocation.parse("forge:textures/white.png"));
+        drawSolidBox(matrixStack, vertexConsumer, aabb, dir, r, g, b, a, ResourceLocation.parse("neoforge:textures/white.png"));
     }
 
     public static void drawBlockFace(
@@ -265,7 +265,7 @@ public class MyRenderer {
     ) {
         AABB aabb = new AABB(bp);
         aabb = aabb.setMaxY(aabb.maxY + 0.01f);
-        drawSolidBox(matrixStack, vertexConsumer, aabb, dir, yOffset, r, g, b, a, ResourceLocation.parse("forge:textures/white.png"));
+        drawSolidBox(matrixStack, vertexConsumer, aabb, dir, yOffset, r, g, b, a, ResourceLocation.parse("neoforge:textures/white.png"));
     }
 
     // might be null RL for black.png as of 1.19?

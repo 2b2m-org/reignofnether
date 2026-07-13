@@ -266,7 +266,7 @@ public class BuildingClientEvents {
         int maxX = -999999;
         int maxY = -999999;
         int maxZ = -999999;
-        ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
+        ResourceLocation rl = ResourceLocation.parse("neoforge:textures/white.png");
         var vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
         for (BuildingBlock block : blocksToDraw) {
             if (buildingToPlace != null && isBuildingToPlaceABridge()
@@ -679,7 +679,7 @@ public class BuildingClientEvents {
         }
 
         // draw rally points and lines
-        ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
+        ResourceLocation rl = ResourceLocation.parse("neoforge:textures/white.png");
         var vertexConsumerEntityTranslucent = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
         var vertexConsumerNoDepthLine = MC.renderBuffers().bufferSource().getBuffer(MyRenderer.LINES_NO_DEPTH_TEST);
         var vertexConsumerLine = MC.renderBuffers().bufferSource().getBuffer(RenderType.LINES);
