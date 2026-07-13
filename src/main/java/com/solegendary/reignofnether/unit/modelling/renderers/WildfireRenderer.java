@@ -50,7 +50,7 @@ public class WildfireRenderer extends MobRenderer<WildfireUnit, WildfireModel<Wi
     }
 
     public ResourceLocation getTextureLocation(WildfireUnit wildfireUnit) {
-        if (wildfireUnit.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get()))
+        if (wildfireUnit.hasEffect(MobEffectRegistrar.SOULS_AFLAME))
             return SOUL_WILDFIRE_LOCATION;
         else
             return WILDFIRE_LOCATION;

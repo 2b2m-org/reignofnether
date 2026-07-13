@@ -57,7 +57,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import org.apache.commons.lang3.text.WordUtils;
 
@@ -370,7 +370,7 @@ public class CommandsServerEvents {
 			.then(Commands.argument("ownerName", StringArgumentType.string())
 				.then(Commands.argument("entity", ResourceLocationArgument.id())
 					.suggests((ctx, builder) -> SharedSuggestionProvider.suggestResource(
-						ForgeRegistries.ENTITY_TYPES.getKeys().stream(), builder))
+						BuiltInRegistries.ENTITY_TYPE.keySet().stream(), builder))
 					.executes(ctx -> summonEntity(
 						ctx,
 						StringArgumentType.getString(ctx, "ownerName"),
@@ -1264,4 +1264,3 @@ public class CommandsServerEvents {
 		String resolve(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException;
 	}
 }
-

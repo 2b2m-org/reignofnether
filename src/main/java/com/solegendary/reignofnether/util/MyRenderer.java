@@ -42,7 +42,7 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
@@ -589,7 +589,7 @@ public class MyRenderer {
                 CrashReport crashreport = CrashReport.forThrowable(var12, "Rendering item");
                 CrashReportCategory crashreportcategory = crashreport.addCategory("Item being rendered");
                 crashreportcategory.setDetail("Item Type", () -> String.valueOf(pStack.getItem()));
-                crashreportcategory.setDetail("Registry Name", () -> String.valueOf(ForgeRegistries.ITEMS.getKey(pStack.getItem())));
+                crashreportcategory.setDetail("Registry Name", () -> String.valueOf(BuiltInRegistries.ITEM.getKey(pStack.getItem())));
                 crashreportcategory.setDetail("Item Damage", () -> String.valueOf(pStack.getDamageValue()));
                 crashreportcategory.setDetail("Item NBT", () -> String.valueOf(pStack.getTag()));
                 crashreportcategory.setDetail("Item Foil", () -> String.valueOf(pStack.hasFoil()));

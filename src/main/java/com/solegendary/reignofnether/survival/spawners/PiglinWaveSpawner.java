@@ -102,9 +102,9 @@ public class PiglinWaveSpawner {
                 entity.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.GOLDEN_BOOTS));
             }
             if (tier >= 6) {
-                entity.getItemBySlot(EquipmentSlot.CHEST).enchant(Enchantments.ALL_DAMAGE_PROTECTION, 1);
-                entity.getItemBySlot(EquipmentSlot.LEGS).enchant(Enchantments.ALL_DAMAGE_PROTECTION, 1);
-                entity.getItemBySlot(EquipmentSlot.FEET).enchant(Enchantments.ALL_DAMAGE_PROTECTION, 1);
+                entity.getItemBySlot(EquipmentSlot.CHEST).enchant(Enchantments.PROTECTION, 1);
+                entity.getItemBySlot(EquipmentSlot.LEGS).enchant(Enchantments.PROTECTION, 1);
+                entity.getItemBySlot(EquipmentSlot.FEET).enchant(Enchantments.PROTECTION, 1);
             }
         }
     }

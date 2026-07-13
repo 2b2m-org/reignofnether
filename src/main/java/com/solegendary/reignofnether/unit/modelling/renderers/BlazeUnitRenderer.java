@@ -18,7 +18,7 @@ public class BlazeUnitRenderer extends BlazeRenderer {
 
     @Override
     public ResourceLocation getTextureLocation(Blaze blazeUnit) {
-        if (blazeUnit.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get()))
+        if (blazeUnit.hasEffect(MobEffectRegistrar.SOULS_AFLAME))
             return SOULFIRE_BLAZE_LOCATION;
         else
             return BLAZE_LOCATION;

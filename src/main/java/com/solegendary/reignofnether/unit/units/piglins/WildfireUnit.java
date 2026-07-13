@@ -365,18 +365,18 @@ public class WildfireUnit extends Blaze implements Unit, AttackerUnit, RangedAtt
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
                 .add(Attributes.ARMOR, WildfireUnit.armorValue)
                 .add(Attributes.ATTACK_KNOCKBACK, 0)
-                .add(AttributeRegistrar.BASE_MAX_HEALTH.get(), WildfireUnit.maxHealth)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), magicDamageResist)
-                .add(AttributeRegistrar.BASE_MAX_MANA.get(), baseMaxMana)
-                .add(AttributeRegistrar.MANA_REGEN_PER_SECOND.get(), manaRegenPerSecond)
-                .add(AttributeRegistrar.MAX_MANA_BONUS_PER_LEVEL.get(), manaBonusPerLevel)
-                .add(AttributeRegistrar.MAX_HEALTH_BONUS_PER_LEVEL.get(), maxHealthBonusPerLevel)
-                .add(AttributeRegistrar.ATTACK_DAMAGE_BONUS_PER_LEVEL.get(), attackBonusPerLevel);
+                .add(AttributeRegistrar.BASE_MAX_HEALTH, WildfireUnit.maxHealth)
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, magicDamageResist)
+                .add(AttributeRegistrar.BASE_MAX_MANA, baseMaxMana)
+                .add(AttributeRegistrar.MANA_REGEN_PER_SECOND, manaRegenPerSecond)
+                .add(AttributeRegistrar.MAX_MANA_BONUS_PER_LEVEL, manaBonusPerLevel)
+                .add(AttributeRegistrar.MAX_HEALTH_BONUS_PER_LEVEL, maxHealthBonusPerLevel)
+                .add(AttributeRegistrar.ATTACK_DAMAGE_BONUS_PER_LEVEL, attackBonusPerLevel);
     }
 
     public void tick() {
@@ -426,7 +426,7 @@ public class WildfireUnit extends Blaze implements Unit, AttackerUnit, RangedAtt
                 double t = (distSqr - minSqr) / (maxSqr - minSqr);
                 t = 1 - Mth.clamp(t, 0.0, 1.0);
                 int amp = (int) Math.round(t * maxAmp);
-                mob.addEffect(new MobEffectInstance(MobEffectRegistrar.INTENSE_HEAT.get(), 15, amp, true, true));
+                mob.addEffect(new MobEffectInstance(MobEffectRegistrar.INTENSE_HEAT, 15, amp, true, true));
             }
         }
     }
@@ -628,10 +628,10 @@ public class WildfireUnit extends Blaze implements Unit, AttackerUnit, RangedAtt
             SoundClientboundPacket.playSoundAtPos(SoundAction.WILDFIRE_SCORCHING_GAZE_END, blockPosition());
         }
         int durationTicks = getScorchingGaze().durationSeconds * 20;
-        targetEntity.addEffect(new MobEffectInstance(MobEffectRegistrar.SCORCHING_FIRE.get(), durationTicks, getScorchingGaze().durationSeconds));
+        targetEntity.addEffect(new MobEffectInstance(MobEffectRegistrar.SCORCHING_FIRE, durationTicks, getScorchingGaze().durationSeconds));
         targetEntity.addEffect(new MobEffectInstance(MobEffects.GLOWING, durationTicks,0, true, true));
-        if (hasEffect(MobEffectRegistrar.SOULS_AFLAME.get())) {
-            targetEntity.addEffect(new MobEffectInstance(MobEffectRegistrar.SCORCHING_FIRE.get(), durationTicks + 20, 0, true, true));
+        if (hasEffect(MobEffectRegistrar.SOULS_AFLAME)) {
+            targetEntity.addEffect(new MobEffectInstance(MobEffectRegistrar.SCORCHING_FIRE, durationTicks + 20, 0, true, true));
         }
         targetEntity.setSecondsOnFire(getScorchingGaze().durationSeconds);
         if (targetEntity instanceof Unit unit)
@@ -639,11 +639,11 @@ public class WildfireUnit extends Blaze implements Unit, AttackerUnit, RangedAtt
     }
 
     public void soulsAflame() {
-        if (hasEffect(MobEffectRegistrar.SOULS_AFLAME.get()))
+        if (hasEffect(MobEffectRegistrar.SOULS_AFLAME))
             return;
 
         MiscUtil.addParticleExplosion(ParticleRegistrar.BIG_SOUL_FLAME.get(), 15, level(), position().add(0,2,0));
-        addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME.get(), SoulsAflame.DURATION, 0, true, true));
+        addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME, SoulsAflame.DURATION, 0, true, true));
         if (!level().isClientSide()) {
             convertNearbyBlazes();
             convertNearbyFires();
@@ -654,7 +654,7 @@ public class WildfireUnit extends Blaze implements Unit, AttackerUnit, RangedAtt
         List<LivingEntity> nearbyUnits = MiscUtil.getEntitiesWithinRange(position(), SoulsAflame.RANGE, LivingEntity.class, level());
         for (LivingEntity le : nearbyUnits) {
             if (le instanceof BlazeUnit blazeUnit && UnitServerEvents.getUnitToEntityRelationship(this, blazeUnit) == Relationship.FRIENDLY) {
-                le.addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME.get(), SoulsAflame.DURATION, 0, true, true));
+                le.addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME, SoulsAflame.DURATION, 0, true, true));
             }
         }
     }

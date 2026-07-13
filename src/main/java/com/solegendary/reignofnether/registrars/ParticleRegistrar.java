@@ -5,19 +5,19 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.ForgeRegistries;
-import net.neoforged.neoforge.registries.RegistryObject;
+import net.minecraft.core.registries.Registries;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 public class ParticleRegistrar {
 
     public static final DeferredRegister<ParticleType<?>> PARTICLES =
-            DeferredRegister.create(ForgeRegistries.PARTICLE_TYPES, ReignOfNether.MOD_ID);
+            DeferredRegister.create(Registries.PARTICLE_TYPE, ReignOfNether.MOD_ID);
 
-    public static final RegistryObject<SimpleParticleType> BIG_ENCHANT =
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> BIG_ENCHANT =
             PARTICLES.register("big_enchant",
                     () -> new SimpleParticleType(false));
 
-    public static final RegistryObject<SimpleParticleType> BIG_SOUL_FLAME =
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> BIG_SOUL_FLAME =
             PARTICLES.register("big_soul_flame",
                     () -> new SimpleParticleType(false));
 

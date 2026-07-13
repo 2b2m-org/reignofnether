@@ -108,7 +108,7 @@ public class SoulsAflame extends HeroAbility {
 
     private void use(Level level, Unit unitUsing) {
         LivingEntity le = (LivingEntity) unitUsing;
-        boolean isSoulsAflameActive = le.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get());
+        boolean isSoulsAflameActive = le.hasEffect(MobEffectRegistrar.SOULS_AFLAME);
 
         if (level.isClientSide() && isSoulsAflameActive) {
             HudClientEvents.showTemporaryMessage(I18n.get("abilities.reignofnether.souls_aflame.already_active"));

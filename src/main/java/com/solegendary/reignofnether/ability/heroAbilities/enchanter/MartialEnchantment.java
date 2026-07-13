@@ -145,7 +145,7 @@ public class MartialEnchantment extends AbstractEnchantment {
     @Nullable
     public static Enchantment getEnchantmentForUnit(LivingEntity unit) {
         if (unit instanceof MilitiaUnit militiaUnit)
-            return militiaUnit.isUsingBow() ? Enchantments.POWER_ARROWS : Enchantments.SHARPNESS;
+            return militiaUnit.isUsingBow() ? Enchantments.POWER : Enchantments.SHARPNESS;
         if (unit instanceof VindicatorUnit)
             return EnchantmentRegistrar.BREACHING.get();
         if (unit instanceof PillagerUnit)
@@ -155,7 +155,7 @@ public class MartialEnchantment extends AbstractEnchantment {
         if (unit instanceof WindcallerUnit)
             return EnchantmentRegistrar.LONGSHOT.get();
         if (unit instanceof SkeletonUnit || unit instanceof StrayUnit || unit instanceof HeadhunterUnit)
-            return Enchantments.POWER_ARROWS;
+            return Enchantments.POWER;
         if (unit instanceof BruteUnit || unit instanceof WitherSkeletonUnit)
             return Enchantments.SHARPNESS;
         return null;

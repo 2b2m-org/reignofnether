@@ -42,9 +42,9 @@ public abstract class EntityRenderDispatcherMixin {
 
     @Unique private static boolean reignofnether$shouldRenderSoulfire(Entity entity) {
         if (entity instanceof LivingEntity le) {
-            return le.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get());
+            return le.hasEffect(MobEffectRegistrar.SOULS_AFLAME);
         } else if (entity instanceof Projectile proj && proj.getOwner() instanceof LivingEntity le) {
-            return le.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get());
+            return le.hasEffect(MobEffectRegistrar.SOULS_AFLAME);
         }
         return false;
     }

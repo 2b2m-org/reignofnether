@@ -285,13 +285,13 @@ public class WraithUnit extends Monster implements Unit, AttackerUnit, KeyframeA
                 .add(Attributes.ARMOR, WraithUnit.armorValue)
                 .add(Attributes.ATTACK_KNOCKBACK, 0f)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 9999.0f)
-                .add(AttributeRegistrar.EVASION_CHANCE.get(), evasionChance)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
+                .add(AttributeRegistrar.EVASION_CHANCE, evasionChance)
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, 0);
     }
 
     @Override
@@ -464,13 +464,13 @@ public class WraithUnit extends Monster implements Unit, AttackerUnit, KeyframeA
 
         Unit.fullResetBehaviours(targetUnit);
         targetUnit.getMoveGoal().setMoveTarget(fleeBp);
-        targetEntity.addEffect(new MobEffectInstance(MobEffectRegistrar.UNCONTROLLABLE.get(), Fear.DURATION_SECONDS * 20, 0, true, false));
-        targetEntity.addEffect(new MobEffectInstance(MobEffectRegistrar.FEARFUL.get(), Fear.DURATION_SECONDS * 20, 0, true, false));
+        targetEntity.addEffect(new MobEffectInstance(MobEffectRegistrar.UNCONTROLLABLE, Fear.DURATION_SECONDS * 20, 0, true, false));
+        targetEntity.addEffect(new MobEffectInstance(MobEffectRegistrar.FEARFUL, Fear.DURATION_SECONDS * 20, 0, true, false));
     }
 
 
     public void onCastPossess(LivingEntity targetEntity) {
-        MobEffectInstance mei = targetEntity.getEffect(MobEffectRegistrar.PARTIALLY_POSSESSED.get());
+        MobEffectInstance mei = targetEntity.getEffect(MobEffectRegistrar.PARTIALLY_POSSESSED);
         int amp = 0;
         if (mei != null) {
             amp = mei.getAmplifier() + 1;
@@ -478,7 +478,7 @@ public class WraithUnit extends Monster implements Unit, AttackerUnit, KeyframeA
         // play possess sound
         kill();
         if (targetEntity instanceof Unit unit && unit.getCost().population <= (amp + 1) * Possess.POP_PER_WRAITH) {
-            targetEntity.removeEffect(MobEffectRegistrar.PARTIALLY_POSSESSED.get());
+            targetEntity.removeEffect(MobEffectRegistrar.PARTIALLY_POSSESSED);
             unit.setOwnerName(this.getOwnerName());
             unit.setAnchor(null);
             MiscUtil.addParticleExplosion(ParticleTypes.SCULK_SOUL, 40, level(), targetEntity.getEyePosition(), 0.15f);
@@ -491,7 +491,7 @@ public class WraithUnit extends Monster implements Unit, AttackerUnit, KeyframeA
             }
         } else {
             targetEntity.addEffect(new MobEffectInstance(
-                    MobEffectRegistrar.PARTIALLY_POSSESSED.get(),
+                    MobEffectRegistrar.PARTIALLY_POSSESSED,
                     Possess.PARTIAL_POSSESS_DURATION_SECONDS * 20,
                     amp,
                     false,

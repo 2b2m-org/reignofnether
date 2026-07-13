@@ -1,4 +1,11 @@
 {
+    "enchantment.reignofnether.vigor": "Vigor",
+    "enchantment.reignofnether.breaching": "Breaching",
+    "enchantment.reignofnether.fortifying": "Fortifying",
+    "enchantment.reignofnether.maiming": "Maiming",
+    "enchantment.reignofnether.zeal": "Zeal",
+    "enchantment.reignofnether.gust": "Gust",
+    "enchantment.reignofnether.longshot": "Longshot",
     "item.reignofnether.zombie_unit_spawn_egg": "Spawn Zombie Unit",
     "item.reignofnether.husk_unit_spawn_egg": "Spawn Husk Unit",
     "item.reignofnether.drowned_unit_spawn_egg": "Spawn Drowned Unit",

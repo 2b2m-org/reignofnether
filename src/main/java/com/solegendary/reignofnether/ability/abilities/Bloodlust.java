@@ -90,7 +90,7 @@ public class Bloodlust extends Ability {
                 "Bloodlust",
                 ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/abilities/bloodlust.png"),
                 hotkey,
-                () -> unit.hasEffectWithDuration(MobEffectRegistrar.BLOODLUST.get()),
+                () -> unit.hasEffectWithDuration(MobEffectRegistrar.BLOODLUST),
                 () -> !ResearchClient.hasResearch(ProductionItems.RESEARCH_BLOODLUST),
                 () -> !((LivingEntity) unit).isVehicle() && !((LivingEntity) unit).isPassenger(),
                 () -> UnitClientEvents.sendUnitCommand(UnitAction.BLOOD_LUST),
@@ -113,7 +113,7 @@ public class Bloodlust extends Ability {
             Unit.addParticlesAroundSelf(unitUsing, ParticleTypes.ANGRY_VILLAGER);
         }
         setToMaxCooldown(unitUsing);
-        ((LivingEntity) unitUsing).addEffect(new MobEffectInstance(MobEffectRegistrar.BLOODLUST.get(), DURATION_SECONDS * 20, 0));
+        ((LivingEntity) unitUsing).addEffect(new MobEffectInstance(MobEffectRegistrar.BLOODLUST, DURATION_SECONDS * 20, 0));
         ((LivingEntity) unitUsing).addEffect(new MobEffectInstance(MobEffects.REGENERATION, (int) (getHealthCost(unitUsing) * 20 * 2.5f) + 40, 0));
     }
 

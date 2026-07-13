@@ -293,8 +293,8 @@ public class WindcallerUnit extends Pillager implements Unit, AttackerUnit, Rang
                 this.setDeltaMovement(0,1,0);
 
             this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(movementSpeedFlying);
-            this.getAttribute(AttributeRegistrar.ATTACKS_PER_SECOND.get()).setBaseValue(attacksPerSecondFlying);
-            this.getAttribute(AttributeRegistrar.ATTACK_RANGE.get()).setBaseValue(attackRangeFlying + (hasLongshot() ? LONGSHOT_BONUS_RANGE : 0));
+            this.getAttribute(AttributeRegistrar.ATTACKS_PER_SECOND).setBaseValue(attacksPerSecondFlying);
+            this.getAttribute(AttributeRegistrar.ATTACK_RANGE).setBaseValue(attackRangeFlying + (hasLongshot() ? LONGSHOT_BONUS_RANGE : 0));
 
             if (!level().isClientSide() && doAnimationAndSound) {
                 UnitAnimationClientboundPacket.sendBasicPacket(UnitAnimationAction.CHARGE_SPELL, this);
@@ -310,8 +310,8 @@ public class WindcallerUnit extends Pillager implements Unit, AttackerUnit, Rang
                 pendingGroundMoveTarget = MiscUtil.getHighestGroundBlock(level(), moveTarget);
 
             this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(movementSpeed);
-            this.getAttribute(AttributeRegistrar.ATTACKS_PER_SECOND.get()).setBaseValue(attacksPerSecond);
-            this.getAttribute(AttributeRegistrar.ATTACK_RANGE.get()).setBaseValue(attackRange + (hasLongshot() ? LONGSHOT_BONUS_RANGE : 0));
+            this.getAttribute(AttributeRegistrar.ATTACKS_PER_SECOND).setBaseValue(attacksPerSecond);
+            this.getAttribute(AttributeRegistrar.ATTACK_RANGE).setBaseValue(attackRange + (hasLongshot() ? LONGSHOT_BONUS_RANGE : 0));
 
             if (!level().isClientSide() && doAnimationAndSound)
                 UnitAnimationClientboundPacket.sendBasicPacket(UnitAnimationAction.STOP, this);
@@ -388,12 +388,12 @@ public class WindcallerUnit extends Pillager implements Unit, AttackerUnit, Rang
                 .add(Attributes.MAX_HEALTH, WindcallerUnit.maxHealth)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
                 .add(Attributes.ARMOR, WindcallerUnit.armorValue)
-                .add(AttributeRegistrar.BASE_MAX_HEALTH.get(), WindcallerUnit.maxHealth)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0);
+                .add(AttributeRegistrar.BASE_MAX_HEALTH, WindcallerUnit.maxHealth)
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0);
     }
 
     public void tick() {
@@ -527,7 +527,7 @@ public class WindcallerUnit extends Pillager implements Unit, AttackerUnit, Rang
 
     public int getPunchLevel() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getEnchantmentLevel(Enchantments.PUNCH_ARROWS);
+        return itemStack.getEnchantmentLevel(Enchantments.PUNCH);
     }
 
     @Override

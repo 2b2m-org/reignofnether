@@ -345,18 +345,18 @@ public class NecromancerUnit extends Skeleton implements Unit, AttackerUnit, Ran
                 .add(Attributes.MAX_HEALTH, NecromancerUnit.maxHealth)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
                 .add(Attributes.ARMOR, NecromancerUnit.armorValue)
-                .add(AttributeRegistrar.BASE_MAX_HEALTH.get(), NecromancerUnit.maxHealth)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), magicDamageResist)
-                .add(AttributeRegistrar.BASE_MAX_MANA.get(), baseMaxMana)
-                .add(AttributeRegistrar.MANA_REGEN_PER_SECOND.get(), manaRegenPerSecond)
-                .add(AttributeRegistrar.MAX_MANA_BONUS_PER_LEVEL.get(), manaBonusPerLevel)
-                .add(AttributeRegistrar.MAX_HEALTH_BONUS_PER_LEVEL.get(), maxHealthBonusPerLevel)
-                .add(AttributeRegistrar.ATTACK_DAMAGE_BONUS_PER_LEVEL.get(), attackBonusPerLevel);
+                .add(AttributeRegistrar.BASE_MAX_HEALTH, NecromancerUnit.maxHealth)
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, magicDamageResist)
+                .add(AttributeRegistrar.BASE_MAX_MANA, baseMaxMana)
+                .add(AttributeRegistrar.MANA_REGEN_PER_SECOND, manaRegenPerSecond)
+                .add(AttributeRegistrar.MAX_MANA_BONUS_PER_LEVEL, manaBonusPerLevel)
+                .add(AttributeRegistrar.MAX_HEALTH_BONUS_PER_LEVEL, maxHealthBonusPerLevel)
+                .add(AttributeRegistrar.ATTACK_DAMAGE_BONUS_PER_LEVEL, attackBonusPerLevel);
     }
 
     public void tick() {

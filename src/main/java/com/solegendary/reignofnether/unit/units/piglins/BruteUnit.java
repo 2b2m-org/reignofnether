@@ -229,12 +229,12 @@ public class BruteUnit extends PiglinBrute implements Unit, AttackerUnit {
                 .add(Attributes.MAX_HEALTH, BruteUnit.maxHealth)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
                 .add(Attributes.ARMOR, BruteUnit.armorValue)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), rangedDamageResist)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, rangedDamageResist)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, 0);
     }
 
     @Override
@@ -305,7 +305,7 @@ public class BruteUnit extends PiglinBrute implements Unit, AttackerUnit {
     public void setupEquipmentAndUpgradesServer() {
         if (!hasEnchantedNetheriteSword()) {
             ItemStack swordStack = new ItemStack(Items.GOLDEN_SWORD);
-            AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 0, AttributeModifier.Operation.ADDITION);
+            AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 0, AttributeModifier.Operation.ADD_VALUE);
             swordStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
             this.setItemSlot(EquipmentSlot.MAINHAND, swordStack);
         }
@@ -352,7 +352,7 @@ public class BruteUnit extends PiglinBrute implements Unit, AttackerUnit {
     @Override
     public void onPickupEquipment(ItemStack itemStack) {
         if (itemStack.getItem() == Items.NETHERITE_SWORD) {
-            AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 2, AttributeModifier.Operation.ADDITION);
+            AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 2, AttributeModifier.Operation.ADD_VALUE);
             itemStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
         }
         setItemSlot(getEquipmentSlotForItem(itemStack), itemStack);

@@ -38,8 +38,9 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.registries.RegistryObject;
 import org.lwjgl.glfw.GLFW;
+
+import java.util.function.Supplier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -269,7 +270,7 @@ public class TutorialClientEvents {
         }
     }
 
-    private static void msg(String msg, boolean bold, RegistryObject<SoundEvent> soundEvt, Object... params) {
+    private static void msg(String msg, boolean bold, Supplier<SoundEvent> soundEvt, Object... params) {
         if (MC.player == null) {
             return;
         }

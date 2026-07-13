@@ -203,12 +203,12 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
                 .add(Attributes.MAX_HEALTH, HeadhunterUnit.maxHealth)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
                 .add(Attributes.ARMOR, HeadhunterUnit.armorValue)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, 0);
     }
 
     @Override
@@ -297,11 +297,11 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
     public void setupEquipmentAndUpgradesServer() {
         if (!hasFlameTrident()) {
             ItemStack tridentStack = new ItemStack(Items.TRIDENT);
-            AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 0, AttributeModifier.Operation.ADDITION);
+            AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 0, AttributeModifier.Operation.ADD_VALUE);
             tridentStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
 
             if (ResearchServerEvents.playerHasResearch(getOwnerName(), ProductionItems.RESEARCH_HEAVY_TRIDENTS))
-                tridentStack.enchant(Enchantments.PUNCH_ARROWS, 1);
+                tridentStack.enchant(Enchantments.PUNCH, 1);
 
             this.setItemSlot(EquipmentSlot.MAINHAND, tridentStack);
         }
@@ -323,7 +323,7 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
 
     public boolean hasFlameTrident() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getAllEnchantments().containsKey(Enchantments.FLAMING_ARROWS);
+        return itemStack.getAllEnchantments().containsKey(Enchantments.FLAME);
     }
 
     @Override
@@ -346,7 +346,7 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
     @Override
     public void onPickupEquipment(ItemStack itemStack) {
         if (itemStack.getItem() == Items.TRIDENT) {
-            AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 0, AttributeModifier.Operation.ADDITION);
+            AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 0, AttributeModifier.Operation.ADD_VALUE);
             itemStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
         }
         setItemSlot(getEquipmentSlotForItem(itemStack), itemStack);
@@ -364,7 +364,7 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
 
     public int getPowerLevel() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getEnchantmentLevel(Enchantments.POWER_ARROWS);
+        return itemStack.getEnchantmentLevel(Enchantments.POWER);
     }
 
     @Override

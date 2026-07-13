@@ -153,11 +153,11 @@ public class UnitActionItem {
         actionableUnitsLoop:
         for (Unit unit : actionableUnits) {
 
-            if (((LivingEntity) unit).getEffect(MobEffectRegistrar.STUN.get()) != null ||
-                ((LivingEntity) unit).getEffect(MobEffectRegistrar.FREEZE.get()) != null) {
+            if (((LivingEntity) unit).getEffect(MobEffectRegistrar.STUN) != null ||
+                ((LivingEntity) unit).getEffect(MobEffectRegistrar.FREEZE) != null) {
                 Unit.fullResetBehaviours(unit);
                 continue;
-            } else if (((LivingEntity) unit).getEffect(MobEffectRegistrar.UNCONTROLLABLE.get()) != null) {
+            } else if (((LivingEntity) unit).getEffect(MobEffectRegistrar.UNCONTROLLABLE) != null) {
                 continue;
             } else if (unit.ignoreNonStopCommands() && action != UnitAction.STOP)
                 continue;

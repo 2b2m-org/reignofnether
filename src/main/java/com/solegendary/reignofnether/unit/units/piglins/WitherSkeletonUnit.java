@@ -194,19 +194,19 @@ public class WitherSkeletonUnit extends WitherSkeleton implements Unit, Attacker
                 .add(Attributes.ATTACK_KNOCKBACK, 0.5f)
                 .add(Attributes.ARMOR, WitherSkeletonUnit.armorValue)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.5f)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, 0);
     }
 
     @Override
     public void setRemainingFireTicks(int pRemainingFireTicks) {
         if (!level().isClientSide()) {
             boolean hasImmunityResearch = ResearchServerEvents.playerHasResearch(getOwnerName(), ProductionItems.RESEARCH_FIRE_RESISTANCE);
-            if (hasImmunityResearch && !hasEffect(MobEffectRegistrar.SOULS_AFLAME.get()))
+            if (hasImmunityResearch && !hasEffect(MobEffectRegistrar.SOULS_AFLAME))
                 pRemainingFireTicks = 0;
         }
         super.setRemainingFireTicks(pRemainingFireTicks);
@@ -293,7 +293,7 @@ public class WitherSkeletonUnit extends WitherSkeleton implements Unit, Attacker
     @Override
     public void setupEquipmentAndUpgradesServer() {
         ItemStack swordStack = new ItemStack(Items.NETHERITE_SWORD);
-        AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 0, AttributeModifier.Operation.ADDITION);
+        AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), 0, AttributeModifier.Operation.ADD_VALUE);
         swordStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
         this.setItemSlot(EquipmentSlot.MAINHAND, swordStack);
     }

@@ -93,7 +93,7 @@ public class MoltenBombProjectile extends Fireball {
         for (BlockPos bp : bpAndDists.keySet()) {
             if (random.nextFloat() > bpAndDists.get(bp)) {
                 BlockState fireState = Blocks.FIRE.defaultBlockState();
-                if (getOwner() instanceof Blaze blaze && blaze.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get())) {
+                if (getOwner() instanceof Blaze blaze && blaze.hasEffect(MobEffectRegistrar.SOULS_AFLAME)) {
                     fireState = BlockRegistrar.UNEXTINGUISHABLE_SOUL_FIRE.get().defaultBlockState();
                 }
                 BlockServerEvents.addTempBlock(
@@ -112,8 +112,8 @@ public class MoltenBombProjectile extends Fireball {
             mob.hurt(damageSources().mobProjectile(this, (LivingEntity) this.getOwner()), 0.5f);
             if (random.nextBoolean())
                 mob.setSecondsOnFire(5);
-            if (this.getOwner() instanceof LivingEntity le && le.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get())) {
-                mob.addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME.get(), 120, 0, false, false));
+            if (this.getOwner() instanceof LivingEntity le && le.hasEffect(MobEffectRegistrar.SOULS_AFLAME)) {
+                mob.addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME, 120, 0, false, false));
             }
         }
         MiscUtil.addParticleExplosion(ParticleTypes.LAVA, (int) (moltenBomb.radius * 3), level(), position());

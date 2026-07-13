@@ -24,8 +24,8 @@ public class RandomLookAroundUnitGoal extends Goal {
     }
 
     public boolean canUse() {
-        if (mob.hasEffect(MobEffectRegistrar.FREEZE.get()) ||
-            mob.hasEffect(MobEffectRegistrar.STUN.get()))
+        if (mob.hasEffect(MobEffectRegistrar.FREEZE) ||
+            mob.hasEffect(MobEffectRegistrar.STUN))
             return false;
 
         if (mob instanceof AttackerUnit attackerUnit)

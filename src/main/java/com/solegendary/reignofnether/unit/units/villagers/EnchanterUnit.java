@@ -337,18 +337,18 @@ public class EnchanterUnit extends Vindicator implements AttackerUnit, HeroUnit,
                 .add(Attributes.MAX_HEALTH, EnchanterUnit.maxHealth)
                 .add(Attributes.KNOCKBACK_RESISTANCE, KNOCKBACK_RESISTANCE)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
-                .add(AttributeRegistrar.BASE_MAX_HEALTH.get(), EnchanterUnit.maxHealth)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), magicDamageResist)
-                .add(AttributeRegistrar.BASE_MAX_MANA.get(), baseMaxMana)
-                .add(AttributeRegistrar.MANA_REGEN_PER_SECOND.get(), manaRegenPerSecond)
-                .add(AttributeRegistrar.MAX_MANA_BONUS_PER_LEVEL.get(), manaBonusPerLevel)
-                .add(AttributeRegistrar.MAX_HEALTH_BONUS_PER_LEVEL.get(), maxHealthBonusPerLevel)
-                .add(AttributeRegistrar.ATTACK_DAMAGE_BONUS_PER_LEVEL.get(), attackBonusPerLevel);
+                .add(AttributeRegistrar.BASE_MAX_HEALTH, EnchanterUnit.maxHealth)
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, magicDamageResist)
+                .add(AttributeRegistrar.BASE_MAX_MANA, baseMaxMana)
+                .add(AttributeRegistrar.MANA_REGEN_PER_SECOND, manaRegenPerSecond)
+                .add(AttributeRegistrar.MAX_MANA_BONUS_PER_LEVEL, manaBonusPerLevel)
+                .add(AttributeRegistrar.MAX_HEALTH_BONUS_PER_LEVEL, maxHealthBonusPerLevel)
+                .add(AttributeRegistrar.ATTACK_DAMAGE_BONUS_PER_LEVEL, attackBonusPerLevel);
     }
 
     public void tick() {
@@ -395,7 +395,7 @@ public class EnchanterUnit extends Vindicator implements AttackerUnit, HeroUnit,
                     for (Mob mob : MiscUtil.getEntitiesWithinRange(position(), MarchOfProgress.RADIUS, Mob.class, level())) {
                         if (UnitServerEvents.getUnitToEntityRelationship(this, mob) == Relationship.FRIENDLY &&
                             mob instanceof Unit unit && unit.hasAnyEnchants()) {
-                            mob.addEffect(new MobEffectInstance(MobEffectRegistrar.ENCHANTMENT_AMPLIFIER.get(), 30, 0, true, false));
+                            mob.addEffect(new MobEffectInstance(MobEffectRegistrar.ENCHANTMENT_AMPLIFIER, 30, 0, true, false));
                         }
                     }
                 }
@@ -405,8 +405,8 @@ public class EnchanterUnit extends Vindicator implements AttackerUnit, HeroUnit,
         if (isAuraEnabled() && level().isClientSide && tickCount % 20 == 0) {
             List<Mob> mobs = MiscUtil.getEntitiesWithinRange(position(), MarchOfProgress.RADIUS, Mob.class, level());
             for (Mob mob : mobs) {
-                if (mob.hasEffect(MobEffectRegistrar.ENCHANTMENT_AMPLIFIER.get()) ||
-                    mob.hasEffect(MobEffectRegistrar.TEMPORARY_EFFICIENCY.get())) {
+                if (mob.hasEffect(MobEffectRegistrar.ENCHANTMENT_AMPLIFIER) ||
+                    mob.hasEffect(MobEffectRegistrar.TEMPORARY_EFFICIENCY)) {
                     level().addParticle(
                             ParticleRegistrar.BIG_ENCHANT.get(),
                             mob.position().x,
@@ -578,8 +578,8 @@ public class EnchanterUnit extends Vindicator implements AttackerUnit, HeroUnit,
         if (level().isClientSide) return;
 
         if (entity.getMainHandItem().getItem() != Items.AIR)
-            entity.getMainHandItem().enchant(Enchantments.BLOCK_EFFICIENCY, 1);
-        entity.addEffect(new MobEffectInstance(MobEffectRegistrar.TEMPORARY_EFFICIENCY.get(), CivilEnchantment.DURATION_SECONDS * 20));
+            entity.getMainHandItem().enchant(Enchantments.EFFICIENCY, 1);
+        entity.addEffect(new MobEffectInstance(MobEffectRegistrar.TEMPORARY_EFFICIENCY, CivilEnchantment.DURATION_SECONDS * 20));
         playEnchantSound();
 
         if (getHeroLevel() < HeroUnit.MAX_NEUTRAL_EXP_LEVEL)

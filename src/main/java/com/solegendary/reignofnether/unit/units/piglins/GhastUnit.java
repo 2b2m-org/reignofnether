@@ -222,12 +222,12 @@ public class GhastUnit extends Ghast implements Unit, AttackerUnit, RangedAttack
                 .add(Attributes.MOVEMENT_SPEED, GhastUnit.movementSpeed)
                 .add(Attributes.MAX_HEALTH, GhastUnit.maxHealth)
                 .add(Attributes.ARMOR, GhastUnit.armorValue)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0.5f);
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, 0.5f);
     }
 
     @Override // prevent vanilla logic for picking up items
@@ -265,7 +265,7 @@ public class GhastUnit extends Ghast implements Unit, AttackerUnit, RangedAttack
         if (tickCount % 10 == 0) {
             BlockState lowestBs = level().getBlockState(MiscUtil.getHighestNonAirBlock(level(), blockPosition(), false, false));
             if (lowestBs.isAir() || lowestBs.getBlock() == Blocks.STRUCTURE_VOID) {
-                addEffect(new MobEffectInstance(MobEffectRegistrar.DISARM.get(), 15, 1, true, false));
+                addEffect(new MobEffectInstance(MobEffectRegistrar.DISARM, 15, 1, true, false));
             }
         }
 
@@ -357,7 +357,7 @@ public class GhastUnit extends Ghast implements Unit, AttackerUnit, RangedAttack
 
     @Override
     public void performUnitRangedAttack(double x, double y, double z, float velocity) {
-        if (this.hasEffect(MobEffectRegistrar.DISARM.get()))
+        if (this.hasEffect(MobEffectRegistrar.DISARM))
             return;
 
         Vec3 viewVec = this.getViewVector(1.0F);

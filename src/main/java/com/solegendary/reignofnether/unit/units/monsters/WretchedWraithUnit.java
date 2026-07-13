@@ -409,18 +409,18 @@ public class WretchedWraithUnit extends Monster implements Unit, AttackerUnit, H
                 .add(Attributes.ARMOR, WretchedWraithUnit.armorValue)
                 .add(Attributes.ATTACK_KNOCKBACK, 0f)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0f)
-                .add(AttributeRegistrar.BASE_MAX_HEALTH.get(), WretchedWraithUnit.maxHealth)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), magicDamageResist)
-                .add(AttributeRegistrar.BASE_MAX_MANA.get(), baseMaxMana)
-                .add(AttributeRegistrar.MANA_REGEN_PER_SECOND.get(), manaRegenPerSecond)
-                .add(AttributeRegistrar.MAX_MANA_BONUS_PER_LEVEL.get(), manaBonusPerLevel)
-                .add(AttributeRegistrar.MAX_HEALTH_BONUS_PER_LEVEL.get(), maxHealthBonusPerLevel)
-                .add(AttributeRegistrar.ATTACK_DAMAGE_BONUS_PER_LEVEL.get(), attackBonusPerLevel);
+                .add(AttributeRegistrar.BASE_MAX_HEALTH, WretchedWraithUnit.maxHealth)
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, magicDamageResist)
+                .add(AttributeRegistrar.BASE_MAX_MANA, baseMaxMana)
+                .add(AttributeRegistrar.MANA_REGEN_PER_SECOND, manaRegenPerSecond)
+                .add(AttributeRegistrar.MAX_MANA_BONUS_PER_LEVEL, manaBonusPerLevel)
+                .add(AttributeRegistrar.MAX_HEALTH_BONUS_PER_LEVEL, maxHealthBonusPerLevel)
+                .add(AttributeRegistrar.ATTACK_DAMAGE_BONUS_PER_LEVEL, attackBonusPerLevel);
     }
 
     public void tick() {
@@ -603,7 +603,7 @@ public class WretchedWraithUnit extends Monster implements Unit, AttackerUnit, H
             for (LivingEntity entity : MiscUtil.getEntitiesWithinRange(position(), radius, LivingEntity.class, level())) {
                 Relationship rs = UnitServerEvents.getUnitToEntityRelationship(this, entity);
                 if (rs != Relationship.FRIENDLY && rs != Relationship.OWNED)
-                    entity.addEffect(new MobEffectInstance(MobEffectRegistrar.FROST_DAMAGE.get(), duration));
+                    entity.addEffect(new MobEffectInstance(MobEffectRegistrar.FROST_DAMAGE, duration));
             }
         }
     }
@@ -666,7 +666,7 @@ public class WretchedWraithUnit extends Monster implements Unit, AttackerUnit, H
             Relationship rs = UnitServerEvents.getUnitToEntityRelationship(this, mob);
             if (rs != Relationship.OWNED && rs != Relationship.FRIENDLY &&
                 mob.onGround() && !(mob instanceof WretchedWraithUnit) &&
-                !mob.hasEffect(MobEffectRegistrar.FREEZE.get())) {
+                !mob.hasEffect(MobEffectRegistrar.FREEZE)) {
                 int duration = Blizzard.FREEZE_DURATION;
                 BlockServerEvents.addTempBlock((ServerLevel) level(), mob.getOnPos().above(),
                         Blocks.PACKED_ICE.defaultBlockState(), Blocks.AIR.defaultBlockState(), duration, true);
@@ -675,8 +675,8 @@ public class WretchedWraithUnit extends Monster implements Unit, AttackerUnit, H
                 BlockServerEvents.addTempBlock((ServerLevel) level(), mob.getOnPos().above().above().above(),
                         BlockRegistrar.WRAITH_SNOW_LAYER.get().defaultBlockState(), Blocks.AIR.defaultBlockState(), duration, true);
                 snowToPlace.putAll(BlockServerEvents.getSnowPositions(level(), mob.getOnPos().above(), 2));
-                mob.addEffect(new MobEffectInstance(MobEffectRegistrar.FREEZE.get(), duration));
-                mob.addEffect(new MobEffectInstance(MobEffectRegistrar.FROST_DAMAGE.get(), duration));
+                mob.addEffect(new MobEffectInstance(MobEffectRegistrar.FREEZE, duration));
+                mob.addEffect(new MobEffectInstance(MobEffectRegistrar.FROST_DAMAGE, duration));
                 MiscUtil.addParticleExplosion(ParticleTypes.SNOWFLAKE, 10, level(), mob.position());
                 break;
             }

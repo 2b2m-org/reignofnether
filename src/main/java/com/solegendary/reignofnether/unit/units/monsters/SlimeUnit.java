@@ -301,7 +301,7 @@ public class SlimeUnit extends Slime implements Unit, AttackerUnit {
         this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(getUnitMaxHealth());
         this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(getBaseMovementSpeed());
         this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(0);
-        this.getAttribute(AttributeRegistrar.ATTACK_DAMAGE.get()).setBaseValue(0);
+        this.getAttribute(AttributeRegistrar.ATTACK_DAMAGE).setBaseValue(0);
         this.getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(getKnockbackResistance());
         this.getAttribute(Attributes.ARMOR).setBaseValue(pSize == 1 ? 0 : armorPerSize * pSize);
 
@@ -372,12 +372,12 @@ public class SlimeUnit extends Slime implements Unit, AttackerUnit {
                 .add(Attributes.ARMOR, SlimeUnit.armorPerSize)
                 .add(Attributes.MAX_HEALTH, 10)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamagePerSize)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), 2)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), magicDamageResist);
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamagePerSize)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, 2)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, magicDamageResist);
     }
 
     public void tick() {
@@ -533,7 +533,7 @@ public class SlimeUnit extends Slime implements Unit, AttackerUnit {
         }
         if (result && getSize() >= 2 && pEntity instanceof LivingEntity && !(this instanceof MagmaCubeUnit) && !this.level().isClientSide())
             if (ResearchServerEvents.playerHasResearch(getOwnerName(), ProductionItems.RESEARCH_SLIME_CONVERSION))
-                ((LivingEntity)pEntity).addEffect(new MobEffectInstance(MobEffectRegistrar.SLIME_INFECTED.get(), CONVERT_DEBUFF_DURATION_SECONDS * 20, 0), this);
+                ((LivingEntity)pEntity).addEffect(new MobEffectInstance(MobEffectRegistrar.SLIME_INFECTED, CONVERT_DEBUFF_DURATION_SECONDS * 20, 0), this);
         return result;
     }
 

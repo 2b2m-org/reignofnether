@@ -349,7 +349,7 @@ public class MiscUtil {
         if (unitMob instanceof BoggedUnit) {
             priorityFilter = e -> !e.hasEffect(MobEffects.POISON);
         } else if (unitMob instanceof WraithUnit) {
-            priorityFilter = e -> !e.hasEffect(MobEffectRegistrar.FEARFUL.get());
+            priorityFilter = e -> !e.hasEffect(MobEffectRegistrar.FEARFUL);
         } else if (unitMob instanceof WitherSkeletonUnit) {
             priorityFilter = e -> e.hasEffect(MobEffects.WITHER);
         } else if (unitMob instanceof WindcallerUnit) {

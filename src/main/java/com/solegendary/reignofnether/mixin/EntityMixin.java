@@ -92,7 +92,7 @@ public abstract class EntityMixin {
             cancellable = true
     )
     public void extinguishFire(CallbackInfo ci) {
-        if ((Object)this instanceof LivingEntity le && le.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get())) {
+        if ((Object)this instanceof LivingEntity le && le.hasEffect(MobEffectRegistrar.SOULS_AFLAME)) {
             ci.cancel();
         }
     }
@@ -103,7 +103,7 @@ public abstract class EntityMixin {
             cancellable = true
     )
     public void playEntityOnFireExtinguishedSound(CallbackInfo ci) {
-        if ((Object)this instanceof LivingEntity le && le.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get())) {
+        if ((Object)this instanceof LivingEntity le && le.hasEffect(MobEffectRegistrar.SOULS_AFLAME)) {
             ci.cancel();
         }
     }
@@ -115,7 +115,7 @@ public abstract class EntityMixin {
     )
     public void setRemainingFireTicks(int pRemainingFireTicks, CallbackInfo ci) {
         if (pRemainingFireTicks <= 0 && (Object)this instanceof LivingEntity le &&
-            le.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get())) {
+            le.hasEffect(MobEffectRegistrar.SOULS_AFLAME)) {
             ci.cancel();
         }
     }

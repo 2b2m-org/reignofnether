@@ -229,9 +229,9 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
         if (weapon == Items.STONE_SWORD && swordEnchanted) {
             weaponStack.enchant(Enchantments.SHARPNESS, 1);
         } else if (weapon == Items.BOW && bowEnchanted) {
-            weaponStack.enchant(Enchantments.POWER_ARROWS, 1);
+            weaponStack.enchant(Enchantments.POWER, 1);
         }
-        AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), damageMod, AttributeModifier.Operation.ADDITION);
+        AttributeModifier mod = new AttributeModifier(UUID.randomUUID().toString(), damageMod, AttributeModifier.Operation.ADD_VALUE);
         weaponStack.addAttributeModifier(Attributes.ATTACK_DAMAGE, mod, EquipmentSlot.MAINHAND);
         this.setItemSlot(EquipmentSlot.MAINHAND, weaponStack);
         AttributeInstance ai2 = getAttribute(Attributes.MOVEMENT_SPEED);
@@ -285,12 +285,12 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
                 .add(Attributes.MAX_HEALTH, MilitiaUnit.maxHealth)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
                 .add(Attributes.ARMOR, MilitiaUnit.armorValue)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, 0);
     }
 
     @Override
@@ -495,7 +495,7 @@ public class MilitiaUnit extends Vindicator implements Unit, AttackerUnit, Range
 
     public int getPowerLevel() {
         ItemStack itemStack = this.getItemBySlot(EquipmentSlot.MAINHAND);
-        return itemStack.getEnchantmentLevel(Enchantments.POWER_ARROWS);
+        return itemStack.getEnchantmentLevel(Enchantments.POWER);
     }
 
     @Override

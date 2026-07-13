@@ -72,7 +72,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon EFFICIENCY = new EnchantmentIcon(
-            Enchantments.BLOCK_EFFICIENCY,
+            Enchantments.EFFICIENCY,
             EquipmentSlot.MAINHAND,
             getEnchantedItemStack(Items.IRON_PICKAXE),
             List.of(
@@ -90,7 +90,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon POWER = new EnchantmentIcon(
-            Enchantments.POWER_ARROWS,
+            Enchantments.POWER,
             EquipmentSlot.MAINHAND,
             getEnchantedItemStack(Items.BOW),
             List.of(
@@ -117,7 +117,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon PUNCH = new EnchantmentIcon(
-            Enchantments.PUNCH_ARROWS,
+            Enchantments.PUNCH,
             EquipmentSlot.MAINHAND,
             getEnchantedItemStack(Items.BOW),
             List.of(
@@ -171,7 +171,7 @@ public class PassiveIcons {
             )
     );
     public static final EnchantmentIcon FLAME = new EnchantmentIcon(
-            Enchantments.FLAMING_ARROWS,
+            Enchantments.FLAME,
             EquipmentSlot.MAINHAND,
             getEnchantedItemStack(Items.TRIDENT),
             List.of(

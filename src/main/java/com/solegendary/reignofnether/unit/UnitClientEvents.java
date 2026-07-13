@@ -1154,7 +1154,7 @@ ticksToNextVisCheck -= 1;
             LivingEntity entity = hudSelectedEntity;
             if ((entity != null && getPlayerToEntityRelationship(entity) == Relationship.OWNED || isSandboxPlayer) &&
                     !(entity instanceof CreeperUnit)) {
-                if (entity != null && !entity.hasEffect(MobEffectRegistrar.PARTIALLY_POSSESSED.get())) {
+                if (entity != null && !entity.hasEffect(MobEffectRegistrar.PARTIALLY_POSSESSED)) {
                     sendUnitCommand(UnitAction.DELETE);
                 }
             }

@@ -920,7 +920,7 @@ public class BuildingPlacement {
                     builderCount += 1;
             }
             if (((Mob) workerUnit).getActiveEffectsMap().containsKey(MobEffects.DIG_SPEED) ||
-                ((Mob) workerUnit).getActiveEffectsMap().containsKey(MobEffectRegistrar.TEMPORARY_EFFICIENCY.get()))
+                ((Mob) workerUnit).getActiveEffectsMap().containsKey(MobEffectRegistrar.TEMPORARY_EFFICIENCY))
                 builderCount += 1;
         }
 

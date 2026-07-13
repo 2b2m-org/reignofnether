@@ -121,7 +121,7 @@ public class UnitCrossbowAttackGoal<T extends Monster & RangedAttackMob & Crossb
         ItemStack itemstack = this.mob.getItemBySlot(EquipmentSlot.MAINHAND);
         if (this.crossbowState == UNCHARGED) {
             int ticks = CrossbowItem.getChargeDuration(itemstack);
-            this.mob.addEffect(new MobEffectInstance(MobEffectRegistrar.MINOR_MOVEMENT_SLOWDOWN.get(), ticks, 3, true, false));
+            this.mob.addEffect(new MobEffectInstance(MobEffectRegistrar.MINOR_MOVEMENT_SLOWDOWN, ticks, 3, true, false));
             this.mob.startUsingItem(ProjectileUtil.getWeaponHoldingHand(this.mob, item -> item instanceof CrossbowItem));
             this.crossbowState = CHARGING;
             this.mob.setChargingCrossbow(true);

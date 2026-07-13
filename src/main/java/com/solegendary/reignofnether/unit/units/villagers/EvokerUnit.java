@@ -239,10 +239,10 @@ public class EvokerUnit extends Evoker implements Unit, AttackerUnit, RangedAtta
                 .add(Attributes.MAX_HEALTH, EvokerUnit.maxHealth)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
                 .add(Attributes.ARMOR, EvokerUnit.armorValue)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), EvokerUnit.attacksPerSecond)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, EvokerUnit.attacksPerSecond)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, 0);
     }
 
     @Override

@@ -193,12 +193,12 @@ public class MarauderUnit extends PiglinBrute implements Unit, AttackerUnit, Key
 
     @Override
     public int getAttackWindupTicks() {
-        return hasEffectWithDuration(MobEffectRegistrar.BLOODLUST.get()) ? 10 : 16;
+        return hasEffectWithDuration(MobEffectRegistrar.BLOODLUST) ? 10 : 16;
     }
 
     @Override
     public float getAnimationSpeed() {
-        return hasEffectWithDuration(MobEffectRegistrar.BLOODLUST.get()) ? 2.0f : 1.2f;
+        return hasEffectWithDuration(MobEffectRegistrar.BLOODLUST) ? 2.0f : 1.2f;
     }
 
     // non-looping animations
@@ -258,12 +258,12 @@ public class MarauderUnit extends PiglinBrute implements Unit, AttackerUnit, Key
                 .add(Attributes.ARMOR, MarauderUnit.armorValue)
                 .add(Attributes.ATTACK_KNOCKBACK, 0f)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.66f)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, 0);
     }
 
     @Override
@@ -294,10 +294,10 @@ public class MarauderUnit extends PiglinBrute implements Unit, AttackerUnit, Key
     public boolean doHurtTarget(@NotNull Entity pEntity) {
         boolean result;
         if (isNextHitBig()) {
-            this.getAttribute(Attributes.ATTACK_KNOCKBACK).addTransientModifier(new AttributeModifier("knockback", 1.5f, AttributeModifier.Operation.ADDITION));
+            this.getAttribute(Attributes.ATTACK_KNOCKBACK).addTransientModifier(new AttributeModifier("knockback", 1.5f, AttributeModifier.Operation.ADD_VALUE));
             result = super.doHurtTarget(pEntity);
             if (pEntity instanceof LivingEntity le) {
-                le.addEffect(new MobEffectInstance(MobEffectRegistrar.STUN.get(), 40));
+                le.addEffect(new MobEffectInstance(MobEffectRegistrar.STUN, 40));
             }
             this.getAttribute(Attributes.ATTACK_KNOCKBACK).removeModifiers();
             decrementAttacks();
@@ -315,7 +315,7 @@ public class MarauderUnit extends PiglinBrute implements Unit, AttackerUnit, Key
                 for (Mob mob : closestMobs) {
                     if (UnitServerEvents.getUnitToEntityRelationship(this, mob) != Relationship.FRIENDLY && mob.getId() != pEntity.getId()) {
                         super.doHurtTarget(mob);
-                        mob.addEffect(new MobEffectInstance(MobEffectRegistrar.STUN.get(), 20));
+                        mob.addEffect(new MobEffectInstance(MobEffectRegistrar.STUN, 20));
                         extraHitsLeft -= 1;
                         if (extraHitsLeft <= 0) {
                             break;

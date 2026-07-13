@@ -43,7 +43,7 @@ public class BlazeUnitFireball extends SmallFireball {
         super.tick();
         if (!this.level().isClientSide() && isFirewallShot) {
             BlockState fireState = Blocks.FIRE.defaultBlockState();
-            if (getOwner() instanceof Blaze blaze && blaze.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get())) {
+            if (getOwner() instanceof Blaze blaze && blaze.hasEffect(MobEffectRegistrar.SOULS_AFLAME)) {
                 fireState = BlockRegistrar.UNEXTINGUISHABLE_SOUL_FIRE.get().defaultBlockState();
             }
             Block block = this.level().getBlockState(this.getOnPos()).getBlock();
@@ -98,9 +98,9 @@ public class BlazeUnitFireball extends SmallFireball {
 
             this.onHitEntity(entityHitResult);
             this.level().gameEvent(GameEvent.PROJECTILE_LAND, pResult.getLocation(), GameEvent.Context.of(this, null));
-            if (this.getOwner() instanceof LivingEntity le && le.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get()) &&
+            if (this.getOwner() instanceof LivingEntity le && le.hasEffect(MobEffectRegistrar.SOULS_AFLAME) &&
                 entityHitResult.getEntity() instanceof LivingEntity leTarget) {
-                leTarget.addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME.get(), 120, 0, false, false));
+                leTarget.addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME, 120, 0, false, false));
             }
             if (!this.level().isClientSide && !targetOnFire && !this.isFirewallShot)
                 this.discard();

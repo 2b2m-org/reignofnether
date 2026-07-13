@@ -39,6 +39,7 @@ import com.solegendary.reignofnether.unit.units.villagers.*;
 import com.solegendary.reignofnether.util.EnchantmentUtil;
 import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -61,7 +62,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.*;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -114,29 +114,29 @@ public class UnitServerEvents {
 
     private static final Random RANDOM = new Random();
 
-    private static final List<MobEffect> SYNCED_MOB_EFFECTS = List.of(
+    private static final List<Holder<MobEffect>> SYNCED_MOB_EFFECTS = List.of(
         MobEffects.DAMAGE_RESISTANCE,
-        MobEffectRegistrar.STUN.get(),
-        MobEffectRegistrar.FREEZE.get(),
-        MobEffectRegistrar.DAMAGE_TAKEN_INCREASE.get(),
-        MobEffectRegistrar.MINOR_MOVEMENT_SLOWDOWN.get(),
-        MobEffectRegistrar.MINOR_MOVEMENT_SPEED.get(),
-        MobEffectRegistrar.ATTACK_SLOWDOWN.get(),
-        MobEffectRegistrar.TEMPORARY_EFFICIENCY.get(),
-        MobEffectRegistrar.BLOODLUST.get(),
-        MobEffectRegistrar.FROST_DAMAGE.get(),
-        MobEffectRegistrar.DISARM.get(),
-        MobEffectRegistrar.ENCHANTMENT_AMPLIFIER.get(),
-        MobEffectRegistrar.SCORCHING_FIRE.get(),
-        MobEffectRegistrar.SOULS_AFLAME.get(),
-        MobEffectRegistrar.ANGRY.get(),
-        MobEffectRegistrar.FEARFUL.get(),
-        MobEffectRegistrar.PARTIALLY_POSSESSED.get(),
+        MobEffectRegistrar.STUN,
+        MobEffectRegistrar.FREEZE,
+        MobEffectRegistrar.DAMAGE_TAKEN_INCREASE,
+        MobEffectRegistrar.MINOR_MOVEMENT_SLOWDOWN,
+        MobEffectRegistrar.MINOR_MOVEMENT_SPEED,
+        MobEffectRegistrar.ATTACK_SLOWDOWN,
+        MobEffectRegistrar.TEMPORARY_EFFICIENCY,
+        MobEffectRegistrar.BLOODLUST,
+        MobEffectRegistrar.FROST_DAMAGE,
+        MobEffectRegistrar.DISARM,
+        MobEffectRegistrar.ENCHANTMENT_AMPLIFIER,
+        MobEffectRegistrar.SCORCHING_FIRE,
+        MobEffectRegistrar.SOULS_AFLAME,
+        MobEffectRegistrar.ANGRY,
+        MobEffectRegistrar.FEARFUL,
+        MobEffectRegistrar.PARTIALLY_POSSESSED,
         MobEffects.LEVITATION
     );
 
     // Per-entity last-synced mob effect amplifiers. Null amp means "absent last sync".
-    private static final HashMap<Integer, HashMap<MobEffect, Byte>> lastSyncedEffects = new HashMap<>();
+    private static final HashMap<Integer, HashMap<Holder<MobEffect>, Byte>> lastSyncedEffects = new HashMap<>();
 
     // Time-sliced formation dispatch: VANILLA-ONLY (rtsPathfinding off). Large group MOVE commands
     // are spread across ticks to avoid the spike from N units all running vanilla's synchronous main-thread
@@ -540,9 +540,9 @@ saveTicks += 1;
 
         LivingEntity lastHurtByMob = evt.getEntity().getLastHurtByMob();
 
-        boolean drownedInfected = evt.getEntity().getActiveEffectsMap().containsKey(MobEffectRegistrar.ZOMBIE_INFECTED.get()) ||
+        boolean drownedInfected = evt.getEntity().getActiveEffectsMap().containsKey(MobEffectRegistrar.ZOMBIE_INFECTED) ||
                 lastHurtByMob instanceof DrownedUnit;
-        boolean slimeInfected = (evt.getEntity().getActiveEffectsMap().containsKey(MobEffectRegistrar.SLIME_INFECTED.get()) ||
+        boolean slimeInfected = (evt.getEntity().getActiveEffectsMap().containsKey(MobEffectRegistrar.SLIME_INFECTED) ||
                 ((lastHurtByMob instanceof SlimeUnit) && !(lastHurtByMob instanceof MagmaCubeUnit)));
 
         if (lastHurtByMob instanceof Unit unit && (drownedInfected || slimeInfected)) {
@@ -624,7 +624,7 @@ saveTicks += 1;
             }
         }
 
-        if (evt.getEntity().hasEffect(MobEffectRegistrar.SCORCHING_FIRE.get())) {
+        if (evt.getEntity().hasEffect(MobEffectRegistrar.SCORCHING_FIRE)) {
             List<Mob> mobs = MiscUtil.getEntitiesWithinRange(evt.getEntity().position(), ScorchingGaze.SPREAD_RANGE, Mob.class, evt.getEntity().level());
             ArrayList<Mob> friendlyUnits = new ArrayList<>();
             for (Mob mob : mobs) {
@@ -635,14 +635,14 @@ saveTicks += 1;
             }
             friendlyUnits.sort(Comparator.comparing(le -> le.position().distanceToSqr(evt.getEntity().position())));
             if (!friendlyUnits.isEmpty()) {
-                int durationSeconds = evt.getEntity().getEffect(MobEffectRegistrar.SCORCHING_FIRE.get()).getAmplifier() - 2;
+                int durationSeconds = evt.getEntity().getEffect(MobEffectRegistrar.SCORCHING_FIRE).getAmplifier() - 2;
                 int durationTicks = durationSeconds * 20;
-                if (durationSeconds > 0 && friendlyUnits.get(0).addEffect(new MobEffectInstance(MobEffectRegistrar.SCORCHING_FIRE.get(), durationTicks, durationSeconds))) {
+                if (durationSeconds > 0 && friendlyUnits.get(0).addEffect(new MobEffectInstance(MobEffectRegistrar.SCORCHING_FIRE, durationTicks, durationSeconds))) {
                     MiscUtil.addParticleExplosion(ParticleTypes.LAVA, 12, evt.getEntity().level(), evt.getEntity().position());
                     SoundClientboundPacket.playSoundAtPos(SoundAction.WILDFIRE_SCORCHING_GAZE_END, friendlyUnits.get(0).blockPosition());
                     friendlyUnits.get(0).addEffect(new MobEffectInstance(MobEffects.GLOWING, durationTicks,0, true, true));
-                    if (evt.getEntity().hasEffect(MobEffectRegistrar.SOULS_AFLAME.get())) {
-                        friendlyUnits.get(0).addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME.get(), durationTicks + 20, 0, true, true));
+                    if (evt.getEntity().hasEffect(MobEffectRegistrar.SOULS_AFLAME)) {
+                        friendlyUnits.get(0).addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME, durationTicks + 20, 0, true, true));
                     }
                 }
             }
@@ -744,8 +744,8 @@ saveTicks += 1;
                     UnitSyncClientboundPacket.sendSyncResourcesPacket(unit);
                     UnitSyncClientboundPacket.sendSyncStatsPacket(entity);
 
-                    HashMap<MobEffect, Byte> lastState = lastSyncedEffects.computeIfAbsent(entity.getId(), k -> new HashMap<>());
-                    for (MobEffect me : SYNCED_MOB_EFFECTS) {
+                    HashMap<Holder<MobEffect>, Byte> lastState = lastSyncedEffects.computeIfAbsent(entity.getId(), k -> new HashMap<>());
+                    for (Holder<MobEffect> me : SYNCED_MOB_EFFECTS) {
                         MobEffectInstance mei = entity.getEffect(me);
                         Byte lastAmp = lastState.get(me);
                         if (mei != null) {
@@ -1005,10 +1005,10 @@ saveTicks += 1;
 
         if (evt.getSource().getEntity() instanceof LivingEntity le) {
             int breachLevel = le.getMainHandItem().getEnchantmentLevel(EnchantmentRegistrar.BREACHING.get());
-            MobEffectInstance existingDmgIncrease = evt.getEntity().getEffect(MobEffectRegistrar.DAMAGE_TAKEN_INCREASE.get());
+            MobEffectInstance existingDmgIncrease = evt.getEntity().getEffect(MobEffectRegistrar.DAMAGE_TAKEN_INCREASE);
             if (breachLevel > 0) {
                 int amp = existingDmgIncrease != null ? (breachLevel * 2) + existingDmgIncrease.getAmplifier() : Math.max(0, (breachLevel * 2) - 1);
-                evt.getEntity().addEffect(new MobEffectInstance(MobEffectRegistrar.DAMAGE_TAKEN_INCREASE.get(), 100, amp));
+                evt.getEntity().addEffect(new MobEffectInstance(MobEffectRegistrar.DAMAGE_TAKEN_INCREASE, 100, amp));
             }
         }
         if (evt.getSource().getEntity() instanceof Vex vex && vex.getOwner() instanceof EvokerUnit evokerUnit) {
@@ -1028,19 +1028,19 @@ saveTicks += 1;
             Level level = evt.getEntity().level();
             Block block = level.getBlockState(evt.getEntity().getOnPos().above()).getBlock();
             if (block == Blocks.SOUL_FIRE || block == BlockRegistrar.UNEXTINGUISHABLE_SOUL_FIRE.get()) {
-                evt.getEntity().addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME.get(), 120, 0, true, true));
+                evt.getEntity().addEffect(new MobEffectInstance(MobEffectRegistrar.SOULS_AFLAME, 120, 0, true, true));
             }
         }
 
-        if (evt.getEntity().hasEffect(MobEffectRegistrar.SCORCHING_FIRE.get()) && evt.getSource().is(DamageTypes.ON_FIRE)) {
+        if (evt.getEntity().hasEffect(MobEffectRegistrar.SCORCHING_FIRE) && evt.getSource().is(DamageTypes.ON_FIRE)) {
             evt.setAmount(evt.getAmount() * 3);
         }
 
-        if (evt.getEntity().hasEffect(MobEffectRegistrar.SOULS_AFLAME.get()) && evt.getSource().is(DamageTypes.ON_FIRE)) {
+        if (evt.getEntity().hasEffect(MobEffectRegistrar.SOULS_AFLAME) && evt.getSource().is(DamageTypes.ON_FIRE)) {
             evt.setAmount(evt.getAmount() * 2);
         }
 
-        if (evt.getEntity().hasEffect(MobEffectRegistrar.SOULS_AFLAME.get()) && evt.getSource().is(DamageTypes.ON_FIRE)) {
+        if (evt.getEntity().hasEffect(MobEffectRegistrar.SOULS_AFLAME) && evt.getSource().is(DamageTypes.ON_FIRE)) {
             evt.setAmount(evt.getAmount() * 2);
         }
 
@@ -1099,7 +1099,7 @@ saveTicks += 1;
     @SubscribeEvent
     public static void onMobEffectAdded(MobEffectEvent.Added evt) {
         // double level of all enchants
-        if (evt.getEffectInstance().getEffect() == MobEffectRegistrar.ENCHANTMENT_AMPLIFIER.get() &&
+        if (evt.getEffectInstance().is(MobEffectRegistrar.ENCHANTMENT_AMPLIFIER) &&
             evt.getOldEffectInstance() == null) {
             EnchantmentUtil.updateEnchantLevels(evt.getEntity(), false);
         }
@@ -1112,11 +1112,11 @@ saveTicks += 1;
     public static void onMobEffectExpired(MobEffectEvent.Expired evt) {
         // halve level of all enchants
         if (evt.getEffectInstance() != null) {
-            MobEffect effect = evt.getEffectInstance().getEffect();
-            if (effect == MobEffectRegistrar.ENCHANTMENT_AMPLIFIER.get()) {
+            Holder<MobEffect> effect = evt.getEffectInstance().getEffect();
+            if (effect.is(MobEffectRegistrar.ENCHANTMENT_AMPLIFIER)) {
                 EnchantmentUtil.updateEnchantLevels(evt.getEntity(), true);
-            } else if (effect == MobEffectRegistrar.TEMPORARY_EFFICIENCY.get()) {
-                EnchantmentHelper.setEnchantments(new HashMap<>(), evt.getEntity().getMainHandItem());
+            } else if (effect.is(MobEffectRegistrar.TEMPORARY_EFFICIENCY)) {
+                EnchantmentUtil.clear(evt.getEntity().getMainHandItem());
             }
         }
     }
@@ -1136,7 +1136,7 @@ saveTicks += 1;
 
     @SubscribeEvent
     public static void onLivingKnockBack(LivingKnockBackEvent evt) {
-        if (evt.getEntity().getEffect(MobEffectRegistrar.FREEZE.get()) != null)
+        if (evt.getEntity().getEffect(MobEffectRegistrar.FREEZE) != null)
             evt.setCanceled(true);
         if (evt.getEntity() instanceof GhastUnit)
             evt.setCanceled(true);

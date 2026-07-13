@@ -156,7 +156,7 @@ public class CivilEnchantment extends AbstractEnchantment {
     public boolean canEnchant(LivingEntity le) {
         return getAllowedMobTypes().contains(le.getType()) &&
                 le instanceof Unit unit &&
-                !unit.hasEffectWithDuration(MobEffectRegistrar.TEMPORARY_EFFICIENCY.get());
+                !unit.hasEffectWithDuration(MobEffectRegistrar.TEMPORARY_EFFICIENCY);
     }
 
     @Override
@@ -177,8 +177,8 @@ public class CivilEnchantment extends AbstractEnchantment {
 
     public static float getEfficiencyMultiplier(WorkerUnit workerUnit) {
         LivingEntity le = (LivingEntity) workerUnit;
-        if (le.hasEffect(MobEffectRegistrar.TEMPORARY_EFFICIENCY.get())) {
-            return le.hasEffect(MobEffectRegistrar.ENCHANTMENT_AMPLIFIER.get()) ?
+        if (le.hasEffect(MobEffectRegistrar.TEMPORARY_EFFICIENCY)) {
+            return le.hasEffect(MobEffectRegistrar.ENCHANTMENT_AMPLIFIER) ?
                     CivilEnchantment.SUPER_EFFICIENCY_SPEED_MULTIPLIER:
                     CivilEnchantment.EFFICIENCY_SPEED_MULTIPLIER;
         }

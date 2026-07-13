@@ -1,5 +1,9 @@
 package com.solegendary.reignofnether.util;
 
+import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
@@ -8,35 +12,68 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 
-import java.util.HashMap;
 import java.util.Map;
 
-public class EnchantmentUtil {
+public final class EnchantmentUtil {
+    private static final Map<ResourceKey<Enchantment>, Item> LEVEL_TWO_ENCHANTS = Map.of(
+        Enchantments.SHARPNESS, Items.IRON_AXE,
+        Enchantments.QUICK_CHARGE, Items.CROSSBOW
+    );
 
-    private static final HashMap<Enchantment, Item> level2Enchants = new HashMap<>();
-
-    static {
-        level2Enchants.put(Enchantments.SHARPNESS, Items.IRON_AXE);
-        level2Enchants.put(Enchantments.QUICK_CHARGE, Items.CROSSBOW);
+    private EnchantmentUtil() {
     }
 
-    public static int getRegularEnchantLevel(Enchantment enchantment, ItemStack itemStack) {
-        if (level2Enchants.get(enchantment) == itemStack.getItem()) {
-            return 2;
+    public static Holder.Reference<Enchantment> holder(
+        RegistryAccess registryAccess,
+        ResourceKey<Enchantment> enchantment
+    ) {
+        return registryAccess.registryOrThrow(Registries.ENCHANTMENT).getHolderOrThrow(enchantment);
+    }
+
+    public static int getLevel(ItemStack stack, ResourceKey<Enchantment> enchantment) {
+        for (var entry : stack.getEnchantments().entrySet()) {
+            if (entry.getKey().is(enchantment)) {
+                return entry.getIntValue();
+            }
         }
-        return 1;
+        return 0;
+    }
+
+    public static boolean has(ItemStack stack, ResourceKey<Enchantment> enchantment) {
+        return getLevel(stack, enchantment) > 0;
+    }
+
+    public static void enchant(
+        ItemStack stack,
+        RegistryAccess registryAccess,
+        ResourceKey<Enchantment> enchantment,
+        int level
+    ) {
+        stack.enchant(holder(registryAccess, enchantment), level);
+    }
+
+    public static void remove(ItemStack stack, ResourceKey<Enchantment> enchantment) {
+        EnchantmentHelper.updateEnchantments(stack, mutable -> mutable.removeIf(holder -> holder.is(enchantment)));
+    }
+
+    public static void clear(ItemStack stack) {
+        EnchantmentHelper.setEnchantments(stack, ItemEnchantments.EMPTY);
     }
 
     public static void updateEnchantLevels(LivingEntity entity, boolean regularLevels) {
-        ItemStack chestItem = entity.getItemBySlot(EquipmentSlot.CHEST);
-        Map<Enchantment, Integer> chestEnchants = chestItem.getAllEnchantments();
-        chestEnchants.replaceAll((enchant, level) -> getRegularEnchantLevel(enchant, chestItem) * (regularLevels ? 1 : 2));
-        EnchantmentHelper.setEnchantments(chestEnchants, chestItem);
+        updateEnchantLevels(entity.getItemBySlot(EquipmentSlot.CHEST), regularLevels);
+        updateEnchantLevels(entity.getItemBySlot(EquipmentSlot.MAINHAND), regularLevels);
+    }
 
-        ItemStack mainhandItem = entity.getItemBySlot(EquipmentSlot.MAINHAND);
-        Map<Enchantment, Integer> mainhandEnchants = mainhandItem.getAllEnchantments();
-        mainhandEnchants.replaceAll((enchant, level) -> getRegularEnchantLevel(enchant, mainhandItem) * (regularLevels ? 1 : 2));
-        EnchantmentHelper.setEnchantments(mainhandEnchants, mainhandItem);
+    private static void updateEnchantLevels(ItemStack stack, boolean regularLevels) {
+        EnchantmentHelper.updateEnchantments(stack, mutable -> {
+            for (Holder<Enchantment> enchantment : mutable.keySet().toArray(Holder[]::new)) {
+                int baseLevel = LEVEL_TWO_ENCHANTS.entrySet().stream()
+                    .anyMatch(entry -> enchantment.is(entry.getKey()) && entry.getValue() == stack.getItem()) ? 2 : 1;
+                mutable.set(enchantment, baseLevel * (regularLevels ? 1 : 2));
+            }
+        });
     }
 }

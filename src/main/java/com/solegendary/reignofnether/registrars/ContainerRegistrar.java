@@ -6,15 +6,15 @@ import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.ForgeRegistries;
-import net.neoforged.neoforge.registries.RegistryObject;
+import net.minecraft.core.registries.Registries;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 public class ContainerRegistrar {
 
-    public static final DeferredRegister<MenuType<?>> CONTAINERS = DeferredRegister.create(ForgeRegistries.MENU_TYPES,
+    public static final DeferredRegister<MenuType<?>> CONTAINERS = DeferredRegister.create(Registries.MENU,
             ReignOfNether.MOD_ID);
 
-    public static final RegistryObject<MenuType<TopdownGuiContainer>> TOPDOWNGUI_CONTAINER = CONTAINERS
+    public static final DeferredHolder<MenuType<?>, MenuType<TopdownGuiContainer>> TOPDOWNGUI_CONTAINER = CONTAINERS
             .register("topdowngui_container", () -> new MenuType<>(TopdownGuiContainer::new, FeatureFlagSet.of()));
 
     public static void init(IEventBus modBus) {

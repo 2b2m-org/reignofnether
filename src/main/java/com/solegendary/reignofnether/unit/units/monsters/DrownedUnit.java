@@ -170,12 +170,12 @@ public class DrownedUnit extends Drowned implements Unit, AttackerUnit {
                 .add(Attributes.ARMOR, DrownedUnit.armorValue)
                 .add(Attributes.MAX_HEALTH, DrownedUnit.maxHealth)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), rangedDamageResist)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0)
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, rangedDamageResist)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, 0)
                 .add(Attributes.SPAWN_REINFORCEMENTS_CHANCE, 0); // needs to be added for parent to work
     }
 
@@ -277,7 +277,7 @@ public class DrownedUnit extends Drowned implements Unit, AttackerUnit {
     public boolean doHurtTarget(@NotNull Entity pEntity) {
         if (super.doHurtTarget(pEntity)) {
             if (pEntity instanceof LivingEntity)
-                ((LivingEntity)pEntity).addEffect(new MobEffectInstance(MobEffectRegistrar.ZOMBIE_INFECTED.get(), CONVERT_DEBUFF_DURATION_SECONDS * 20, 0), this);
+                ((LivingEntity)pEntity).addEffect(new MobEffectInstance(MobEffectRegistrar.ZOMBIE_INFECTED, CONVERT_DEBUFF_DURATION_SECONDS * 20, 0), this);
             return true;
         } else {
             return false;

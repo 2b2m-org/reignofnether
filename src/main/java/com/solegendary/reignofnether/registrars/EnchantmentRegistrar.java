@@ -1,33 +1,27 @@
 package com.solegendary.reignofnether.registrars;
 
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.enchantments.*;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.ForgeRegistries;
-import net.neoforged.neoforge.registries.RegistryObject;
 
-public class EnchantmentRegistrar {
+public final class EnchantmentRegistrar {
+    public static final ResourceKey<Enchantment> VIGOR = key("vigor");
+    public static final ResourceKey<Enchantment> BREACHING = key("breaching");
+    public static final ResourceKey<Enchantment> FORTIFYING = key("fortifying");
+    public static final ResourceKey<Enchantment> MAIMING = key("maiming");
+    public static final ResourceKey<Enchantment> ZEAL = key("zeal");
+    public static final ResourceKey<Enchantment> GUST = key("gust");
+    public static final ResourceKey<Enchantment> LONGSHOT = key("longshot");
 
-    public static final DeferredRegister<Enchantment> ENCHANTMENTS =
-            DeferredRegister.create(ForgeRegistries.ENCHANTMENTS, ReignOfNether.MOD_ID);
+    private EnchantmentRegistrar() {
+    }
 
-    public static final RegistryObject<Enchantment> VIGOR = ENCHANTMENTS.register("vigor", VigorEnchantment::new);
-
-    public static final RegistryObject<Enchantment> BREACHING = ENCHANTMENTS.register("breaching", BreachingEnchantment::new);
-
-    public static final RegistryObject<Enchantment> FORTYIFYING = ENCHANTMENTS.register("fortifying", FortifyingEnchantment::new);
-
-    public static final RegistryObject<Enchantment> MAIMING = ENCHANTMENTS.register("maiming", MaimingEnchantment::new);
-
-    public static final RegistryObject<Enchantment> ZEAL = ENCHANTMENTS.register("zeal", ZealEnchantment::new);
-
-    public static final RegistryObject<Enchantment> GUST = ENCHANTMENTS.register("gust", GustEnchantment::new);
-
-    public static final RegistryObject<Enchantment> LONGSHOT = ENCHANTMENTS.register("longshot", GustEnchantment::new);
-
-    public static void init(IEventBus modBus) {
-        ENCHANTMENTS.register(modBus);
+    private static ResourceKey<Enchantment> key(String path) {
+        return ResourceKey.create(
+            Registries.ENCHANTMENT,
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path)
+        );
     }
 }

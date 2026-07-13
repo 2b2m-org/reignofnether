@@ -353,12 +353,12 @@ public class VillagerUnit extends Vindicator implements Unit, WorkerUnit, Attack
                 .add(Attributes.MAX_HEALTH, VillagerUnit.maxHealth)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
                 .add(Attributes.ARMOR, VillagerUnit.armorValue)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, 0);
     }
 
     @Override
@@ -384,8 +384,8 @@ public class VillagerUnit extends Vindicator implements Unit, WorkerUnit, Attack
             this.callToArmsGoal.tick();
 
             if (tickCount % 20 == 0) {
-                if (getMainHandItem().getAllEnchantments().containsKey(Enchantments.BLOCK_EFFICIENCY) &&
-                    !hasEffectWithDuration(MobEffectRegistrar.TEMPORARY_EFFICIENCY.get())) {
+                if (getMainHandItem().getAllEnchantments().containsKey(Enchantments.EFFICIENCY) &&
+                    !hasEffectWithDuration(MobEffectRegistrar.TEMPORARY_EFFICIENCY)) {
                     EnchantmentHelper.setEnchantments(new HashMap<>(), getMainHandItem());
                 }
             }
@@ -577,8 +577,8 @@ public class VillagerUnit extends Vindicator implements Unit, WorkerUnit, Attack
     @Override
     public void setItemSlot(EquipmentSlot pSlot, ItemStack pStack) {
         if (pStack.getItem() != Items.AIR && pSlot == EquipmentSlot.MAINHAND &&
-            this.hasEffectWithDuration(MobEffectRegistrar.TEMPORARY_EFFICIENCY.get())) {
-            pStack.enchant(Enchantments.BLOCK_EFFICIENCY, 1);
+            this.hasEffectWithDuration(MobEffectRegistrar.TEMPORARY_EFFICIENCY)) {
+            pStack.enchant(Enchantments.EFFICIENCY, 1);
         }
         super.setItemSlot(pSlot, pStack);
     }

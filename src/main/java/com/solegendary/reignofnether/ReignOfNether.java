@@ -12,7 +12,6 @@ import com.solegendary.reignofnether.registrars.BlockRegistrar;
 import com.solegendary.reignofnether.registrars.ClientEventRegistrar;
 import com.solegendary.reignofnether.registrars.CommandArgumentRegistrar;
 import com.solegendary.reignofnether.registrars.ContainerRegistrar;
-import com.solegendary.reignofnether.registrars.EnchantmentRegistrar;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.registrars.ItemRegistrar;
@@ -39,7 +38,6 @@ public final class ReignOfNether {
     public static final String VERSION_STRING = "1.3.8a";
 
     public ReignOfNether(IEventBus modBus, ModContainer modContainer) {
-        EnchantmentRegistrar.init(modBus);
         AttributeRegistrar.init(modBus);
         ItemRegistrar.init(modBus);
         EntityRegistrar.init(modBus);

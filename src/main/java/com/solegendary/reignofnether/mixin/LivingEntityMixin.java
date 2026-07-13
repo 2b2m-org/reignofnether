@@ -210,8 +210,8 @@ public abstract class LivingEntityMixin extends Entity {
             at = @At("TAIL")
     )
     public void baseTick(CallbackInfo ci) {
-        if (!this.level().isClientSide && this.remainingFireTicks > 0 && !fireImmune() && hasEffect(MobEffectRegistrar.INTENSE_HEAT.get())) {
-            int amp = Math.min(39, getEffect(MobEffectRegistrar.INTENSE_HEAT.get()).getAmplifier());
+        if (!this.level().isClientSide && this.remainingFireTicks > 0 && !fireImmune() && hasEffect(MobEffectRegistrar.INTENSE_HEAT)) {
+            int amp = Math.min(39, getEffect(MobEffectRegistrar.INTENSE_HEAT).getAmplifier());
             int fireTicks = (this.remainingFireTicks + 10);
             if (fireTicks % (80 - (amp * 2)) == 0) {
                 this.hurt(this.damageSources().onFire(), 1.0F);

@@ -21,7 +21,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity> {
             T entity,
             CallbackInfoReturnable<Boolean> cir
     ) {
-        if (entity.hasEffect(MobEffectRegistrar.ATTACK_SLOWDOWN.get()) &&
+        if (entity.hasEffect(MobEffectRegistrar.ATTACK_SLOWDOWN) &&
             entity.level().getBlockState(entity.getOnPos().above()).getBlock() == BlockRegistrar.WRAITH_SNOW_LAYER.get()) {
             cir.setReturnValue(true);
         }

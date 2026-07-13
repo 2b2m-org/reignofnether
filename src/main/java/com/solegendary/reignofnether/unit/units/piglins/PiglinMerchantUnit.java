@@ -316,18 +316,18 @@ public class PiglinMerchantUnit extends Piglin implements Unit, AttackerUnit, He
                 .add(Attributes.MAX_HEALTH, PiglinMerchantUnit.maxHealth)
                 .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
                 .add(Attributes.ARMOR, PiglinMerchantUnit.armorValue)
-                .add(AttributeRegistrar.BASE_MAX_HEALTH.get(), PiglinMerchantUnit.maxHealth)
-                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), attackDamage)
-                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
-                .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
-                .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
-                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), magicDamageResist)
-                .add(AttributeRegistrar.BASE_MAX_MANA.get(), baseMaxMana)
-                .add(AttributeRegistrar.MANA_REGEN_PER_SECOND.get(), manaRegenPerSecond)
-                .add(AttributeRegistrar.MAX_MANA_BONUS_PER_LEVEL.get(), manaBonusPerLevel)
-                .add(AttributeRegistrar.MAX_HEALTH_BONUS_PER_LEVEL.get(), maxHealthBonusPerLevel)
-                .add(AttributeRegistrar.ATTACK_DAMAGE_BONUS_PER_LEVEL.get(), attackBonusPerLevel);
+                .add(AttributeRegistrar.BASE_MAX_HEALTH, PiglinMerchantUnit.maxHealth)
+                .add(AttributeRegistrar.ATTACK_DAMAGE, attackDamage)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND, attacksPerSecond)
+                .add(AttributeRegistrar.ATTACK_RANGE, attackRange)
+                .add(AttributeRegistrar.AGGRO_RANGE, aggroRange)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST, 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST, magicDamageResist)
+                .add(AttributeRegistrar.BASE_MAX_MANA, baseMaxMana)
+                .add(AttributeRegistrar.MANA_REGEN_PER_SECOND, manaRegenPerSecond)
+                .add(AttributeRegistrar.MAX_MANA_BONUS_PER_LEVEL, manaBonusPerLevel)
+                .add(AttributeRegistrar.MAX_HEALTH_BONUS_PER_LEVEL, maxHealthBonusPerLevel)
+                .add(AttributeRegistrar.ATTACK_DAMAGE_BONUS_PER_LEVEL, attackBonusPerLevel);
     }
 
     @Override // prevent vanilla logic for picking up items
@@ -594,8 +594,8 @@ public class PiglinMerchantUnit extends Piglin implements Unit, AttackerUnit, He
                         items.add(new ItemStack(Items.NETHERITE_CHESTPLATE));
                     else if (i > 0 && !headhunterUnit.hasFlameTrident()) {
                         ItemStack itemStack = new ItemStack(Items.TRIDENT);
-                        itemStack.enchant(Enchantments.FLAMING_ARROWS, 1);
-                        itemStack.enchant(Enchantments.PUNCH_ARROWS, 1);
+                        itemStack.enchant(Enchantments.FLAME, 1);
+                        itemStack.enchant(Enchantments.PUNCH, 1);
                         items.add(itemStack);
                     } else {
                         items.add(new ItemStack(Items.ENCHANTED_GOLDEN_APPLE));

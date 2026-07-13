@@ -70,7 +70,7 @@ public abstract class MobMixin extends LivingEntity {
             at = @At("HEAD")
     )
     public void tick(CallbackInfo ci) {
-        MobEffectInstance mei = this.getEffect(MobEffectRegistrar.FROST_DAMAGE.get());
+        MobEffectInstance mei = this.getEffect(MobEffectRegistrar.FROST_DAMAGE);
         BlockState inBlockState = level().getBlockState(getOnPos().above());
         if (mei != null && mei.getDuration() > 0 && mei.getDuration() % 20 == 0 && onGround()) {
             int layers = BlockUtils.getWraithSnowLayers(inBlockState);
