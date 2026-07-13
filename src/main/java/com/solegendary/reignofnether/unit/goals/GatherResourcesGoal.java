@@ -155,7 +155,9 @@ public class GatherResourcesGoal extends MoveToTargetBlockGoal {
         this.data.targetResourceName = gatherName;
         this.data.gatherTarget = gatherPos;
         this.gatherTicksLeft = gatherTicks;
-        this.data.targetResourceSource = ResourceSources.getFromBlockPos(data.gatherTarget, mob.level());
+        this.data.targetResourceSource = gatherPos == null
+                ? null
+                : ResourceSources.getFromBlockPos(gatherPos, mob.level());
     }
 
     public void tickClient() {
