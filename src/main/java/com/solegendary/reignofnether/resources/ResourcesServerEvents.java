@@ -35,15 +35,15 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.*;
 
@@ -128,10 +128,8 @@ public class ResourcesServerEvents {
     private static final int SAVE_TICKS_MAX = 600;
     private static int saveTicks = 0;
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END)
-            return;
-        saveTicks += 1;
+    public static void onServerTick(ServerTickEvent.Post evt) {
+saveTicks += 1;
         if (saveTicks >= SAVE_TICKS_MAX) {
             ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
             if (level != null) {

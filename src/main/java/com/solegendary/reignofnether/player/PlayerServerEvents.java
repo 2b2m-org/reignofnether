@@ -57,14 +57,14 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.event.ServerChatEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.network.NetworkHooks;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.ServerChatEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.network.NetworkHooks;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -217,43 +217,39 @@ public class PlayerServerEvents {
     }
 
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent evt) {
+    public static void onServerTick(ServerTickEvent.Post evt) {
         serverLevel = evt.getServer().getLevel(Level.OVERWORLD);
 
         synchronized (rtsPlayers) {
-            if (evt.phase == TickEvent.Phase.END) {
-                for (RTSPlayer rtsPlayer : rtsPlayers)
-                    rtsPlayer.serverTick();
+            for (RTSPlayer rtsPlayer : rtsPlayers)
+                rtsPlayer.serverTick();
 
-                for (RTSPlayer rtsPlayer : rtsPlayers) {
-                    if (rtsPlayer.beaconOwnerTicks == Beacon.getTicksToWin(serverLevel)) {
-                        PlayerServerEvents.beaconVictory(rtsPlayer.name);
-                        break;
-                    }
+            for (RTSPlayer rtsPlayer : rtsPlayers) {
+                if (rtsPlayer.beaconOwnerTicks == Beacon.getTicksToWin(serverLevel)) {
+                    PlayerServerEvents.beaconVictory(rtsPlayer.name);
+                    break;
                 }
-                if (rtsPlayers.isEmpty()) {
-                    rtsGameTicks = 0;
-                } else {
-                    rtsGameTicks += 1;
-                    if (rtsGameTicks % 200 == 0) {
-                        PlayerClientboundPacket.syncRtsGameTime(rtsGameTicks);
-                    }
-                    if (rtsGameTicks % 20 == 0) {
-                        for (RTSPlayer rtsPlayer : rtsPlayers) {
-                            PlayerClientboundPacket.syncBeaconOwnerTicks(rtsPlayer.name, rtsPlayer.beaconOwnerTicks);
-                        }
+            }
+            if (rtsPlayers.isEmpty()) {
+                rtsGameTicks = 0;
+            } else {
+                rtsGameTicks += 1;
+                if (rtsGameTicks % 200 == 0) {
+                    PlayerClientboundPacket.syncRtsGameTime(rtsGameTicks);
+                }
+                if (rtsGameTicks % 20 == 0) {
+                    for (RTSPlayer rtsPlayer : rtsPlayers) {
+                        PlayerClientboundPacket.syncBeaconOwnerTicks(rtsPlayer.name, rtsPlayer.beaconOwnerTicks);
                     }
                 }
             }
         }
-        if (evt.phase == TickEvent.Phase.END) {
-            saveTicks += 1;
-            if (saveTicks >= SAVE_TICKS_MAX) {
-                ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
-                if (level != null) {
-                    saveRTSPlayers();
-                    saveTicks = 0;
-                }
+        saveTicks += 1;
+        if (saveTicks >= SAVE_TICKS_MAX) {
+            ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
+            if (level != null) {
+                saveRTSPlayers();
+                saveTicks = 0;
             }
         }
     }

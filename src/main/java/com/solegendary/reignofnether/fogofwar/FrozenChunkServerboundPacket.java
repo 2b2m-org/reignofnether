@@ -7,8 +7,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.IPlantable;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.common.IPlantable;
+import net.neoforged.neoforge.network.NetworkEvent;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;

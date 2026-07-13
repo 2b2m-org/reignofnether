@@ -16,7 +16,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.AbstractIllager;
 import net.minecraft.world.item.*;
-import net.minecraftforge.client.ForgeHooksClient;
+import net.neoforged.neoforge.client.ForgeHooksClient;
 
 import javax.annotation.Nullable;
 import java.util.Locale;

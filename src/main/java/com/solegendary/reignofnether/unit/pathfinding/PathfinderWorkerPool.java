@@ -9,11 +9,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.pathfinder.Path;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 
-@Mod.EventBusSubscriber(modid = ReignOfNether.MOD_ID)
+@EventBusSubscriber(modid = ReignOfNether.MOD_ID)
 public final class PathfinderWorkerPool {
     private PathfinderWorkerPool() {}
 
@@ -136,25 +136,25 @@ public final class PathfinderWorkerPool {
     }
 
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent evt) {
+    public static void onServerTickPre(ServerTickEvent.Pre evt) {
         // START: rebuild settled dirty chunks, then classify a budget of cold corridor chunks and dispatch any
         // request now warm. Drain first so paths captured this tick see freshest data.
-        if (evt.phase == TickEvent.Phase.START) {
-            // apply a pending pathfindingThreads change before any dispatch this tick.
-            applyPendingResize();
-            // walkability caching + dispatch only run with the rtsPathfinding gamerule on (off = vanilla
-            // pathfinding). the resource index is independent (used by gather goals either way), so always drains.
-            if (UnitServerEvents.rtsPathfinding) {
-                WalkabilityGrid.drainDirtyChunks(PathfinderConfig.MAX_CHUNK_RECLASSIFY_PER_TICK);
-            }
-            ResourceIndex.drainBuildQueue(ResourceIndex.MAX_RESOURCE_CHUNK_SCANS_PER_TICK);
-            if (UnitServerEvents.rtsPathfinding) {
-                processBuildQueue();
-            }
-            return;
+        // apply a pending pathfindingThreads change before any dispatch this tick.
+        applyPendingResize();
+        // walkability caching + dispatch only run with the rtsPathfinding gamerule on (off = vanilla
+        // pathfinding). the resource index is independent (used by gather goals either way), so always drains.
+        if (UnitServerEvents.rtsPathfinding) {
+            WalkabilityGrid.drainDirtyChunks(PathfinderConfig.MAX_CHUNK_RECLASSIFY_PER_TICK);
         }
+        ResourceIndex.drainBuildQueue(ResourceIndex.MAX_RESOURCE_CHUNK_SCANS_PER_TICK);
+        if (UnitServerEvents.rtsPathfinding) {
+            processBuildQueue();
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerTickPost(ServerTickEvent.Post evt) {
         // END: deliver finished paths back on the main thread.
-        if (evt.phase != TickEvent.Phase.END) return;
         if (!UnitServerEvents.rtsPathfinding) return;
         Runnable r;
         int drained = 0;

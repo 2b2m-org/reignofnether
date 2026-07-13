@@ -38,9 +38,9 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.event.*;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.*;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
@@ -263,12 +263,8 @@ public class OrthoviewClientEvents {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END) {
-            return;
-        }
-
-        long windowHandle = MC.getWindow().getWindow();
+    public static void onClientTick(ClientTickEvent.Post evt) {
+long windowHandle = MC.getWindow().getWindow();
         int cursorMode;
 
         try {

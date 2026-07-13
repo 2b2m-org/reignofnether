@@ -53,15 +53,16 @@ import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.EntityTravelToDimensionEvent;
-import net.minecraftforge.event.entity.living.MobSpawnEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.event.level.ExplosionEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.entity.EntityTravelToDimensionEvent;
+import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.ExplosionEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -102,10 +103,8 @@ public class BuildingServerEvents {
     private static final int SAVE_TICKS_MAX = 600;
     private static int saveTicks = 0;
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END)
-            return;
-        saveTicks += 1;
+    public static void onServerTick(ServerTickEvent.Post evt) {
+saveTicks += 1;
         if (saveTicks >= SAVE_TICKS_MAX) {
             ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
             if (level != null) {
@@ -628,12 +627,12 @@ public class BuildingServerEvents {
     }
 
     @SubscribeEvent
-    public static void onWorldTick(TickEvent.LevelTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || evt.level.isClientSide() || evt.level.dimension() != Level.OVERWORLD) {
+    public static void onWorldTick(LevelTickEvent.Post evt) {
+        if (evt.getLevel().isClientSide() || evt.getLevel().dimension() != Level.OVERWORLD) {
             return;
         }
 
-        serverLevel = (ServerLevel) evt.level;
+        serverLevel = (ServerLevel) evt.getLevel();
 
         buildingSyncTicks -= 1;
         if (buildingSyncTicks <= 0) {

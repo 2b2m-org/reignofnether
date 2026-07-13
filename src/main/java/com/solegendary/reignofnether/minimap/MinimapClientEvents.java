@@ -58,10 +58,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.Vec2;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.joml.Matrix4f;
 import org.joml.Vector3d;
 import org.lwjgl.glfw.GLFW;
@@ -1322,11 +1322,8 @@ public class MinimapClientEvents {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END)
-            return;
-
-        updateMapTerrain(terrainPartition, darkTerrainPartition);
+    public static void onClientTick(ClientTickEvent.Post evt) {
+updateMapTerrain(terrainPartition, darkTerrainPartition);
         mapColoursOverlays = new int[worldRadius * 2][worldRadius * 2];
         if (BlockClientEvents.nightCircleMode != NightCircleMode.OFF)
             updateNightCircles();

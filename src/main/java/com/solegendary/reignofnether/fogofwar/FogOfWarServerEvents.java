@@ -9,11 +9,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.common.IPlantable;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.IPlantable;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -45,11 +45,11 @@ public class FogOfWarServerEvents {
     }
 
     @SubscribeEvent
-    public static void onWorldTick(TickEvent.LevelTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || evt.level.isClientSide() || evt.level.dimension() != Level.OVERWORLD)
+    public static void onWorldTick(LevelTickEvent.Post evt) {
+        if (evt.getLevel().isClientSide() || evt.getLevel().dimension() != Level.OVERWORLD)
             return;
 
-        serverLevel = (ServerLevel) evt.level;
+        serverLevel = (ServerLevel) evt.getLevel();
     }
 
     // register here too for command blocks

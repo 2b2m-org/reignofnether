@@ -4,10 +4,10 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.commands.argument.BuildingArgument;
 
 import net.minecraft.commands.synchronization.ArgumentTypeInfo;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.registries.RegistryObject;
 
 public class CommandArgumentRegistrar {
 	
@@ -20,7 +20,7 @@ public class CommandArgumentRegistrar {
 			BuildingArgument.Info::new
 		);
 	
-	public static void init(FMLJavaModLoadingContext context) {
-		COMMAND_ARGUMENT_TYPES.register(context.getModEventBus());
+	public static void init(IEventBus modBus) {
+		COMMAND_ARGUMENT_TYPES.register(modBus);
 	}
 }

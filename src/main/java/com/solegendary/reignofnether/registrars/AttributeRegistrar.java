@@ -3,10 +3,10 @@ package com.solegendary.reignofnether.registrars;
 import com.solegendary.reignofnether.ReignOfNether;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.registries.RegistryObject;
 
 public class AttributeRegistrar {
     public static final DeferredRegister<Attribute> ATTRIBUTES = DeferredRegister.create(ForgeRegistries.ATTRIBUTES, ReignOfNether.MOD_ID);
@@ -89,7 +89,7 @@ public class AttributeRegistrar {
                             .setSyncable(true)
             );
 
-    public static void init(FMLJavaModLoadingContext context) {
-        ATTRIBUTES.register(context.getModEventBus());
+    public static void init(IEventBus modBus) {
+        ATTRIBUTES.register(modBus);
     }
 }

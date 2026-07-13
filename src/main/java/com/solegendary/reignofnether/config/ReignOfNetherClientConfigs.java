@@ -2,21 +2,21 @@ package com.solegendary.reignofnether.config;
 
 import com.solegendary.reignofnether.player.PlayerColors;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraftforge.client.ConfigScreenHandler;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class ReignOfNetherClientConfigs {
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static final ForgeConfigSpec SPEC;
+    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec SPEC;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> PLAYER_COLOR_SELF;
-    public static final ForgeConfigSpec.ConfigValue<Integer> PLAYER_COLOR_ALLY;
-    public static final ForgeConfigSpec.ConfigValue<Integer> PLAYER_COLOR_NEUTRAL;
-    public static final ForgeConfigSpec.ConfigValue<Integer> PLAYER_COLOR_ENEMY;
+    public static final ModConfigSpec.ConfigValue<Integer> PLAYER_COLOR_SELF;
+    public static final ModConfigSpec.ConfigValue<Integer> PLAYER_COLOR_ALLY;
+    public static final ModConfigSpec.ConfigValue<Integer> PLAYER_COLOR_NEUTRAL;
+    public static final ModConfigSpec.ConfigValue<Integer> PLAYER_COLOR_ENEMY;
 
-    public static final ForgeConfigSpec.ConfigValue<Boolean> USE_PLAYER_COLORS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_SENSITIVITY;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> SQUARE_MINIMAP;
+    public static final ModConfigSpec.ConfigValue<Boolean> USE_PLAYER_COLORS;
+    public static final ModConfigSpec.ConfigValue<Integer> CAMERA_SENSITIVITY;
+    public static final ModConfigSpec.ConfigValue<Boolean> SQUARE_MINIMAP;
 
     static {
         BUILDER.push("Configuration File");
@@ -35,8 +35,8 @@ public class ReignOfNetherClientConfigs {
         SPEC = BUILDER.build();
     }
 
-    public static ConfigScreenHandler.ConfigScreenFactory createConfigScreen() {
-        return new ConfigScreenHandler.ConfigScreenFactory(ReignOfNetherClientConfigs::buildConfigScreen);
+    public static IConfigScreenFactory createConfigScreen() {
+        return (container, screen) -> buildConfigScreen(screen);
     }
 
     private static Screen buildConfigScreen(Screen screen) {

@@ -14,8 +14,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.List;
 
@@ -82,10 +82,8 @@ public class AttackWarningClientEvents {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END)
-            return;
-        if (attackWarningCd > 0)
+    public static void onClientTick(ClientTickEvent.Post evt) {
+if (attackWarningCd > 0)
             attackWarningCd -= 1;
         flickerTimer -= 1;
         if (flickerTimer <= 0) {

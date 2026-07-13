@@ -1,21 +1,20 @@
 package com.solegendary.reignofnether;
 
 import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
-import net.minecraftforge.client.ConfigScreenHandler;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 public class ClientModConfigs {
 
-    public static void registerClientConfigs(FMLJavaModLoadingContext mlctx) {
-        mlctx.registerConfig(ModConfig.Type.CLIENT,
+    public static void registerClientConfigs(ModContainer modContainer) {
+        modContainer.registerConfig(ModConfig.Type.CLIENT,
                 ReignOfNetherClientConfigs.SPEC,
                 "reignofnether-client-" + ReignOfNether.VERSION_STRING + ".toml");
 
-        mlctx.registerExtensionPoint(
-                ConfigScreenHandler.ConfigScreenFactory.class,
+        modContainer.registerExtensionPoint(
+                IConfigScreenFactory.class,
                 ReignOfNetherClientConfigs::createConfigScreen
         );
     }
 }
-

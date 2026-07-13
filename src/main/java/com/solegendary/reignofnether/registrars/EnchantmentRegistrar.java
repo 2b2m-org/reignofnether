@@ -3,10 +3,10 @@ package com.solegendary.reignofnether.registrars;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.enchantments.*;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.registries.RegistryObject;
 
 public class EnchantmentRegistrar {
 
@@ -27,7 +27,7 @@ public class EnchantmentRegistrar {
 
     public static final RegistryObject<Enchantment> LONGSHOT = ENCHANTMENTS.register("longshot", GustEnchantment::new);
 
-    public static void init(FMLJavaModLoadingContext context) {
-        ENCHANTMENTS.register(context.getModEventBus());
+    public static void init(IEventBus modBus) {
+        ENCHANTMENTS.register(modBus);
     }
 }

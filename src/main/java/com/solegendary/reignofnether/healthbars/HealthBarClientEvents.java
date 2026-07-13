@@ -21,10 +21,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.client.event.RenderLivingEvent;
-import net.minecraftforge.event.TickEvent.PlayerTickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.RenderLivingEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 
@@ -59,8 +59,8 @@ public class HealthBarClientEvents {
         renderBarsInWorld(evt.getPartialTick(), evt.getPoseStack(), camera);
     }
     @SubscribeEvent
-    public static void playerTick(PlayerTickEvent evt) {
-        if (!evt.player.level().isClientSide)
+    public static void playerTick(PlayerTickEvent.Post evt) {
+        if (!evt.getEntity().level().isClientSide)
             return;
         BarStates.tick();
     }

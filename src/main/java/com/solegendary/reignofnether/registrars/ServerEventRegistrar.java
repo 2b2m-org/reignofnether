@@ -23,8 +23,8 @@ import com.solegendary.reignofnether.debug.RtsDebugServerEvents;
 import com.solegendary.reignofnether.unit.NonUnitServerEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.worldborder.WorldBorderServerEvents;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.IEventBus;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.common.NeoForge;
 
 /*
     This class is required to make sure that we don't accidentally try to load any client-side-only classes
@@ -33,7 +33,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
  */
 
 public class ServerEventRegistrar {
-    private final IEventBus vanillaEventBus = MinecraftForge.EVENT_BUS;
+    private final IEventBus vanillaEventBus = NeoForge.EVENT_BUS;
 
     public ServerEventRegistrar() { }
 

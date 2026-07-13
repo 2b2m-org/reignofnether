@@ -2,9 +2,9 @@ package com.solegendary.reignofnether.config;
 
 import com.solegendary.reignofnether.resources.ResourceCost;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.DistExecutor;
+import net.neoforged.neoforge.network.NetworkEvent;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;

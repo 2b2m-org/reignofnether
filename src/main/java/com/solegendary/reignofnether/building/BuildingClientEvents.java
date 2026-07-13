@@ -61,10 +61,10 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
 
 import java.awt.*;
@@ -297,7 +297,7 @@ public class BuildingClientEvents {
                 15728880,
                 // red if invalid, else green
                 overlayColour,
-                net.minecraftforge.client.model.data.ModelData.EMPTY,
+                net.neoforged.neoforge.client.model.data.ModelData.EMPTY,
                 null
             );
 
@@ -978,12 +978,8 @@ public class BuildingClientEvents {
     private static int ticksToNextVisCheck = VIS_CHECK_TICKS_MAX;
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END) {
-            return;
-        }
-
-        if (!SandboxClientEvents.isSandboxPlayer())
+    public static void onClientTick(ClientTickEvent.Post evt) {
+if (!SandboxClientEvents.isSandboxPlayer())
             selectedBuildings.removeIf(BuildingPlacement::isOutsideWorldBorder);
 
         ticksToNextVisCheck -= 1;

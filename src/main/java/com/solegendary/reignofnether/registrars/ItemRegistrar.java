@@ -4,11 +4,11 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.items.HeroExperienceBottleItem;
 import com.solegendary.reignofnether.items.ThrowableTnt;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.common.ForgeSpawnEggItem;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.neoforge.common.ForgeSpawnEggItem;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.registries.RegistryObject;
 
 public class ItemRegistrar {
 
@@ -192,7 +192,7 @@ public class ItemRegistrar {
     public static final RegistryObject<Item> THROWN_HERO_EXPERIENCE_BOTTLE =
             ITEMS.register("thrown_hero_experience_bottle", () -> new HeroExperienceBottleItem(new Item.Properties()));
 
-    public static void init(FMLJavaModLoadingContext context) {
-        ITEMS.register(context.getModEventBus());
+    public static void init(IEventBus modBus) {
+        ITEMS.register(modBus);
     }
 }

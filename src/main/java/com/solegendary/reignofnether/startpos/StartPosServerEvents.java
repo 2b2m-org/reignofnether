@@ -19,11 +19,11 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -173,11 +173,8 @@ public class StartPosServerEvents {
     }
 
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END)
-            return;
-
-        if (startingGame) {
+    public static void onServerTick(ServerTickEvent.Post evt) {
+if (startingGame) {
             if (ticksToStart % 20 == 0) {
                 int secondsLeft = ticksToStart / 20;
                 if (secondsLeft > 0) {

@@ -19,13 +19,13 @@ import net.minecraft.commands.Commands;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -93,11 +93,11 @@ public class SurvivalServerEvents {
     }
 
     @SubscribeEvent
-    public static void onLevelTick(TickEvent.LevelTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || evt.level.isClientSide() || evt.level.dimension() != Level.OVERWORLD)
+    public static void onLevelTick(LevelTickEvent.Post evt) {
+        if (evt.getLevel().isClientSide() || evt.getLevel().dimension() != Level.OVERWORLD)
             return;
 
-        serverLevel = (ServerLevel) evt.level;
+        serverLevel = (ServerLevel) evt.getLevel();
 
         if (!isEnabled())
             return;
@@ -106,8 +106,8 @@ public class SurvivalServerEvents {
         if (ticks % TICK_INTERVAL != 0)
             return;
 
-        long time = evt.level.getDayTime();
-        long normTime = TimeUtils.normaliseTime(evt.level.getDayTime());
+        long time = evt.getLevel().getDayTime();
+        long normTime = TimeUtils.normaliseTime(evt.getLevel().getDayTime());
 
         if (!isStarted()) {
             setToGameStartTime();
@@ -126,7 +126,7 @@ public class SurvivalServerEvents {
             }
             if (lastTime <= TimeUtils.DUSK + getWaveSurvivalTimeModifier(difficulty) + 50 &&
                     normTime > TimeUtils.DUSK + getWaveSurvivalTimeModifier(difficulty) + 50) {
-                startNextWave((ServerLevel) evt.level);
+                startNextWave((ServerLevel) evt.getLevel());
             }
             if (lastTime <= TimeUtils.DAWN && normTime > TimeUtils.DAWN) {
                 PlayerServerEvents.sendMessageToAllPlayers("survival.reignofnether.dawn", true);
@@ -137,7 +137,7 @@ public class SurvivalServerEvents {
         int enemyCount = getCurrentEnemies().size() + portals.size();
         if (enemyCount < lastEnemyCount && enemyCount <= 3) {
             if (enemyCount == 0)
-                waveCleared((ServerLevel) evt.level);
+                waveCleared((ServerLevel) evt.getLevel());
             else if (enemyCount == 1) {
                 PlayerServerEvents.sendMessageToAllPlayers("survival.reignofnether.remaining_enemies_one");
             } else {

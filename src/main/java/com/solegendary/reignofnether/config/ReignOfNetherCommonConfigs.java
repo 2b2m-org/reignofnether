@@ -1,14 +1,14 @@
 package com.solegendary.reignofnether.config;
 
 import com.solegendary.reignofnether.resources.ResourceCosts;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 /*
     Class responsible for defining all configurable ResourceCosts; this occurs during commonsetup
  */
 public class ReignOfNetherCommonConfigs {
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static final ForgeConfigSpec SPEC;
+    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec SPEC;
 
     static {
         BUILDER.push("Configuration File");

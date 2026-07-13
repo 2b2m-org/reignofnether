@@ -47,7 +47,7 @@ import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.ForgeHooks;
+import net.neoforged.neoforge.common.ForgeHooks;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 

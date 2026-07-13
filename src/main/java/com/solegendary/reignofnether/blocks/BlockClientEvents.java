@@ -25,9 +25,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -105,11 +105,8 @@ public class BlockClientEvents {
     public static final int VISIBLE_BORDER_ADJ = 2; // shrink a bit so borderlines themselves are safe to walk on
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END)
-            return;
-
-        nightSourcesUpdateTicks -= 1;
+    public static void onClientTick(ClientTickEvent.Post evt) {
+nightSourcesUpdateTicks -= 1;
 
         NightSourceAddon nsa0 = null;
         Building building = BuildingClientEvents.getBuildingToPlace();

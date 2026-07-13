@@ -2,8 +2,8 @@ package com.solegendary.reignofnether.attackwarnings;
 
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraftforge.event.entity.living.LivingDamageEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 public class AttackWarningServerEvents {
 

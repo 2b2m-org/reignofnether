@@ -3,10 +3,10 @@ package com.solegendary.reignofnether.registrars;
 import com.solegendary.reignofnether.ReignOfNether;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.registries.RegistryObject;
 
 public class SoundRegistrar {
 
@@ -188,7 +188,7 @@ public class SoundRegistrar {
             SOUND_EVENTS.register("windcaller_yell", () ->
                     SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "windcaller_yell")));
 
-    public static void init(FMLJavaModLoadingContext context) {
-        SOUND_EVENTS.register(context.getModEventBus());
+    public static void init(IEventBus modBus) {
+        SOUND_EVENTS.register(modBus);
     }
 }

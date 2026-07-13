@@ -38,9 +38,9 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.living.MobEffectEvent;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
+import net.neoforged.bus.api.Event;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -312,7 +312,7 @@ public class ZombieUnit extends Zombie implements Unit, AttackerUnit, Convertabl
     @Override
     public boolean canBeAffected(MobEffectInstance pEffectInstance) {
         MobEffectEvent.Applicable event = new MobEffectEvent.Applicable(this, pEffectInstance);
-        MinecraftForge.EVENT_BUS.post(event);
+        NeoForge.EVENT_BUS.post(event);
         if (event.getResult() != Event.Result.DEFAULT) {
             return event.getResult() == Event.Result.ALLOW;
         } else {

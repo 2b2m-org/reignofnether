@@ -17,8 +17,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -47,11 +47,8 @@ public class SoundClientEvents {
     public static final float SOUND_RANGE = 96; // all sounds have this max range
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END) {
-            return;
-        }
-        if (songTicksLeft > 0) {
+    public static void onClientTick(ClientTickEvent.Post evt) {
+if (songTicksLeft > 0) {
             songTicksLeft -= 1;
             if (customSong != null && songTicksLeft <= 0)
                 stopFadeableMusicInstance();

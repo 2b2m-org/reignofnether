@@ -45,8 +45,8 @@ public abstract class LiquidBlockRendererMixin {
         ci.cancel();
 
         boolean flag = pFluidState.is(FluidTags.LAVA);
-        TextureAtlasSprite[] atextureatlassprite = net.minecraftforge.client.ForgeHooksClient.getFluidSprites(pLevel, pPos, pFluidState);
-        int i = net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions.of(pFluidState).getTintColor(pFluidState, pLevel, pPos);
+        TextureAtlasSprite[] atextureatlassprite = net.neoforged.neoforge.client.ForgeHooksClient.getFluidSprites(pLevel, pPos, pFluidState);
+        int i = net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(pFluidState).getTintColor(pFluidState, pLevel, pPos);
         float alpha = (float)(i >> 24 & 255) / 255.0F;
         float f = (float)(i >> 16 & 255) / 255.0F;
         float f1 = (float)(i >> 8 & 255) / 255.0F;

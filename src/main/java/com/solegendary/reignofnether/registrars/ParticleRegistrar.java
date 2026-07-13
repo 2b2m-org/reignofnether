@@ -3,10 +3,10 @@ package com.solegendary.reignofnether.registrars;
 import com.solegendary.reignofnether.ReignOfNether;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.registries.RegistryObject;
 
 public class ParticleRegistrar {
 
@@ -21,7 +21,7 @@ public class ParticleRegistrar {
             PARTICLES.register("big_soul_flame",
                     () -> new SimpleParticleType(false));
 
-    public static void init(FMLJavaModLoadingContext context) {
-        PARTICLES.register(context.getModEventBus());
+    public static void init(IEventBus modBus) {
+        PARTICLES.register(modBus);
     }
 }

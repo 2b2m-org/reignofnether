@@ -70,13 +70,13 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
-import net.minecraftforge.event.entity.EntityMountEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
+import net.neoforged.neoforge.event.entity.EntityMountEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.joml.Vector3d;
 import org.lwjgl.glfw.GLFW;
 
@@ -90,7 +90,7 @@ import static com.solegendary.reignofnether.building.BuildingClientEvents.getPla
 import static com.solegendary.reignofnether.cursor.CursorClientEvents.getPreselectedBlockPos;
 import static com.solegendary.reignofnether.hud.HudClientEvents.hudSelectedEntity;
 import static com.solegendary.reignofnether.unit.Checkpoint.CHECKPOINT_TICKS_FADE;
-import static net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_ENTITIES;
+import static net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_ENTITIES;
 
 
 public class UnitClientEvents {
@@ -508,11 +508,8 @@ public class UnitClientEvents {
     private static final int VIS_CHECK_TICKS_MAX = 10;
     private static int ticksToNextVisCheck = VIS_CHECK_TICKS_MAX;
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END)
-            return;
-
-        ticksToNextVisCheck -= 1;
+    public static void onClientTick(ClientTickEvent.Post evt) {
+ticksToNextVisCheck -= 1;
 
         if (ticksToNextVisCheck <= 0) {
             ticksToNextVisCheck = VIS_CHECK_TICKS_MAX;

@@ -7,10 +7,10 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.registries.RegistryObject;
 
 
 public class MobEffectRegistrar {
@@ -92,7 +92,7 @@ public class MobEffectRegistrar {
                 mobEffect == UNCONTROLLABLE.get();
     }
 
-    public static void init(FMLJavaModLoadingContext context) {
-        MOB_EFFECTS.register(context.getModEventBus());
+    public static void init(IEventBus modBus) {
+        MOB_EFFECTS.register(modBus);
     }
 }

@@ -16,10 +16,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.registries.RegistryObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -292,7 +292,7 @@ public class BlockRegistrar {
 
     public static Map<ResourceKey<CreativeModeTab>, List<Item>> blockItems = new HashMap<>();
 
-    public static void init(FMLJavaModLoadingContext context) {
-        BLOCKS.register(context.getModEventBus());
+    public static void init(IEventBus modBus) {
+        BLOCKS.register(modBus);
     }
 }

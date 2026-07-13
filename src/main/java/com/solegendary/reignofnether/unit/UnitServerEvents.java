@@ -71,15 +71,16 @@ import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.IPlantable;
-import net.minecraftforge.common.world.ForgeChunkManager;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.*;
-import net.minecraftforge.event.entity.living.*;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.IPlantable;
+import net.neoforged.neoforge.common.world.ForgeChunkManager;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.entity.*;
+import net.neoforged.neoforge.event.entity.living.*;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.joml.Vector3d;
 
 import java.util.*;
@@ -167,10 +168,8 @@ public class UnitServerEvents {
     private static final int SAVE_TICKS_MAX = 600;
     private static int saveTicks = 0;
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END)
-            return;
-        saveTicks += 1;
+    public static void onServerTick(ServerTickEvent.Post evt) {
+saveTicks += 1;
         if (saveTicks >= SAVE_TICKS_MAX) {
             ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
             if (level != null) {
@@ -707,8 +706,8 @@ public class UnitServerEvents {
     }
 
     @SubscribeEvent
-    public static void onFormationDispatchTick(TickEvent.LevelTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || evt.level.isClientSide() || evt.level.dimension() != Level.OVERWORLD)
+    public static void onFormationDispatchTick(LevelTickEvent.Post evt) {
+        if (evt.getLevel().isClientSide() || evt.getLevel().dimension() != Level.OVERWORLD)
             return;
         synchronized (formationDispatchQueue) {
             if (formationDispatchQueue.isEmpty())
@@ -731,8 +730,8 @@ public class UnitServerEvents {
     // null
     // remember to always reset targets so that users' actions always overwrite any existing action
     @SubscribeEvent
-    public static void onWorldTick(TickEvent.LevelTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || evt.level.isClientSide() || evt.level.dimension() != Level.OVERWORLD) {
+    public static void onWorldTick(LevelTickEvent.Post evt) {
+        if (evt.getLevel().isClientSide() || evt.getLevel().dimension() != Level.OVERWORLD) {
             return;
         }
         unitSyncTicks -= 1;
@@ -773,14 +772,14 @@ public class UnitServerEvents {
                 }
 
                 // remove old chunk // add current chunk
-                ChunkAccess newChunk = evt.level.getChunk(entity.getOnPos());
+                ChunkAccess newChunk = evt.getLevel().getChunk(entity.getOnPos());
                 ChunkAccess oldChunk = forcedUnitChunks.get(entity.getId());
                 boolean chunkNeedsUpdate = oldChunk != null && (
                     oldChunk.getPos().x != newChunk.getPos().x || oldChunk.getPos().z != newChunk.getPos().z
                 );
 
                 if (chunkNeedsUpdate) {
-                    ForgeChunkManager.forceChunk((ServerLevel) evt.level,
+                    ForgeChunkManager.forceChunk((ServerLevel) evt.getLevel(),
                         ReignOfNether.MOD_ID,
                         entity,
                         oldChunk.getPos().x,
@@ -788,7 +787,7 @@ public class UnitServerEvents {
                         false,
                         true
                     );
-                    ForgeChunkManager.forceChunk((ServerLevel) evt.level,
+                    ForgeChunkManager.forceChunk((ServerLevel) evt.getLevel(),
                         ReignOfNether.MOD_ID,
                         entity,
                         newChunk.getPos().x,
@@ -807,9 +806,9 @@ public class UnitServerEvents {
 
             for (UnitActionItem uai : unitActionSlowQueue) {
                 if (uai.getUnitIds().length > 0) {
-                    Entity entity = evt.level.getEntity(uai.getUnitIds()[0]);
+                    Entity entity = evt.getLevel().getEntity(uai.getUnitIds()[0]);
                     if (entity instanceof Unit unit && unit.isIdle()) {
-                        uai.action(evt.level);
+                        uai.action(evt.getLevel());
                         actionedItem = uai;
                         //System.out.println("actioned item from queue: " + uai.getAction().name() + "|" + uai.getUnitIds()[0] + "|" + uai.getPreselectedBlockPos());
                         break;
@@ -821,7 +820,7 @@ public class UnitServerEvents {
         }
         synchronized (unitActionFastQueue) {
             for (UnitActionItem actionItem : unitActionFastQueue)
-                actionItem.action(evt.level);
+                actionItem.action(evt.getLevel());
             unitActionFastQueue.clear();
         }
     }

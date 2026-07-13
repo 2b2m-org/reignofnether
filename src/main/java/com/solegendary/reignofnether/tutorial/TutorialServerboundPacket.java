@@ -2,7 +2,7 @@ package com.solegendary.reignofnether.tutorial;
 
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.NetworkEvent;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
