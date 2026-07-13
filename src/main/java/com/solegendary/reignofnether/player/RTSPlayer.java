@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.player;
 
 import com.solegendary.reignofnether.ability.TradeAction;
+import com.solegendary.reignofnether.bot.BotDifficulty;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.buildings.neutral.Beacon;
@@ -28,6 +29,7 @@ public class RTSPlayer {
     public Map<TradeAction, Integer> tradeRates = new HashMap<>();
     public boolean aiControlled = false;
     public BlockPos aiHomePos = null;
+    public BotDifficulty aiDifficulty = BotDifficulty.MEDIUM;
 
     private RTSPlayer(String playerName, Faction faction, int id) {
         this.name = playerName;
@@ -73,7 +75,7 @@ public class RTSPlayer {
 
     private RTSPlayer(String name, int id, int ticksWithoutCapitol, Faction faction, int beaconOwnerTicks,
                       int[] scores, int scenarioRoleIndex, Map<TradeAction, Integer> tradeRates,
-                      boolean aiControlled, BlockPos aiHomePos) {
+                      boolean aiControlled, BlockPos aiHomePos, BotDifficulty aiDifficulty) {
         this.name = name;
         this.id = id;
         this.ticksWithoutCapitol = ticksWithoutCapitol;
@@ -84,13 +86,14 @@ public class RTSPlayer {
         this.tradeRates = tradeRates;
         this.aiControlled = aiControlled;
         this.aiHomePos = aiHomePos;
+        this.aiDifficulty = aiDifficulty;
     }
 
     public static RTSPlayer getFromSave(String name, int id, int ticksWithoutCapitol, Faction faction, int beaconOwnerTicks,
                                         int[] scores, int scenarioRoleIndex, Map<TradeAction, Integer> tradeRates,
-                                        boolean aiControlled, BlockPos aiHomePos) {
+                                        boolean aiControlled, BlockPos aiHomePos, BotDifficulty aiDifficulty) {
         return new RTSPlayer(name, id, ticksWithoutCapitol, faction, beaconOwnerTicks, scores, scenarioRoleIndex,
-                tradeRates, aiControlled, aiHomePos);
+                tradeRates, aiControlled, aiHomePos, aiDifficulty);
     }
 
     public static RTSPlayer getNewPlayer(String playerName, Faction faction, int id) {
@@ -111,10 +114,12 @@ public class RTSPlayer {
         return new RTSPlayer(name, faction);
     }
 
-    public static RTSPlayer getNewAiBot(String name, Faction faction, BlockPos homePos) {
+    public static RTSPlayer getNewAiBot(String name, Faction faction, BlockPos homePos,
+                                        BotDifficulty difficulty) {
         RTSPlayer bot = new RTSPlayer(name, faction);
         bot.aiControlled = true;
         bot.aiHomePos = homePos;
+        bot.aiDifficulty = difficulty;
         return bot;
     }
 

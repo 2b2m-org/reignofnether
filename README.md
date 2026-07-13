@@ -38,14 +38,25 @@ Published Minecraft 1.20.1 versions still use their matching Forge release. Mod 
 Operators can add AI-controlled RTS players from the server console or in-game chat:
 
 ```text
-/rts-bot add <name> <villagers|monsters|piglins> [x y z]
+/rts-bot add <name> <villagers|monsters|piglins> [easy|medium|hard] [x y z]
 /rts-bot list
+/rts-bot difficulty <name> <easy|medium|hard>
 /rts-bot remove <name>
 ```
 
-If the position is omitted, the bot starts near the command source. The bot uses normal resource costs and the same gathering, construction, production, and combat command paths as a human player. It builds a small economy, trains a mixed basic army, and attacks enemy structures after reaching five military units.
+The difficulty defaults to `medium`. Either the difficulty, the position, or both may be omitted; without a position, the bot starts near the command source. Difficulty and home position are saved across server restarts.
 
-For faster development matches, `/rts-bot speed <name> true` enables the existing accelerated build, production, and gathering timings for that bot. Set it back to `false` for normal match timing. Bot ownership and home positions are saved across server restarts; tutorial NPC bots remain separately scripted.
+All difficulties use identical starting resources, costs, gathering rates, build and production times, unit stats, and map information. They differ only in decisions:
+
+| Difficulty | Economy | Supply planning | Attack behavior |
+| --- | --- | --- | --- |
+| Easy | 4 workers, food-heavy split | 1 unit ahead | attacks at 4 units; smaller 8-unit army |
+| Medium | 5 workers, balanced split | 2 units ahead | attacks at 8 units; regroups below 4; balanced 12-unit army |
+| Hard | 9 workers, construction-aware split | 3 units ahead | masses 16 units, prioritizes strategic targets, retreats below 8 |
+
+Bots use normal resource costs and the same gathering, construction, production, and combat command paths as human players. With fog of war disabled, the map is visible to every player and bot. With fog enabled, bots remember only structures discovered by their own units and buildings and scout when they have no known target.
+
+For development tests only, `/rts-bot test-speed <name> true` enables the existing build, production, and gathering speed cheats. This is separate from difficulty and is visibly marked in `/rts-bot list`; set it back to `false` for normal match timing. Tutorial NPC bots remain separately scripted.
 
 ## License
 

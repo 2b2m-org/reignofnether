@@ -7,6 +7,8 @@ public record BotDecisionContext(
         int population,
         int populationSupply,
         boolean supplyUnderConstruction,
+        int workerPopulationCost,
+        int armyPopulationCost,
         boolean farmPresent,
         boolean militaryPresent,
         boolean militaryReady

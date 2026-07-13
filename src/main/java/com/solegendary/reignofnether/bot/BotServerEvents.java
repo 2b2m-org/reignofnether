@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.bot;
 
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
@@ -43,7 +44,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public final class BotServerEvents {
-    private static final int DECISION_INTERVAL_TICKS = 20;
+    private static final int TICK_GRANULARITY = 10;
     private static final Map<String, BotController> CONTROLLERS = new HashMap<>();
 
     private BotServerEvents() {
@@ -62,6 +63,7 @@ public final class BotServerEvents {
                                                 context.getSource(),
                                                 StringArgumentType.getString(context, "name"),
                                                 StringArgumentType.getString(context, "faction"),
+                                                BotDifficulty.MEDIUM,
                                                 BlockPos.containing(context.getSource().getPosition())
                                         ))
                                         .then(Commands.argument("pos", BlockPosArgument.blockPos())
@@ -69,15 +71,30 @@ public final class BotServerEvents {
                                                         context.getSource(),
                                                         StringArgumentType.getString(context, "name"),
                                                         StringArgumentType.getString(context, "faction"),
+                                                        BotDifficulty.MEDIUM,
                                                         BlockPosArgument.getLoadedBlockPos(context, "pos")
-                                                ))))))
+                                                )))
+                                        .then(addDifficultyBranch(BotDifficulty.EASY))
+                                        .then(addDifficultyBranch(BotDifficulty.MEDIUM))
+                                        .then(addDifficultyBranch(BotDifficulty.HARD)))))
                 .then(Commands.literal("list").executes(context -> listBots(context.getSource())))
                 .then(Commands.literal("remove")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .suggests(BotServerEvents::suggestBotNames)
                                 .executes(context -> removeBot(
                                         context.getSource(), StringArgumentType.getString(context, "name")))))
-                .then(Commands.literal("speed")
+                .then(Commands.literal("difficulty")
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .suggests(BotServerEvents::suggestBotNames)
+                                .then(Commands.argument("level", StringArgumentType.word())
+                                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                List.of("easy", "medium", "hard"), builder))
+                                        .executes(context -> setDifficulty(
+                                                context.getSource(),
+                                                StringArgumentType.getString(context, "name"),
+                                                StringArgumentType.getString(context, "level")
+                                        )))))
+                .then(Commands.literal("test-speed")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .suggests(BotServerEvents::suggestBotNames)
                                 .then(Commands.argument("enabled", BoolArgumentType.bool())
@@ -89,9 +106,29 @@ public final class BotServerEvents {
         );
     }
 
+    private static LiteralArgumentBuilder<CommandSourceStack> addDifficultyBranch(BotDifficulty difficulty) {
+        String name = difficulty.name().toLowerCase(Locale.ROOT);
+        return Commands.literal(name)
+                .executes(context -> addBot(
+                        context.getSource(),
+                        StringArgumentType.getString(context, "name"),
+                        StringArgumentType.getString(context, "faction"),
+                        difficulty,
+                        BlockPos.containing(context.getSource().getPosition())
+                ))
+                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                        .executes(context -> addBot(
+                                context.getSource(),
+                                StringArgumentType.getString(context, "name"),
+                                StringArgumentType.getString(context, "faction"),
+                                difficulty,
+                                BlockPosArgument.getLoadedBlockPos(context, "pos")
+                        )));
+    }
+
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
-        if (event.getServer().getTickCount() % DECISION_INTERVAL_TICKS != 0)
+        if (event.getServer().getTickCount() % TICK_GRANULARITY != 0)
             return;
         ServerLevel level = event.getServer().getLevel(Level.OVERWORLD);
         if (level == null)
@@ -117,7 +154,8 @@ public final class BotServerEvents {
         CONTROLLERS.clear();
     }
 
-    private static int addBot(CommandSourceStack source, String name, String factionName, BlockPos requestedHome) {
+    private static int addBot(CommandSourceStack source, String name, String factionName, BotDifficulty difficulty,
+                              BlockPos requestedHome) {
         ServerLevel level = source.getLevel();
         Faction faction = parseFaction(factionName);
         if (faction == null) {
@@ -142,7 +180,7 @@ public final class BotServerEvents {
         BuildingPlacement preview = strategy.capitol().createBuildingPlacement(level, origin.get(), Rotation.NONE, name);
         BlockPos home = BotBuildingPlanner.groundAt(level, preview.centrePos.getX(), preview.centrePos.getZ());
 
-        RTSPlayer bot = RTSPlayer.getNewAiBot(name, faction, home);
+        RTSPlayer bot = RTSPlayer.getNewAiBot(name, faction, home, difficulty);
         PlayerServerEvents.rtsPlayers.add(bot);
         ResourcesServerEvents.assignResources(name);
         ResourcesServerEvents.resetResources(name);
@@ -170,9 +208,10 @@ public final class BotServerEvents {
         PlayerClientboundPacket.syncRtsGameTime(PlayerServerEvents.rtsGameTicks);
         PlayerServerEvents.saveRTSPlayers();
 
-        ReignOfNether.LOGGER.info("[Bot] added {} faction={} home={} capitol={}", name, faction, home, capitol.originPos);
+        ReignOfNether.LOGGER.info("[Bot] added {} faction={} difficulty={} home={} capitol={}",
+                name, faction, difficulty, home, capitol.originPos);
         source.sendSuccess(() -> Component.literal("Added RTS bot " + name + " (" + factionName.toLowerCase(Locale.ROOT)
-                + ") at " + home.toShortString()), true);
+                + ", " + difficulty.name().toLowerCase(Locale.ROOT) + ") at " + home.toShortString()), true);
         return 1;
     }
 
@@ -223,6 +262,24 @@ public final class BotServerEvents {
         return controllers.size();
     }
 
+    private static int setDifficulty(CommandSourceStack source, String name, String level) {
+        RTSPlayer player = PlayerServerEvents.getRTSPlayer(name);
+        if (player == null || !player.aiControlled) {
+            source.sendFailure(Component.literal("No AI-controlled RTS bot named '" + name + "' exists."));
+            return 0;
+        }
+        BotDifficulty difficulty = BotDifficulty.fromName(level).orElse(null);
+        if (difficulty == null) {
+            source.sendFailure(Component.literal("Unknown difficulty '" + level + "'. Use easy, medium, or hard."));
+            return 0;
+        }
+        player.aiDifficulty = difficulty;
+        PlayerServerEvents.saveRTSPlayers();
+        source.sendSuccess(() -> Component.literal("Set " + name + " difficulty to "
+                + difficulty.name().toLowerCase(Locale.ROOT)), true);
+        return 1;
+    }
+
     private static int setSpeed(CommandSourceStack source, String name, boolean enabled) {
         RTSPlayer player = PlayerServerEvents.getRTSPlayer(name);
         if (player == null || !player.aiControlled) {
@@ -239,7 +296,7 @@ public final class BotServerEvents {
                 ResearchClientboundPacket.removeCheat(name, cheat);
             }
         }
-        source.sendSuccess(() -> Component.literal("Accelerated bot timing " + (enabled ? "enabled" : "disabled")
+        source.sendSuccess(() -> Component.literal("Test-only speed cheats " + (enabled ? "enabled" : "disabled")
                 + " for " + name), true);
         return 1;
     }

@@ -5,6 +5,7 @@ import net.minecraft.core.HolderLookup;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.TradeAction;
 import com.solegendary.reignofnether.ability.abilities.TradeResources;
+import com.solegendary.reignofnether.bot.BotDifficulty;
 import com.solegendary.reignofnether.faction.Faction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -66,9 +67,12 @@ public class RTSPlayerSaveData extends SavedData {
 
                 boolean aiControlled = ptag.getBoolean("aiControlled");
                 BlockPos aiHomePos = ptag.contains("aiHomePos") ? BlockPos.of(ptag.getLong("aiHomePos")) : null;
+                BotDifficulty aiDifficulty = ptag.contains("aiDifficulty")
+                        ? BotDifficulty.fromName(ptag.getString("aiDifficulty")).orElse(BotDifficulty.MEDIUM)
+                        : BotDifficulty.MEDIUM;
 
                 data.rtsPlayers.add(RTSPlayer.getFromSave(name, id, ticksWithoutCapitol, faction, beaconOwnerTicks,
-                        scores, scenarioRoleIndex, tradeRates, aiControlled, aiHomePos));
+                        scores, scenarioRoleIndex, tradeRates, aiControlled, aiHomePos, aiDifficulty));
 
                 ReignOfNether.LOGGER.info("RTSPlayerSaveData.load: " + name + "|" + id + "|" + faction);
             }
@@ -99,6 +103,8 @@ public class RTSPlayerSaveData extends SavedData {
             cTag.putBoolean("aiControlled", p.aiControlled);
             if (p.aiHomePos != null)
                 cTag.putLong("aiHomePos", p.aiHomePos.asLong());
+            if (p.aiControlled)
+                cTag.putString("aiDifficulty", p.aiDifficulty.name());
             list.add(cTag);
 
             //ReignOfNether.LOGGER.info("RTSPlayerSaveData.save: " + p.name + "|" + p.id + "|" + p.faction);
