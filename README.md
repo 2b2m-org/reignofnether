@@ -41,20 +41,31 @@ Operators can add AI-controlled RTS players from the server console or in-game c
 /rts-bot add <name> <villagers|monsters|piglins> [easy|medium|hard] [x y z]
 /rts-bot list
 /rts-bot difficulty <name> <easy|medium|hard>
+/rts-bot personality <name> <steady|rusher|turtle>
 /rts-bot remove <name>
 ```
 
-The difficulty defaults to `medium`. Either the difficulty, the position, or both may be omitted; without a position, the bot starts near the command source. Difficulty and home position are saved across server restarts.
+The difficulty defaults to `medium` and the personality defaults to `steady`. Either the difficulty, the position, or both may be omitted; without a position, the bot starts near the command source. Difficulty, personality, and home position are saved across server restarts.
 
-All difficulties use identical starting resources, costs, gathering rates, build and production times, unit stats, and map information. They differ only in decisions:
+All difficulties use identical starting resources, costs, gathering rates, build and production times, unit stats, and fog-of-war visibility rules. They differ only in decisions:
+
+Army budgets use the mod's population costs rather than unit head counts, giving every faction the same military supply budget.
 
 | Difficulty | Economy | Supply planning | Attack behavior |
 | --- | --- | --- | --- |
-| Easy | 4 workers, food-heavy split | 1 unit ahead | attacks at 4 units; smaller 8-unit army |
-| Medium | 5 workers, balanced split | 2 units ahead | attacks at 8 units; regroups below 4; balanced 12-unit army |
-| Hard | 9 workers, construction-aware split | 3 units ahead | masses 16 units, prioritizes strategic targets, retreats below 8 |
+| Easy | 4 workers, food-heavy split | 1 unit ahead | attacks at 12 population; smaller 24-population army |
+| Medium | 5 workers, balanced split | 2 units ahead | attacks at 24 population; may regroup below 12 when pressured; balanced 36-population army |
+| Hard | 9 workers, construction-aware split | 3 units ahead | attacks at 36 population, reinforces toward 48, may regroup below 24 when pressured |
 
-Bots use normal resource costs and the same gathering, construction, production, and combat command paths as human players. With fog of war disabled, the map is visible to every player and bot. With fog enabled, bots remember only structures discovered by their own units and buildings and scout when they have no known target.
+Personalities are fair strategic tradeoffs layered on top of any difficulty:
+
+| Personality | Economy and timing | Army style | Target and defense style |
+| --- | --- | --- | --- |
+| Rusher | 1 fewer worker; attacks 6 population earlier | 25% ranged; 6-population-smaller army | attacks the nearest known structure; recalls committed armies only for critical buildings |
+| Steady | baseline economy and timing | 40% ranged; baseline army size | prioritizes the enemy capitol, then production |
+| Turtle | 1 extra worker; attacks 6 population later | 60% ranged; 6-population-larger army | prioritizes production and recalls committed armies to defend threatened buildings |
+
+Bots use normal resource costs and the same gathering, construction, production, and combat command paths as human players. They defend recently damaged buildings, replace fallen builders, and fall back to nearby food sources while their farm regrows. With fog of war disabled, the map is visible to every player and bot. With fog enabled, bots remember structures discovered by their own buildings or their team's units, plus structures revealed by normal game rules, and attack-move while scouting when they have no known target.
 
 For development tests only, `/rts-bot test-speed <name> true` enables the existing build, production, and gathering speed cheats. This is separate from difficulty and is visibly marked in `/rts-bot list`; set it back to `false` for normal match timing. Tutorial NPC bots remain separately scripted.
 

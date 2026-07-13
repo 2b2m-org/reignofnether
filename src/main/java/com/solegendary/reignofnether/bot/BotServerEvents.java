@@ -7,6 +7,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.faction.Faction;
@@ -17,6 +18,7 @@ import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.research.ResearchClientboundPacket;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
+import com.solegendary.reignofnether.survival.SurvivalServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -46,6 +48,7 @@ import java.util.concurrent.CompletableFuture;
 public final class BotServerEvents {
     private static final int TICK_GRANULARITY = 10;
     private static final Map<String, BotController> CONTROLLERS = new HashMap<>();
+    private static boolean survivalAlliancesReady;
 
     private BotServerEvents() {
     }
@@ -94,6 +97,17 @@ public final class BotServerEvents {
                                                 StringArgumentType.getString(context, "name"),
                                                 StringArgumentType.getString(context, "level")
                                         )))))
+                .then(Commands.literal("personality")
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .suggests(BotServerEvents::suggestBotNames)
+                                .then(Commands.argument("style", StringArgumentType.word())
+                                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                List.of("steady", "rusher", "turtle"), builder))
+                                        .executes(context -> setPersonality(
+                                                context.getSource(),
+                                                StringArgumentType.getString(context, "name"),
+                                                StringArgumentType.getString(context, "style")
+                                        )))))
                 .then(Commands.literal("test-speed")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .suggests(BotServerEvents::suggestBotNames)
@@ -133,6 +147,14 @@ public final class BotServerEvents {
         ServerLevel level = event.getServer().getLevel(Level.OVERWORLD);
         if (level == null)
             return;
+        if (SurvivalServerEvents.isEnabled()) {
+            if (!survivalAlliancesReady) {
+                AlliancesServerEvents.applyCoopAlliances();
+                survivalAlliancesReady = true;
+            }
+        } else {
+            survivalAlliancesReady = false;
+        }
 
         List<RTSPlayer> players;
         synchronized (PlayerServerEvents.rtsPlayers) {
@@ -152,11 +174,16 @@ public final class BotServerEvents {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         CONTROLLERS.clear();
+        survivalAlliancesReady = false;
     }
 
     private static int addBot(CommandSourceStack source, String name, String factionName, BotDifficulty difficulty,
                               BlockPos requestedHome) {
         ServerLevel level = source.getLevel();
+        if (!level.dimension().equals(Level.OVERWORLD)) {
+            source.sendFailure(Component.literal("RTS bots can only be added from the Overworld."));
+            return 0;
+        }
         Faction faction = parseFaction(factionName);
         if (faction == null) {
             source.sendFailure(Component.literal("Unknown faction '" + factionName + "'. Use villagers, monsters, or piglins."));
@@ -166,7 +193,14 @@ public final class BotServerEvents {
             source.sendFailure(Component.literal("Bot names must be 32 characters or fewer."));
             return 0;
         }
-        if (PlayerServerEvents.isRTSPlayer(name)) {
+        if (SurvivalServerEvents.ENEMY_OWNER_NAME.equalsIgnoreCase(name)) {
+            source.sendFailure(Component.literal("'" + name + "' is reserved by Wave Survival."));
+            return 0;
+        }
+        boolean nameInUse = PlayerServerEvents.hasRTSPlayerName(name)
+                || source.getServer().getPlayerList().getPlayers().stream()
+                .anyMatch(player -> player.getGameProfile().getName().equalsIgnoreCase(name));
+        if (nameInUse) {
             source.sendFailure(Component.literal("An RTS player named '" + name + "' already exists."));
             return 0;
         }
@@ -180,7 +214,7 @@ public final class BotServerEvents {
         BuildingPlacement preview = strategy.capitol().createBuildingPlacement(level, origin.get(), Rotation.NONE, name);
         BlockPos home = BotBuildingPlanner.groundAt(level, preview.centrePos.getX(), preview.centrePos.getZ());
 
-        RTSPlayer bot = RTSPlayer.getNewAiBot(name, faction, home, difficulty);
+        RTSPlayer bot = RTSPlayer.getNewAiBot(name, faction, home, difficulty, BotPersonality.STEADY);
         PlayerServerEvents.rtsPlayers.add(bot);
         ResourcesServerEvents.assignResources(name);
         ResourcesServerEvents.resetResources(name);
@@ -200,7 +234,10 @@ public final class BotServerEvents {
             return 0;
         }
 
-        level.setDayTime(500);
+        if (SurvivalServerEvents.isEnabled()) {
+            AlliancesServerEvents.applyCoopAlliances();
+            survivalAlliancesReady = true;
+        }
         CONTROLLERS.put(name, new BotController(name));
         PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.bot_added", true, name);
         PlayerServerEvents.sendMessageToAllPlayers(
@@ -208,10 +245,10 @@ public final class BotServerEvents {
         PlayerClientboundPacket.syncRtsGameTime(PlayerServerEvents.rtsGameTicks);
         PlayerServerEvents.saveRTSPlayers();
 
-        ReignOfNether.LOGGER.info("[Bot] added {} faction={} difficulty={} home={} capitol={}",
-                name, faction, difficulty, home, capitol.originPos);
+        ReignOfNether.LOGGER.info("[Bot] added {} faction={} difficulty={} personality={} home={} capitol={}",
+                name, faction, difficulty, bot.aiPersonality, home, capitol.originPos);
         source.sendSuccess(() -> Component.literal("Added RTS bot " + name + " (" + factionName.toLowerCase(Locale.ROOT)
-                + ", " + difficulty.name().toLowerCase(Locale.ROOT) + ") at " + home.toShortString()), true);
+                + ", " + difficulty.name().toLowerCase(Locale.ROOT) + ", steady) at " + home.toShortString()), true);
         return 1;
     }
 
@@ -277,6 +314,25 @@ public final class BotServerEvents {
         PlayerServerEvents.saveRTSPlayers();
         source.sendSuccess(() -> Component.literal("Set " + name + " difficulty to "
                 + difficulty.name().toLowerCase(Locale.ROOT)), true);
+        return 1;
+    }
+
+    private static int setPersonality(CommandSourceStack source, String name, String style) {
+        RTSPlayer player = PlayerServerEvents.getRTSPlayer(name);
+        if (player == null || !player.aiControlled) {
+            source.sendFailure(Component.literal("No AI-controlled RTS bot named '" + name + "' exists."));
+            return 0;
+        }
+        BotPersonality personality = BotPersonality.fromName(style).orElse(null);
+        if (personality == null) {
+            source.sendFailure(Component.literal(
+                    "Unknown personality '" + style + "'. Use steady, rusher, or turtle."));
+            return 0;
+        }
+        player.aiPersonality = personality;
+        PlayerServerEvents.saveRTSPlayers();
+        source.sendSuccess(() -> Component.literal("Set " + name + " personality to "
+                + personality.name().toLowerCase(Locale.ROOT)), true);
         return 1;
     }
 

@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents;
 import com.solegendary.reignofnether.attackwarnings.AttackWarningServerEvents;
 import com.solegendary.reignofnether.blocks.BlockClientEvents;
 import com.solegendary.reignofnether.blocks.BlockServerEvents;
+import com.solegendary.reignofnether.bot.BotServerEvents;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingClientEvents;
@@ -106,6 +107,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(BlockServerEvents.class);
         vanillaEventBus.register(TutorialServerEvents.class);
         vanillaEventBus.register(PlayerServerEvents.class);
+        vanillaEventBus.register(BotServerEvents.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);

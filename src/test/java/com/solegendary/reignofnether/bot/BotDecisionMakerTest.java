@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BotDecisionMakerTest {
@@ -18,12 +19,24 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void personalityNamesParseSafelyForCommandsAndSaves() {
+        assertAll(
+                () -> assertEquals(BotPersonality.STEADY, BotPersonality.fromName("steady").orElseThrow()),
+                () -> assertEquals(BotPersonality.RUSHER, BotPersonality.fromName("RuShEr").orElseThrow()),
+                () -> assertTrue(BotPersonality.fromName("").isEmpty()),
+                () -> assertTrue(BotPersonality.fromName("berserker").isEmpty())
+        );
+    }
+
+    @Test
     void waitsUntilCapitolExistsAndIsBuilt() {
         assertAll(
                 () -> assertEquals(BotGoal.WAIT_FOR_CAPITOL,
-                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, context(false, false))),
+                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
+                                context(false, false))),
                 () -> assertEquals(BotGoal.WAIT_FOR_CAPITOL,
-                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, context(true, false)))
+                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
+                                context(true, false)))
         );
     }
 
@@ -41,24 +54,48 @@ class BotDecisionMakerTest {
         );
 
         assertEquals(BotGoal.BUILD_SUPPLY,
-                BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, context));
+                BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY, context));
     }
 
     @Test
     void growsEconomyBeforeMilitary() {
         assertAll(
                 () -> assertEquals(BotGoal.TRAIN_WORKER,
-                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, new BotDecisionContext(
+                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
+                                new BotDecisionContext(
                                 true, true, 4, 4, 20, false, 1, 3,
                                 false, false, false))),
                 () -> assertEquals(BotGoal.BUILD_FARM,
-                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, new BotDecisionContext(
+                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
+                                new BotDecisionContext(
                                 true, true, 5, 5, 20, false, 1, 3,
                                 false, false, false))),
                 () -> assertEquals(BotGoal.BUILD_MILITARY,
-                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, new BotDecisionContext(
+                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
+                                new BotDecisionContext(
                                 true, true, 5, 5, 20, false, 1, 3,
                                 true, false, false)))
+        );
+    }
+
+    @Test
+    void hardEstablishesProductionBeforeFinishingItsEconomy() {
+        assertAll(
+                () -> assertEquals(BotGoal.BUILD_FARM,
+                        BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
+                                new BotDecisionContext(
+                                        true, true, 5, 5, 20, false, 1, 3,
+                                        false, false, false))),
+                () -> assertEquals(BotGoal.BUILD_MILITARY,
+                        BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
+                                new BotDecisionContext(
+                                        true, true, 5, 5, 20, false, 1, 3,
+                                        true, false, false))),
+                () -> assertEquals(BotGoal.TRAIN_WORKER,
+                        BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
+                                new BotDecisionContext(
+                                        true, true, 7, 7, 20, false, 1, 3,
+                                        true, true, true)))
         );
     }
 
@@ -66,11 +103,13 @@ class BotDecisionMakerTest {
     void waitsForMilitaryBuildingBeforeTrainingArmy() {
         assertAll(
                 () -> assertEquals(BotGoal.WAIT_FOR_MILITARY,
-                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, new BotDecisionContext(
+                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
+                                new BotDecisionContext(
                                 true, true, 5, 5, 20, false, 1, 3,
                                 true, true, false))),
                 () -> assertEquals(BotGoal.TRAIN_ARMY,
-                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, new BotDecisionContext(
+                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
+                                new BotDecisionContext(
                                 true, true, 5, 5, 20, false, 1, 3,
                                 true, true, true)))
         );
@@ -85,15 +124,55 @@ class BotDecisionMakerTest {
                         < BotDifficulty.MEDIUM.supplyLookaheadUnits()),
                 () -> assertTrue(BotDifficulty.MEDIUM.supplyLookaheadUnits()
                         < BotDifficulty.HARD.supplyLookaheadUnits()),
-                () -> assertTrue(BotDifficulty.EASY.targetArmySize() < BotDifficulty.MEDIUM.targetArmySize()),
-                () -> assertTrue(BotDifficulty.MEDIUM.targetArmySize() < BotDifficulty.HARD.targetArmySize()),
-                () -> assertTrue(BotDifficulty.EASY.retreatThreshold()
-                        < BotDifficulty.MEDIUM.retreatThreshold()),
-                () -> assertTrue(BotDifficulty.MEDIUM.retreatThreshold()
-                        < BotDifficulty.HARD.retreatThreshold()),
+                () -> assertTrue(BotDifficulty.EASY.targetArmyPopulation()
+                        < BotDifficulty.MEDIUM.targetArmyPopulation()),
+                () -> assertTrue(BotDifficulty.MEDIUM.targetArmyPopulation()
+                        < BotDifficulty.HARD.targetArmyPopulation()),
+                () -> assertTrue(BotDifficulty.EASY.retreatPopulation()
+                        < BotDifficulty.MEDIUM.retreatPopulation()),
+                () -> assertTrue(BotDifficulty.MEDIUM.retreatPopulation()
+                        < BotDifficulty.HARD.retreatPopulation()),
                 () -> assertEquals(5, BotDifficulty.MEDIUM.targetWorkers()),
-                () -> assertEquals(12, BotDifficulty.MEDIUM.targetArmySize())
+                () -> assertEquals(24, BotDifficulty.EASY.targetArmyPopulation()),
+                () -> assertEquals(36, BotDifficulty.MEDIUM.targetArmyPopulation()),
+                () -> assertEquals(48, BotDifficulty.HARD.targetArmyPopulation()),
+                () -> assertEquals(12, BotDifficulty.EASY.attackPopulation()),
+                () -> assertEquals(24, BotDifficulty.MEDIUM.attackPopulation()),
+                () -> assertEquals(36, BotDifficulty.HARD.attackPopulation())
         );
+    }
+
+    @Test
+    void personalitiesTradeEarlyPressureForEconomyAndArmyScale() {
+        assertAll(
+                () -> assertTrue(BotDecisionMaker.targetWorkers(BotDifficulty.MEDIUM, BotPersonality.RUSHER)
+                        < BotDecisionMaker.targetWorkers(BotDifficulty.MEDIUM, BotPersonality.STEADY)),
+                () -> assertTrue(BotDecisionMaker.targetWorkers(BotDifficulty.MEDIUM, BotPersonality.STEADY)
+                        < BotDecisionMaker.targetWorkers(BotDifficulty.MEDIUM, BotPersonality.TURTLE)),
+                () -> assertTrue(BotDecisionMaker.attackPopulation(BotDifficulty.MEDIUM, BotPersonality.RUSHER)
+                        < BotDecisionMaker.attackPopulation(BotDifficulty.MEDIUM, BotPersonality.STEADY)),
+                () -> assertTrue(BotDecisionMaker.attackPopulation(BotDifficulty.MEDIUM, BotPersonality.STEADY)
+                        < BotDecisionMaker.attackPopulation(BotDifficulty.MEDIUM, BotPersonality.TURTLE)),
+                () -> assertTrue(BotDecisionMaker.targetArmyPopulation(
+                                BotDifficulty.MEDIUM, BotPersonality.RUSHER)
+                        < BotDecisionMaker.targetArmyPopulation(BotDifficulty.MEDIUM, BotPersonality.STEADY)),
+                () -> assertTrue(BotDecisionMaker.targetArmyPopulation(
+                                BotDifficulty.MEDIUM, BotPersonality.STEADY)
+                        < BotDecisionMaker.targetArmyPopulation(BotDifficulty.MEDIUM, BotPersonality.TURTLE))
+        );
+    }
+
+    @Test
+    void attackGatesRemainReachableWithAFogScoutReserved() {
+        for (BotDifficulty difficulty : BotDifficulty.values()) {
+            for (BotPersonality personality : BotPersonality.values()) {
+                int target = BotDecisionMaker.targetArmyPopulation(difficulty, personality);
+                assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
+                        BotDecisionMaker.chooseArmyOrder(difficulty, personality, target - 3,
+                                0, false, false),
+                        () -> difficulty + "/" + personality + " gate must be reachable with a scout reserved");
+            }
+        }
     }
 
     @Test
@@ -105,11 +184,11 @@ class BotDecisionMakerTest {
 
         assertAll(
                 () -> assertEquals(BotGoal.TRAIN_ARMY,
-                        BotDecisionMaker.chooseGoal(BotDifficulty.EASY, context)),
+                        BotDecisionMaker.chooseGoal(BotDifficulty.EASY, BotPersonality.STEADY, context)),
                 () -> assertEquals(BotGoal.TRAIN_ARMY,
-                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, context)),
+                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY, context)),
                 () -> assertEquals(BotGoal.BUILD_SUPPLY,
-                        BotDecisionMaker.chooseGoal(BotDifficulty.HARD, context))
+                        BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY, context))
         );
     }
 
@@ -118,34 +197,83 @@ class BotDecisionMakerTest {
         assertAll(
                 () -> assertEquals(3, BotDecisionMaker.foodWorkerCount(BotDifficulty.EASY, 4, false)),
                 () -> assertEquals(3, BotDecisionMaker.foodWorkerCount(BotDifficulty.MEDIUM, 5, false)),
+                () -> assertEquals(2, BotDecisionMaker.foodWorkerCount(BotDifficulty.HARD, 5, false)),
                 () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(BotDifficulty.HARD, 9, false)),
                 () -> assertEquals(6, BotDecisionMaker.foodWorkerCount(BotDifficulty.HARD, 9, true))
         );
     }
 
     @Test
-    void armyCompositionFallsBackInsteadOfStalling() {
-        for (BotDifficulty difficulty : BotDifficulty.values()) {
+    void armyCompositionWaitsForMissingMeleeInsteadOfOverproducingRanged() {
+        for (BotPersonality personality : BotPersonality.values()) {
             assertEquals(BotDecisionMaker.ArmyUnitChoice.MELEE,
-                    BotDecisionMaker.chooseArmyUnit(difficulty, 11, true, false));
+                    BotDecisionMaker.chooseArmyUnit(personality, 18, 15, true, false));
             assertEquals(BotDecisionMaker.ArmyUnitChoice.RANGED,
-                    BotDecisionMaker.chooseArmyUnit(difficulty, 0, false, true));
+                    BotDecisionMaker.chooseArmyUnit(personality, 0, 0, false, true));
             assertEquals(BotDecisionMaker.ArmyUnitChoice.NONE,
-                    BotDecisionMaker.chooseArmyUnit(difficulty, 0, false, false));
+                    BotDecisionMaker.chooseArmyUnit(personality, 12, 18, false, true));
+            assertEquals(BotDecisionMaker.ArmyUnitChoice.NONE,
+                    BotDecisionMaker.chooseArmyUnit(personality, 0, 0, false, false));
         }
     }
 
     @Test
-    void harderBotsPrioritizeKnownStrategicTargets() {
+    void personalitiesMaintainDistinctArmyCompositionsFromSurvivingUnits() {
         assertAll(
-                () -> assertEquals(0, BotDecisionMaker.targetPriority(BotDifficulty.EASY, false, false)),
-                () -> assertEquals(0, BotDecisionMaker.targetPriority(BotDifficulty.EASY, true, true)),
-                () -> assertTrue(BotDecisionMaker.targetPriority(BotDifficulty.MEDIUM, true, false)
-                        < BotDecisionMaker.targetPriority(BotDifficulty.MEDIUM, false, true)),
-                () -> assertTrue(BotDecisionMaker.targetPriority(BotDifficulty.HARD, true, false)
-                        < BotDecisionMaker.targetPriority(BotDifficulty.HARD, false, true)),
-                () -> assertTrue(BotDecisionMaker.targetPriority(BotDifficulty.HARD, false, true)
-                        < BotDecisionMaker.targetPriority(BotDifficulty.HARD, false, false))
+                () -> assertEquals(BotDecisionMaker.ArmyUnitChoice.MELEE,
+                        BotDecisionMaker.chooseArmyUnit(BotPersonality.RUSHER, 9, 3, true, true)),
+                () -> assertEquals(BotDecisionMaker.ArmyUnitChoice.RANGED,
+                        BotDecisionMaker.chooseArmyUnit(BotPersonality.STEADY, 18, 6, true, true)),
+                () -> assertEquals(BotDecisionMaker.ArmyUnitChoice.RANGED,
+                        BotDecisionMaker.chooseArmyUnit(BotPersonality.TURTLE, 18, 6, true, true)),
+                () -> assertEquals(BotDecisionMaker.ArmyUnitChoice.MELEE,
+                        BotDecisionMaker.chooseArmyUnit(BotPersonality.TURTLE, 12, 18, true, true))
+        );
+    }
+
+    @Test
+    void productionNeverOvershootsItsPopulationBudget() {
+        assertAll(
+                () -> assertTrue(BotDecisionMaker.fitsArmyPopulation(33, 3, 36)),
+                () -> assertFalse(BotDecisionMaker.fitsArmyPopulation(34, 3, 36))
+        );
+    }
+
+    @Test
+    void personalitiesPrioritizeDifferentKnownTargets() {
+        assertAll(
+                () -> assertEquals(0, BotDecisionMaker.targetPriority(BotPersonality.RUSHER, false, false)),
+                () -> assertEquals(0, BotDecisionMaker.targetPriority(BotPersonality.RUSHER, true, true)),
+                () -> assertTrue(BotDecisionMaker.targetPriority(BotPersonality.STEADY, true, false)
+                        < BotDecisionMaker.targetPriority(BotPersonality.STEADY, false, true)),
+                () -> assertTrue(BotDecisionMaker.targetPriority(BotPersonality.TURTLE, false, true)
+                        < BotDecisionMaker.targetPriority(BotPersonality.TURTLE, true, true))
+        );
+    }
+
+    @Test
+    void armiesEngageThreatsInsteadOfIgnoringThemDuringBaseRaces() {
+        assertAll(
+                () -> assertEquals(BotDecisionMaker.ArmyOrder.DEFEND,
+                        BotDecisionMaker.chooseArmyOrder(BotDifficulty.EASY, BotPersonality.STEADY,
+                                1, 1, false, true)),
+                () -> assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
+                        BotDecisionMaker.chooseArmyOrder(BotDifficulty.MEDIUM, BotPersonality.STEADY,
+                                24, 0, false, false)),
+                () -> assertEquals(BotDecisionMaker.ArmyOrder.RETREAT,
+                        BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
+                                15, 15, true, false)),
+                () -> assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
+                        BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
+                                15, 3, true, false)),
+                () -> assertEquals(BotDecisionMaker.ArmyOrder.HOLD,
+                        BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
+                                15, 0, false, false)),
+                () -> assertTrue(BotDecisionMaker.shouldFocusEnemyArmy(false, true, 36, 12)),
+                () -> assertFalse(BotDecisionMaker.shouldFocusEnemyArmy(false, true, 36, 9)),
+                () -> assertTrue(BotDecisionMaker.shouldFocusEnemyArmy(true, true, 36, 3)),
+                () -> assertTrue(BotDecisionMaker.shouldDefend(BotPersonality.TURTLE, true, false)),
+                () -> assertTrue(BotDecisionMaker.shouldDefend(BotPersonality.RUSHER, true, true))
         );
     }
 
@@ -170,8 +298,10 @@ class BotDecisionMakerTest {
                 true, true, true
         );
         for (BotDifficulty difficulty : BotDifficulty.values()) {
-            BotGoal first = BotDecisionMaker.chooseGoal(difficulty, context);
-            assertEquals(first, BotDecisionMaker.chooseGoal(difficulty, context));
+            for (BotPersonality personality : BotPersonality.values()) {
+                BotGoal first = BotDecisionMaker.chooseGoal(difficulty, personality, context);
+                assertEquals(first, BotDecisionMaker.chooseGoal(difficulty, personality, context));
+            }
         }
     }
 

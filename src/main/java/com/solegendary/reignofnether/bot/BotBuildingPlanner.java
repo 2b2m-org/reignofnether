@@ -5,12 +5,15 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,11 +26,16 @@ final class BotBuildingPlanner {
 
     static Optional<BlockPos> findPlacement(ServerLevel level, Building building, BlockPos home, String ownerName,
                                             boolean includeHome) {
+        return findPlacement(level, building, home, ownerName, includeHome, null);
+    }
+
+    static Optional<BlockPos> findPlacement(ServerLevel level, Building building, BlockPos home, String ownerName,
+                                            boolean includeHome, BotWorldView worldView) {
         for (BlockPos centre : candidateCentres(level, home, includeHome)) {
             var relativeBlocks = building.getRelativeBlockData(level);
             BlockPos origin = PlayerServerEvents.getBuildingOriginPos(centre, relativeBlocks);
             BuildingPlacement placement = building.createBuildingPlacement(level, origin, Rotation.NONE, ownerName);
-            if (canPlace(level, placement))
+            if (canPlace(level, placement, worldView))
                 return Optional.of(origin);
         }
         return Optional.empty();
@@ -38,30 +46,43 @@ final class BotBuildingPlanner {
         return new BlockPos(x, y, z);
     }
 
+    static boolean isChunkLoaded(ServerLevel level, BlockPos pos) {
+        return level.hasChunk(SectionPos.blockToSectionCoord(pos.getX()),
+                SectionPos.blockToSectionCoord(pos.getZ()));
+    }
+
     private static List<BlockPos> candidateCentres(ServerLevel level, BlockPos home, boolean includeHome) {
         List<BlockPos> centres = new ArrayList<>();
         if (includeHome)
             centres.add(groundAt(level, home.getX(), home.getZ()));
 
         int startRadius = includeHome ? 12 : 18;
+        double outwardX = home.getX() - level.getWorldBorder().getCenterX();
+        double outwardZ = home.getZ() - level.getWorldBorder().getCenterZ();
         for (int radius = startRadius; radius <= MAX_RADIUS; radius += 6) {
             int diagonal = Math.max(1, Math.round(radius * 0.7f));
             int[][] offsets = {
                     {radius, 0}, {0, radius}, {-radius, 0}, {0, -radius},
                     {diagonal, diagonal}, {-diagonal, diagonal}, {-diagonal, -diagonal}, {diagonal, -diagonal}
             };
+            Arrays.sort(offsets, Comparator.<int[]>comparingDouble(
+                    offset -> offset[0] * outwardX + offset[1] * outwardZ).reversed());
             for (int[] offset : offsets)
                 centres.add(groundAt(level, home.getX() + offset[0], home.getZ() + offset[1]));
         }
         return centres;
     }
 
-    private static boolean canPlace(ServerLevel level, BuildingPlacement placement) {
+    private static boolean canPlace(ServerLevel level, BuildingPlacement placement, BotWorldView worldView) {
         BlockPos min = placement.minCorner;
         BlockPos max = placement.maxCorner;
         BlockPos origin = placement.originPos;
 
-        if (!level.hasChunkAt(min) || !level.hasChunkAt(max))
+        if (!isChunkLoaded(level, min) || !isChunkLoaded(level, max))
+            return false;
+        BlockPos visibilityMin = min.offset(-BUILDING_GAP, 0, -BUILDING_GAP);
+        BlockPos visibilityMax = max.offset(BUILDING_GAP, 0, BUILDING_GAP);
+        if (worldView != null && !worldView.isFootprintVisible(visibilityMin, visibilityMax))
             return false;
 
         double requiredBorderDistance = Math.max(max.getX() - min.getX(), max.getZ() - min.getZ()) / 2.0 + BUILDING_GAP;

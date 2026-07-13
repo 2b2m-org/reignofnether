@@ -59,6 +59,9 @@ public class ReturnResourcesGoal extends MoveToTargetBlockGoal {
     }
 
     public void tick() {
+        if (!this.mob.level().isClientSide() && buildingTarget != null && !isValidDropOff(buildingTarget))
+            returnToClosestBuilding();
+
         if (buildingTarget != null) {
             calcMoveTarget();
             if (canDropOff() && this.mob instanceof Unit unit) {
@@ -89,11 +92,16 @@ public class ReturnResourcesGoal extends MoveToTargetBlockGoal {
     public boolean canDropOff() {
         BlockPos target = getNavigationTarget();
         if (buildingTarget != null && target != null)
-            if (buildingTarget.isBuilt && buildingTarget.getBuilding().canAcceptResources &&
-                BuildingServerEvents.getUnitToBuildingRelationship((Unit) this.mob, buildingTarget) == Relationship.OWNED &&
-                BuildingServerEvents.getBuildings().contains(buildingTarget))
+            if (isValidDropOff(buildingTarget))
                 return buildingTarget.isPosInsideBuilding(mob.getOnPos()) || MiscUtil.isMobInRangeOfPos(target, mob, 1.5f);
         return false;
+    }
+
+    private boolean isValidDropOff(BuildingPlacement building) {
+        return BuildingServerEvents.getBuildings().contains(building)
+                && building.isBuilt
+                && building.getBuilding().canAcceptResources
+                && BuildingServerEvents.getUnitToBuildingRelationship((Unit) this.mob, building) == Relationship.OWNED;
     }
 
     public void returnToClosestBuilding() {
@@ -104,7 +112,7 @@ public class ReturnResourcesGoal extends MoveToTargetBlockGoal {
         BuildingPlacement closestBuilding = null;
         double closestDist = 99999;
         for (BuildingPlacement building : BuildingServerEvents.getBuildings()) {
-            if (building.ownerName.equals(((Unit) mob).getOwnerName()) && building.getBuilding().canAcceptResources && building.isBuilt) {
+            if (isValidDropOff(building)) {
                 BlockPos bp = building.getClosestGroundPos(pos, 1);
                 double dist = bp.distSqr(pos);
                 if (dist < closestDist) {
@@ -115,6 +123,8 @@ public class ReturnResourcesGoal extends MoveToTargetBlockGoal {
         }
         if (closestBuilding != null)
             this.setBuildingTarget(closestBuilding);
+        else
+            this.stopReturning();
     }
 
     public void setBuildingTarget(@Nullable BuildingPlacement target) {

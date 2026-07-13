@@ -4,29 +4,29 @@ import java.util.Locale;
 import java.util.Optional;
 
 public enum BotDifficulty {
-    EASY(60, 4, 1, 8, 4, 0, 300, 400, 1),
-    MEDIUM(20, 5, 2, 12, 8, 4, 100, 200, 2),
-    HARD(20, 9, 3, 16, 16, 8, 40, 100, 2);
+    EASY(60, 4, 1, 24, 12, 0, 300, 400, 1),
+    MEDIUM(20, 5, 2, 36, 24, 12, 100, 200, 2),
+    HARD(20, 9, 3, 48, 36, 24, 40, 100, 2);
 
     private final int decisionIntervalTicks;
     private final int targetWorkers;
     private final int supplyLookaheadUnits;
-    private final int targetArmySize;
-    private final int attackThreshold;
-    private final int retreatThreshold;
+    private final int targetArmyPopulation;
+    private final int attackPopulation;
+    private final int retreatPopulation;
     private final int workerReconcileTicks;
     private final int attackRefreshTicks;
     private final int maxProductionQueue;
 
     BotDifficulty(int decisionIntervalTicks, int targetWorkers, int supplyLookaheadUnits,
-                  int targetArmySize, int attackThreshold, int retreatThreshold,
+                  int targetArmyPopulation, int attackPopulation, int retreatPopulation,
                   int workerReconcileTicks, int attackRefreshTicks, int maxProductionQueue) {
         this.decisionIntervalTicks = decisionIntervalTicks;
         this.targetWorkers = targetWorkers;
         this.supplyLookaheadUnits = supplyLookaheadUnits;
-        this.targetArmySize = targetArmySize;
-        this.attackThreshold = attackThreshold;
-        this.retreatThreshold = retreatThreshold;
+        this.targetArmyPopulation = targetArmyPopulation;
+        this.attackPopulation = attackPopulation;
+        this.retreatPopulation = retreatPopulation;
         this.workerReconcileTicks = workerReconcileTicks;
         this.attackRefreshTicks = attackRefreshTicks;
         this.maxProductionQueue = maxProductionQueue;
@@ -44,16 +44,16 @@ public enum BotDifficulty {
         return supplyLookaheadUnits;
     }
 
-    public int targetArmySize() {
-        return targetArmySize;
+    public int targetArmyPopulation() {
+        return targetArmyPopulation;
     }
 
-    public int attackThreshold() {
-        return attackThreshold;
+    public int attackPopulation() {
+        return attackPopulation;
     }
 
-    public int retreatThreshold() {
-        return retreatThreshold;
+    public int retreatPopulation() {
+        return retreatPopulation;
     }
 
     public int workerReconcileTicks() {

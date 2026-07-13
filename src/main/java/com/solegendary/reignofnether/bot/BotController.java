@@ -1,65 +1,45 @@
 package com.solegendary.reignofnether.bot;
 
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingClientboundPacket;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.buildings.placements.PortalPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
-import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.building.production.ProductionItem;
-import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.resources.ResourceName;
+import com.solegendary.reignofnether.resources.ResourceSource;
+import com.solegendary.reignofnether.resources.ResourceSources;
 import com.solegendary.reignofnether.resources.Resources;
-import com.solegendary.reignofnether.resources.ResourcesServerEvents;
-import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.goals.GatherResourcesGoal;
-import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Rotation;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public final class BotController {
-    private static final int TARGET_REVISIT_TICKS = 600;
-    private static final double SCOUT_REACHED_DISTANCE_SQR = 144;
-    private static final int[][] SCOUT_DIRECTIONS = {
-            {1, 0}, {0, 1}, {-1, 0}, {0, -1},
-            {1, 1}, {-1, 1}, {-1, -1}, {1, -1}
-    };
-
     private final String ownerName;
-    private final BotWorldView worldView = new BotWorldView();
-    private final Map<BlockPos, Integer> targetCooldowns = new HashMap<>();
+    private final BotSelf self;
+    private final BotWorldView worldView;
+    private final BotArmy army;
     private BotGoal currentGoal = BotGoal.WAIT_FOR_CAPITOL;
-    private BlockPos militaryPortalOrigin;
-    private BlockPos supplyPortalOrigin;
-    private BuildingPlacement attackTarget;
-    private BlockPos scoutTarget;
-    private double scoutBestDistance;
-    private int scoutLastProgressTick;
-    private int scoutWaypointIndex;
-    private boolean attackCommitted;
     private int nextDecisionTick;
     private int nextWorkerReconcileTick;
-    private int nextAttackTick;
 
     public BotController(String ownerName) {
         this.ownerName = ownerName;
+        self = new BotSelf(ownerName);
+        worldView = new BotWorldView();
+        army = new BotArmy(ownerName, self, worldView);
     }
 
     public String getOwnerName() {
@@ -77,30 +57,32 @@ public final class BotController {
 
         int tick = level.getServer().getTickCount();
         BotDifficulty difficulty = player.aiDifficulty;
+        BotPersonality personality = player.aiPersonality;
         if (tick < nextDecisionTick)
             return;
         nextDecisionTick = tick + difficulty.decisionIntervalTicks();
+        worldView.observe(player);
 
         BotStrategy strategy = BotStrategy.forFaction(player.faction);
+        self.reconcilePortalRoles(strategy);
         if (strategy.usesTransformingPortals())
             maintainPortalTransforms(strategy, difficulty);
 
         BotDecisionContext context = createDecisionContext(strategy);
         if (tick >= nextWorkerReconcileTick) {
-            assignWorkerJobs(strategy, difficulty, context.militaryReady());
+            boolean economyComplete = context.workersAndQueued()
+                    >= BotDecisionMaker.targetWorkers(difficulty, personality);
+            assignWorkerJobs(strategy, difficulty, economyComplete);
             nextWorkerReconcileTick = tick + difficulty.workerReconcileTicks();
         }
 
-        worldView.observe(player);
-        BotGoal nextGoal = BotDecisionMaker.chooseGoal(difficulty, context);
+        BotGoal nextGoal = BotDecisionMaker.chooseGoal(difficulty, personality, context);
         if (nextGoal != currentGoal) {
             currentGoal = nextGoal;
             ReignOfNether.LOGGER.info("[Bot] {} goal={}", ownerName, currentGoal);
         }
-        executeGoal(level, player, strategy, difficulty, currentGoal);
-
-        if (tick >= nextAttackTick)
-            commandArmy(level, player, difficulty);
+        executeGoal(level, player, strategy, difficulty, personality, currentGoal);
+        army.tick(level, player, strategy, difficulty, personality);
     }
 
     public String describe() {
@@ -108,16 +90,17 @@ public final class BotController {
         if (player == null)
             return ownerName + " (inactive)";
 
-        int workers = ownedWorkers().size();
-        int army = ownedArmy().size();
+        int workers = self.workers().size();
+        int army = self.army().size();
         int population = UnitServerEvents.getCurrentPopulation(ownerName);
         int supply = BuildingServerEvents.getTotalPopulationSupply(ownerName);
-        Resources resources = getResources();
+        Resources resources = self.resources();
         String resourceText = resources == null
                 ? "resources unavailable"
                 : "food=" + resources.food + " wood=" + resources.wood + " ore=" + resources.ore;
         return ownerName + " faction=" + player.faction.name().toLowerCase()
                 + " difficulty=" + player.aiDifficulty.name().toLowerCase()
+                + " personality=" + player.aiPersonality.name().toLowerCase()
                 + " goal=" + currentGoal.name().toLowerCase()
                 + " workers=" + workers + " army=" + army
                 + " population=" + population + "/" + supply + " " + resourceText
@@ -125,21 +108,21 @@ public final class BotController {
     }
 
     private BotDecisionContext createDecisionContext(BotStrategy strategy) {
-        BuildingPlacement capitol = ownedBuilding(strategy.capitol());
-        ProductionPlacement military = militaryBuilding(strategy);
-        int queuedWorkers = countQueued(strategy.worker());
+        BuildingPlacement capitol = self.building(strategy.capitol());
+        ProductionPlacement military = self.militaryBuilding(strategy);
+        int queuedWorkers = self.countQueued(strategy.worker());
 
         return new BotDecisionContext(
                 capitol != null,
                 capitol != null && capitol.isBuilt,
-                ownedWorkers().size() + queuedWorkers,
+                self.workers().size() + queuedWorkers,
                 UnitServerEvents.getCurrentPopulation(ownerName),
                 BuildingServerEvents.getTotalPopulationSupply(ownerName),
-                supplyUnderConstruction(strategy),
+                self.supplyUnderConstruction(strategy),
                 strategy.worker().getCost(false, ownerName).population,
                 Math.max(strategy.melee().getCost(false, ownerName).population,
                         strategy.ranged().getCost(false, ownerName).population),
-                ownedBuilding(strategy.farm()) != null,
+                self.building(strategy.farm()) != null,
                 military != null,
                 military != null && military.isBuilt && (!strategy.usesTransformingPortals()
                         || military instanceof PortalPlacement portal
@@ -148,39 +131,58 @@ public final class BotController {
     }
 
     private void executeGoal(ServerLevel level, RTSPlayer player, BotStrategy strategy, BotDifficulty difficulty,
-                             BotGoal goal) {
+                             BotPersonality personality, BotGoal goal) {
         switch (goal) {
             case WAIT_FOR_CAPITOL, WAIT_FOR_MILITARY -> {
             }
             case BUILD_SUPPLY -> {
-                if (!buildStructure(level, player, strategy.supply(), strategy.supplyTransform(), false, difficulty)) {
-                    if (ownedWorkers().size() + countQueued(strategy.worker()) < difficulty.targetWorkers())
-                        trainAt(ownedBuilding(strategy.capitol()), strategy.worker(), "worker", difficulty);
-                    else
-                        trainArmy(strategy, difficulty);
-                }
+                if (!buildStructure(level, player, strategy.supply(), strategy.supplyTransform(), false, difficulty))
+                    continueProduction(strategy, difficulty, personality, true);
             }
-            case TRAIN_WORKER -> trainAt(ownedBuilding(strategy.capitol()), strategy.worker(), "worker", difficulty);
-            case BUILD_FARM -> buildStructure(level, player, strategy.farm(), null, false, difficulty);
-            case BUILD_MILITARY -> buildStructure(level, player, strategy.military(), strategy.militaryTransform(),
-                    true, difficulty);
-            case TRAIN_ARMY -> trainArmy(strategy, difficulty);
+            case TRAIN_WORKER -> {
+                if (!trainAt(self.building(strategy.capitol()), strategy.worker(), "worker", difficulty))
+                    trainArmy(strategy, difficulty, personality, false);
+            }
+            case BUILD_FARM -> {
+                if (!buildStructure(level, player, strategy.farm(), null, false, difficulty))
+                    continueProduction(strategy, difficulty, personality, true);
+            }
+            case BUILD_MILITARY -> {
+                if (!buildStructure(level, player, strategy.military(), strategy.militaryTransform(), true,
+                        difficulty))
+                    continueProduction(strategy, difficulty, personality, true);
+            }
+            case TRAIN_ARMY -> trainArmy(strategy, difficulty, personality, false);
         }
+    }
+
+    private void continueProduction(BotStrategy strategy, BotDifficulty difficulty, BotPersonality personality,
+                                    boolean meleeOnly) {
+        int workersAndQueued = self.workers().size() + self.countQueued(strategy.worker());
+        if (workersAndQueued < BotDecisionMaker.targetWorkers(difficulty, personality)
+                && trainAt(self.building(strategy.capitol()), strategy.worker(), "worker", difficulty))
+            return;
+        trainArmy(strategy, difficulty, personality, meleeOnly);
     }
 
     private boolean buildStructure(ServerLevel level, RTSPlayer player, Building building, ProductionItem transform,
                                    boolean militaryRole, BotDifficulty difficulty) {
-        if (!canAfford(building))
+        if (!self.canAfford(building))
             return false;
 
-        LivingEntity builder = ownedWorkers().stream()
-                .filter(entity -> ((WorkerUnit) entity).getBuildRepairGoal().getBuildingTarget() == null)
+        LivingEntity builder = self.workers().stream()
+                .filter(entity -> {
+                    WorkerUnit worker = (WorkerUnit) entity;
+                    return worker.getBuildRepairGoal().getBuildingTarget() == null
+                            && ((Unit) entity).getReturnResourcesGoal().getBuildingTarget() == null;
+                })
                 .findFirst()
                 .orElse(null);
         if (builder == null)
             return false;
 
-        var origin = BotBuildingPlanner.findPlacement(level, building, player.aiHomePos, ownerName, false);
+        var origin = BotBuildingPlanner.findPlacement(
+                level, building, player.aiHomePos, ownerName, false, worldView);
         if (origin.isEmpty())
             return false;
 
@@ -197,10 +199,7 @@ public final class BotController {
             return false;
 
         if (placement instanceof PortalPlacement portal && transform != null) {
-            if (militaryRole)
-                militaryPortalOrigin = portal.originPos;
-            else
-                supplyPortalOrigin = portal.originPos;
+            self.recordPortal(portal, militaryRole);
             startProduction(portal, transform, militaryRole ? "military portal" : "civilian portal", difficulty);
         }
 
@@ -208,21 +207,38 @@ public final class BotController {
         return true;
     }
 
-    private void trainArmy(BotStrategy strategy, BotDifficulty difficulty) {
-        ProductionPlacement building = militaryBuilding(strategy);
+    private void trainArmy(BotStrategy strategy, BotDifficulty difficulty, BotPersonality personality,
+                           boolean meleeOnly) {
+        ProductionPlacement building = self.militaryBuilding(strategy);
         if (building == null || !building.isBuilt)
             return;
 
-        int armyAndQueued = ownedArmy().size() + countQueued(strategy.melee()) + countQueued(strategy.ranged());
-        if (armyAndQueued >= difficulty.targetArmySize()
+        List<LivingEntity> army = self.army();
+        List<LivingEntity> ranged = army.stream()
+                .filter(RangedAttackerUnit.class::isInstance)
+                .toList();
+        int currentRangedPopulation = BotSelf.population(ranged);
+        int rangedPopulation = currentRangedPopulation + self.queuedPopulation(strategy.ranged());
+        int meleePopulation = BotSelf.population(army) - currentRangedPopulation
+                + self.queuedPopulation(strategy.melee());
+        int armyAndQueuedPopulation = meleePopulation + rangedPopulation;
+        int targetPopulation = BotDecisionMaker.targetArmyPopulation(difficulty, personality);
+        if (armyAndQueuedPopulation >= targetPopulation
                 || building.productionQueue.size() >= difficulty.maxProductionQueue())
             return;
 
+        int meleeCost = Math.max(1, strategy.melee().getCost(false, ownerName).population);
+        int rangedCost = Math.max(1, strategy.ranged().getCost(false, ownerName).population);
         BotDecisionMaker.ArmyUnitChoice choice = BotDecisionMaker.chooseArmyUnit(
-                difficulty,
-                armyAndQueued,
-                strategy.melee().canAfford(building),
-                strategy.ranged().canAfford(building)
+                personality,
+                meleePopulation,
+                rangedPopulation,
+                strategy.melee().canAfford(building)
+                        && BotDecisionMaker.fitsArmyPopulation(
+                        armyAndQueuedPopulation, meleeCost, targetPopulation),
+                !meleeOnly && strategy.ranged().canAfford(building)
+                        && BotDecisionMaker.fitsArmyPopulation(
+                        armyAndQueuedPopulation, rangedCost, targetPopulation)
         );
         ProductionItem item = switch (choice) {
             case MELEE -> strategy.melee();
@@ -253,38 +269,39 @@ public final class BotController {
     }
 
     private void maintainPortalTransforms(BotStrategy strategy, BotDifficulty difficulty) {
-        ProductionPlacement military = militaryBuilding(strategy);
+        ProductionPlacement military = self.militaryBuilding(strategy);
         if (military instanceof PortalPlacement portal
                 && portal.getPortalType() == PortalPlacement.PortalType.BASIC
                 && portal.productionQueue.isEmpty())
             startProduction(portal, strategy.militaryTransform(), "military portal", difficulty);
 
-        ProductionPlacement supply = supplyBuilding(strategy);
+        ProductionPlacement supply = self.supplyBuilding(strategy);
         if (supply instanceof PortalPlacement portal
                 && portal.getPortalType() == PortalPlacement.PortalType.BASIC
                 && portal.productionQueue.isEmpty())
             startProduction(portal, strategy.supplyTransform(), "civilian portal", difficulty);
     }
 
-    private void assignWorkerJobs(BotStrategy strategy, BotDifficulty difficulty, boolean militaryReady) {
-        BuildingPlacement farm = ownedBuilding(strategy.farm());
-        if (farm != null && !farm.isBuilt)
+    private void assignWorkerJobs(BotStrategy strategy, BotDifficulty difficulty, boolean economyComplete) {
+        BuildingPlacement farm = self.building(strategy.farm());
+        if (farm != null && (!farm.isBuilt || !hasHarvestableFood(farm)))
             farm = null;
 
-        List<LivingEntity> workers = ownedWorkers();
-        workers.sort(Comparator.comparingInt(LivingEntity::getId));
-        int foodWorkers = BotDecisionMaker.foodWorkerCount(difficulty, workers.size(), militaryReady);
+        List<LivingEntity> workers = self.workers();
+        reassignOrphanedBuilders(workers);
+        int foodWorkers = BotDecisionMaker.foodWorkerCount(difficulty, workers.size(), economyComplete);
         int workerIndex = 0;
         for (LivingEntity entity : workers) {
             WorkerUnit worker = (WorkerUnit) entity;
+            Unit unit = (Unit) entity;
             ResourceName resource = workerIndex++ < foodWorkers ? ResourceName.FOOD : ResourceName.WOOD;
-            if (worker.getBuildRepairGoal().getBuildingTarget() != null)
+            if (worker.getBuildRepairGoal().getBuildingTarget() != null
+                    || unit.getReturnResourcesGoal().getBuildingTarget() != null)
                 continue;
 
             BuildingPlacement targetFarm = resource == ResourceName.FOOD ? farm : null;
             GatherResourcesGoal gather = worker.getGatherResourceGoal();
             if (gather.getTargetResourceName() != resource || gather.getTargetFarm() != targetFarm) {
-                Unit unit = (Unit) entity;
                 Unit.fullResetBehaviours(unit);
                 gather.setTargetResourceName(resource);
                 gather.setTargetFarm(targetFarm);
@@ -292,343 +309,47 @@ public final class BotController {
         }
     }
 
-    private void commandArmy(ServerLevel level, RTSPlayer player, BotDifficulty difficulty) {
-        int tick = level.getServer().getTickCount();
-        targetCooldowns.entrySet().removeIf(entry -> entry.getValue() <= tick);
-
-        List<LivingEntity> army = ownedArmy();
-        if (army.isEmpty()) {
-            attackCommitted = false;
-            attackTarget = null;
-            clearScoutTarget();
-            nextAttackTick = tick + difficulty.attackRefreshTicks();
-            return;
-        }
-
-        if (attackCommitted && difficulty.retreatThreshold() > 0
-                && army.size() < difficulty.retreatThreshold()) {
-            moveArmy(army, player.aiHomePos.above());
-            ReignOfNether.LOGGER.info("[Bot] {} retreating with {} units", ownerName, army.size());
-            attackCommitted = false;
-            attackTarget = null;
-            clearScoutTarget();
-            nextAttackTick = tick + difficulty.attackRefreshTicks();
-            return;
-        }
-
-        if (!attackCommitted && army.size() < difficulty.attackThreshold()) {
-            nextAttackTick = tick + difficulty.attackRefreshTicks();
-            return;
-        }
-
-        if (attackTarget != null && !BuildingServerEvents.getBuildings().contains(attackTarget)) {
-            targetCooldowns.put(attackTarget.originPos, tick + TARGET_REVISIT_TICKS);
-            attackTarget = null;
-        }
-        if (attackTarget != null && !isActiveEnemy(player, attackTarget.ownerName))
-            attackTarget = null;
-
-        boolean selectedNewTarget = false;
-        if (attackTarget == null) {
-            attackTarget = selectEnemyBuilding(player, difficulty, army.get(0).blockPosition());
-            selectedNewTarget = attackTarget != null;
-        }
-        if (attackTarget == null) {
-            if (worldView.fogEnabled())
-                scout(level, player, army, tick);
-            nextAttackTick = tick + difficulty.attackRefreshTicks();
-            return;
-        }
-
-        int[] ids = army.stream().mapToInt(LivingEntity::getId).toArray();
-        UnitServerEvents.addActionItem(
-                ownerName,
-                UnitAction.ATTACK_BUILDING,
-                -1,
-                ids,
-                attackTarget.originPos,
-                BlockPos.ZERO
-        );
-        attackCommitted = true;
-        clearScoutTarget();
-        if (selectedNewTarget) {
-            ReignOfNether.LOGGER.info("[Bot] {} attacking {} at {} with {} units",
-                    ownerName, attackTarget.ownerName, attackTarget.originPos, ids.length);
-        }
-        nextAttackTick = tick + difficulty.attackRefreshTicks();
-    }
-
-    private BuildingPlacement selectEnemyBuilding(RTSPlayer player, BotDifficulty difficulty, BlockPos armyPos) {
-        return worldView.knownEnemyBuildings(player).stream()
-                .filter(building -> isActiveEnemy(player, building.ownerName))
-                .filter(building -> !targetCooldowns.containsKey(building.originPos))
-                .min(Comparator
-                        .comparingInt((BuildingPlacement building) -> BotDecisionMaker.targetPriority(
-                                difficulty, building.isCapitol, building instanceof ProductionPlacement))
-                        .thenComparingDouble(building -> building.centrePos.distSqr(armyPos)))
-                .orElse(null);
-    }
-
-    private void scout(ServerLevel level, RTSPlayer player, List<LivingEntity> army, int tick) {
-        if (scoutTarget != null && worldView.isVisible(scoutTarget) && level.hasChunkAt(scoutTarget)) {
-            BlockPos ground = BotBuildingPlanner.groundAt(level, scoutTarget.getX(), scoutTarget.getZ());
-            if (Math.abs(ground.getY() - player.aiHomePos.getY()) > 8) {
-                scoutTarget = null;
-            } else {
-                BlockPos adjustedTarget = ground.above();
-                if (!adjustedTarget.equals(scoutTarget)) {
-                    scoutTarget = adjustedTarget;
-                    resetScoutProgress(army, tick);
-                    moveArmy(army, scoutTarget);
-                }
-            }
-        }
-
-        if (scoutTarget != null) {
-            double currentDistance = closestArmyDistance(army, scoutTarget);
-            BotDecisionMaker.ScoutWaypointDecision decision = BotDecisionMaker.evaluateScoutWaypoint(
-                    currentDistance * currentDistance <= SCOUT_REACHED_DISTANCE_SQR,
-                    scoutBestDistance,
-                    currentDistance,
-                    tick - scoutLastProgressTick
-            );
-            if (decision == BotDecisionMaker.ScoutWaypointDecision.PROGRESS) {
-                scoutBestDistance = currentDistance;
-                scoutLastProgressTick = tick;
-                return;
-            }
-            if (decision == BotDecisionMaker.ScoutWaypointDecision.KEEP)
-                return;
-        }
-
-        scoutTarget = nextScoutTarget(level, player.aiHomePos);
-        resetScoutProgress(army, tick);
-        moveArmy(army, scoutTarget);
-        ReignOfNether.LOGGER.info("[Bot] {} scouting at {} with {} units",
-                ownerName, scoutTarget, army.size());
-    }
-
-    private void resetScoutProgress(List<LivingEntity> army, int tick) {
-        scoutBestDistance = closestArmyDistance(army, scoutTarget);
-        scoutLastProgressTick = tick;
-    }
-
-    private static double closestArmyDistance(List<LivingEntity> army, BlockPos target) {
-        return army.stream()
-                .mapToDouble(entity -> Math.sqrt(entity.blockPosition().distSqr(target)))
-                .min()
-                .orElse(Double.POSITIVE_INFINITY);
-    }
-
-    private void clearScoutTarget() {
-        scoutTarget = null;
-        scoutBestDistance = 0;
-        scoutLastProgressTick = 0;
-    }
-
-    private BlockPos nextScoutTarget(ServerLevel level, BlockPos home) {
-        for (int attempt = 0; attempt < SCOUT_DIRECTIONS.length * 4; attempt++) {
-            int index = scoutWaypointIndex++ % (SCOUT_DIRECTIONS.length * 4);
-            int[] direction = SCOUT_DIRECTIONS[index % SCOUT_DIRECTIONS.length];
-            int radius = 128 * (index / SCOUT_DIRECTIONS.length + 1);
-            BlockPos column = new BlockPos(
-                    home.getX() + direction[0] * radius,
-                    home.getY(),
-                    home.getZ() + direction[1] * radius
-            );
-            if (!level.getWorldBorder().isWithinBounds(column))
-                continue;
-            if (!worldView.isVisible(column) || !level.hasChunkAt(column))
-                return column.above();
-            BlockPos ground = BotBuildingPlanner.groundAt(
-                    level,
-                    column.getX(),
-                    column.getZ()
-            );
-            if (Math.abs(ground.getY() - home.getY()) <= 8)
-                return ground.above();
-        }
-        return home.above();
-    }
-
-    private void moveArmy(List<LivingEntity> army, BlockPos target) {
-        UnitServerEvents.addActionItem(
-                ownerName,
-                UnitAction.MOVE,
-                -1,
-                army.stream().mapToInt(LivingEntity::getId).toArray(),
-                target,
-                BlockPos.ZERO
-        );
-    }
-
-    private boolean isActiveEnemy(RTSPlayer player, String otherName) {
-        if (otherName.isBlank() || otherName.equals(ownerName) || AlliancesServerEvents.isAllied(ownerName, otherName))
-            return false;
-        RTSPlayer other = PlayerServerEvents.getRTSPlayer(otherName);
-        return other != null && other != player;
-    }
-
-    private BuildingPlacement ownedBuilding(Building building) {
-        for (BuildingPlacement placement : BuildingServerEvents.getBuildings())
-            if (placement.ownerName.equals(ownerName) && placement.getBuilding() == building)
-                return placement;
-        return null;
-    }
-
-    private ProductionPlacement militaryBuilding(BotStrategy strategy) {
-        if (!strategy.usesTransformingPortals())
-            return asProduction(ownedBuilding(strategy.military()));
-
-        PortalPlacement exact = findPortal(PortalPlacement.PortalType.MILITARY, strategy.militaryTransform());
-        if (exact != null) {
-            militaryPortalOrigin = exact.originPos;
-            return exact;
-        }
-        PortalPlacement saved = portalAt(militaryPortalOrigin);
-        if (saved != null)
-            return saved;
-
-        PortalPlacement firstUnclaimed = firstUnclaimedBasicPortal(supplyPortalOrigin);
-        if (firstUnclaimed != null)
-            militaryPortalOrigin = firstUnclaimed.originPos;
-        return firstUnclaimed;
-    }
-
-    private ProductionPlacement supplyBuilding(BotStrategy strategy) {
-        if (!strategy.usesTransformingPortals())
-            return asProduction(ownedBuilding(strategy.supply()));
-
-        PortalPlacement saved = portalAt(supplyPortalOrigin);
-        if (saved != null)
-            return saved;
-
-        militaryBuilding(strategy);
-        PortalPlacement firstUnclaimed = firstUnclaimedBasicPortal(militaryPortalOrigin);
-        if (firstUnclaimed != null) {
-            supplyPortalOrigin = firstUnclaimed.originPos;
-            return firstUnclaimed;
-        }
-
-        PortalPlacement exact = findPortal(PortalPlacement.PortalType.CIVILIAN, strategy.supplyTransform());
-        if (exact != null)
-            supplyPortalOrigin = exact.originPos;
-        return exact;
-    }
-
-    private PortalPlacement findPortal(PortalPlacement.PortalType type, ProductionItem queuedTransform) {
-        for (BuildingPlacement placement : BuildingServerEvents.getBuildings()) {
-            if (placement instanceof PortalPlacement portal
-                    && placement.ownerName.equals(ownerName)
-                    && queueContains(portal, queuedTransform))
-                return portal;
-        }
-        for (BuildingPlacement placement : BuildingServerEvents.getBuildings()) {
-            if (!(placement instanceof PortalPlacement portal) || !placement.ownerName.equals(ownerName))
-                continue;
-            if (portal.getPortalType() == type)
-                return portal;
-        }
-        return null;
-    }
-
-    private boolean supplyUnderConstruction(BotStrategy strategy) {
-        for (BuildingPlacement placement : BuildingServerEvents.getBuildings()) {
-            if (!placement.ownerName.equals(ownerName))
-                continue;
-            if (!strategy.usesTransformingPortals() && placement.getBuilding() == strategy.supply()
-                    && !placement.isBuilt)
-                return true;
-            if (strategy.usesTransformingPortals() && placement instanceof PortalPlacement portal
-                    && (queueContains(portal, strategy.supplyTransform())
-                    || placement.originPos.equals(supplyPortalOrigin))
-                    && (!placement.isBuilt || portal.getPortalType() == PortalPlacement.PortalType.BASIC))
+    private static boolean hasHarvestableFood(BuildingPlacement farm) {
+        for (var block : farm.getBlocks()) {
+            var state = farm.getLevel().getBlockState(block.getBlockPos());
+            ResourceSource source = ResourceSources.getFromBlockPos(block.getBlockPos(), farm.getLevel());
+            if (source != null && source.resourceName == ResourceName.FOOD
+                    && source.resourceValue > 0 && source.blockStateTest.test(state))
                 return true;
         }
         return false;
     }
 
-    private PortalPlacement firstUnclaimedBasicPortal(BlockPos claimedOrigin) {
-        for (BuildingPlacement placement : BuildingServerEvents.getBuildings()) {
-            if (placement instanceof PortalPlacement portal
-                    && placement.ownerName.equals(ownerName)
-                    && portal.getPortalType() == PortalPlacement.PortalType.BASIC
-                    && (claimedOrigin == null || !placement.originPos.equals(claimedOrigin)))
-                return portal;
+    private void reassignOrphanedBuilders(List<LivingEntity> workers) {
+        for (BuildingPlacement building : BuildingServerEvents.getBuildings()) {
+            if (!building.ownerName.equals(ownerName) || building.isBuilt)
+                continue;
+            boolean hasAssignedBuilder = workers.stream()
+                    .map(entity -> (WorkerUnit) entity)
+                    .anyMatch(worker -> worker.getBuildRepairGoal().getBuildingTarget() == building);
+            if (hasAssignedBuilder)
+                continue;
+
+            LivingEntity replacement = workers.stream()
+                    .filter(entity -> {
+                        WorkerUnit worker = (WorkerUnit) entity;
+                        return worker.getBuildRepairGoal().getBuildingTarget() == null
+                                && ((Unit) entity).getReturnResourcesGoal().getBuildingTarget() == null;
+                    })
+                    .findFirst()
+                    .orElse(null);
+            if (replacement == null)
+                return;
+
+            Unit.fullResetBehaviours((Unit) replacement);
+            ((WorkerUnit) replacement).getBuildRepairGoal().setBuildingTarget(building);
+            ReignOfNether.LOGGER.info("[Bot] {} reassigned builder to {} at {}",
+                    ownerName, building.getBuilding().name, building.originPos);
         }
-        return null;
-    }
-
-    private PortalPlacement portalAt(BlockPos origin) {
-        if (origin == null)
-            return null;
-        for (BuildingPlacement placement : BuildingServerEvents.getBuildings())
-            if (placement instanceof PortalPlacement portal
-                    && placement.ownerName.equals(ownerName)
-                    && placement.originPos.equals(origin))
-                return portal;
-        return null;
-    }
-
-    private static boolean queueContains(ProductionPlacement placement, ProductionItem item) {
-        if (item == null)
-            return false;
-        for (ActiveProduction active : placement.productionQueue)
-            if (active.item == item)
-                return true;
-        return false;
-    }
-
-    private static ProductionPlacement asProduction(BuildingPlacement placement) {
-        return placement instanceof ProductionPlacement production ? production : null;
-    }
-
-    private int countQueued(ProductionItem item) {
-        int count = 0;
-        for (BuildingPlacement placement : BuildingServerEvents.getBuildings())
-            if (placement.ownerName.equals(ownerName) && placement instanceof ProductionPlacement production)
-                for (ActiveProduction active : production.productionQueue)
-                    if (active.item == item)
-                        count++;
-        return count;
-    }
-
-    private List<LivingEntity> ownedWorkers() {
-        List<LivingEntity> workers = new ArrayList<>();
-        for (LivingEntity entity : UnitServerEvents.getAllUnits())
-            if (entity.isAlive() && entity instanceof Unit unit && entity instanceof WorkerUnit
-                    && unit.getOwnerName().equals(ownerName))
-                workers.add(entity);
-        return workers;
-    }
-
-    private List<LivingEntity> ownedArmy() {
-        List<LivingEntity> army = new ArrayList<>();
-        for (LivingEntity entity : UnitServerEvents.getAllUnits())
-            if (entity.isAlive() && entity instanceof Unit unit && entity instanceof AttackerUnit
-                    && !(entity instanceof WorkerUnit) && unit.getOwnerName().equals(ownerName))
-                army.add(entity);
-        army.sort(Comparator.comparingInt(LivingEntity::getId));
-        return army;
-    }
-
-    private Resources getResources() {
-        for (Resources resources : ResourcesServerEvents.resourcesList)
-            if (resources.ownerName.equals(ownerName))
-                return resources;
-        return null;
     }
 
     private boolean hasTestSpeedCheats() {
         return ResearchServerEvents.playerHasCheat(ownerName, "warpten")
                 || ResearchServerEvents.playerHasCheat(ownerName, "operationcwal");
-    }
-
-    private boolean canAfford(Building building) {
-        Resources resources = getResources();
-        return resources != null
-                && resources.food >= building.cost.food
-                && resources.wood >= building.cost.wood
-                && resources.ore >= building.cost.ore;
     }
 }

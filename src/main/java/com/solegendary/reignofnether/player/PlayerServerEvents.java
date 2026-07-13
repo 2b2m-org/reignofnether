@@ -172,6 +172,15 @@ public class PlayerServerEvents {
         }
     }
 
+    public static boolean hasRTSPlayerName(String playerName) {
+        synchronized (rtsPlayers) {
+            for (RTSPlayer player : rtsPlayers)
+                if (player.name.equalsIgnoreCase(playerName))
+                    return true;
+        }
+        return false;
+    }
+
     @Nullable
     public static RTSPlayer getRTSPlayer(String playerName) {
         synchronized (rtsPlayers) {
@@ -403,6 +412,7 @@ public class PlayerServerEvents {
             if (serverPlayer == null) {
                 return;
             }
+            String playerName = serverPlayer.getName().getString();
             if (rtsLocked) {
                 serverPlayer.sendSystemMessage(Component.literal(""));
                 serverPlayer.sendSystemMessage(Component.translatable("server.reignofnether.locked"));
@@ -410,6 +420,12 @@ public class PlayerServerEvents {
                 return;
             }
             if (isRTSPlayer(serverPlayer.getId())) {
+                serverPlayer.sendSystemMessage(Component.literal(""));
+                serverPlayer.sendSystemMessage(Component.translatable("server.reignofnether.already_started"));
+                serverPlayer.sendSystemMessage(Component.literal(""));
+                return;
+            }
+            if (hasRTSPlayerName(playerName)) {
                 serverPlayer.sendSystemMessage(Component.literal(""));
                 serverPlayer.sendSystemMessage(Component.translatable("server.reignofnether.already_started"));
                 serverPlayer.sendSystemMessage(Component.literal(""));
@@ -434,7 +450,6 @@ public class PlayerServerEvents {
                     serverPlayer.getId(),
                     startPosColorId
             ));
-            String playerName = serverPlayer.getName().getString();
             ResourcesServerEvents.assignResources(playerName);
             PlayerClientboundPacket.addRTSPlayer(playerName, faction, (long) serverPlayer.getId(), startPosColorId);
 
