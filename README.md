@@ -1,11 +1,13 @@
 # Reign of Nether: RTS in Minecraft
 
-Inspired the classic Real Time Strategy games of the early 2000s including Starcraft, Warcraft and Age of Empires, Reign of Nether is trying to transform Minecraft into a experience just like one of them using all the same assets and models you find in the vanilla game.
+Inspired by classic real-time strategy games of the early 2000s, including StarCraft, Warcraft, and Age of Empires, Reign of Nether transforms Minecraft into an RTS using the assets and models from the vanilla game.
 
-Reign of Nether doesn't try to imitate one of these games exactly, but instead aims to have uniquely-minecraft features. For example, buildings health is proportional to their blocks placed and all units are based on vanilla Minecraft mobs like Illagers, Creepers, and Piglins.
+Reign of Nether does not imitate any one of those games exactly. Its mechanics are built around Minecraft: a building's health is proportional to its placed blocks, and units are based on vanilla mobs such as Illagers, Creepers, and Piglins.
 
-# Soft roadmap
+## Soft roadmap
+
 These plans are not set in stone but are roughly what I plan to look at next in order of priority (last updated 28 June 2026):
+
 1. Pathfinding improvements
 2. Hero equippable items
 3. Further API and Scenario improvement
@@ -13,24 +15,32 @@ These plans are not set in stone but are roughly what I plan to look at next in 
 5. New units for each faction
 6. Third set of heroes for each faction
 
-# Release
-Download release files here:
-https://www.curseforge.com/minecraft/mc-mods/reign-of-nether-rts-in-minecraft
-https://modrinth.com/mod/reign-of-nether-rts
+## Releases
 
-🏗️ Installation
+Published releases are available on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/reign-of-nether-rts-in-minecraft) and [Modrinth](https://modrinth.com/mod/reign-of-nether-rts).
 
-1. Install Forge 1.20.1: https://files.minecraftforge.net/net/minecraftforge/forge/index_1.20.1.html
-2. Download and add the Reign of Nether mod jar file to your Minecraft mods folder
-3. Launch Minecraft, selecting your installation as Forge 1.20.1
-For mod versions 1.1.3 and below, use Forge 1.19.2 instead
+## Minecraft 1.21.1 development build
 
-# License
+This branch targets Minecraft 1.21.1 and NeoForge 21.1.230 or newer. Building and running it requires Java 21.
+
+Build the mod with:
+
+```sh
+./gradlew clean build
+```
+
+The jar is written to `build/libs/reignofnether-1.3.8a-1.21.1.jar`. Copy that exact jar into the `mods` directory of every client and dedicated server, then launch them with NeoForge 21.1.230 or newer.
+
+Published Minecraft 1.20.1 versions still use their matching Forge release. Mod versions 1.1.3 and earlier use Forge 1.19.2.
+
+## License
+
 GNU General Public License v3.0
-See License.txt for the full text
 
-# Other stuff
+See [LICENSE.txt](LICENSE.txt) for the full text.
+
+## Other stuff
+
 Please join the discord if you want to discuss the mod: https://discord.gg/erBen9CzbD
-I also look at bug reports there much more than here in Github unless you have an actual PR fix
 
-
+I also look at bug reports there much more than here on GitHub unless you have an actual PR fix.
