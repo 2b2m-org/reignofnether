@@ -1,19 +1,28 @@
 package com.solegendary.reignofnether.config;
 
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.resources.ResourceCost;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 /*
     Clientbound packet to synchronize serverside config options with the client
     so that the GUI and other elements can properly reflect the values present on the server.
  */
-public class ClientboundSyncResourceCostPacket {
+public class ClientboundSyncResourceCostPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<ClientboundSyncResourceCostPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:clientbound_sync_resource_cost");
+    public static final StreamCodec<FriendlyByteBuf, ClientboundSyncResourceCostPacket> STREAM_CODEC =
+        StreamCodec.ofMember(ClientboundSyncResourceCostPacket::encode, ClientboundSyncResourceCostPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<ClientboundSyncResourceCostPacket> type() {
+        return TYPE;
+    }
     private final int food;
     private final int wood;
     private final int ore;
@@ -45,19 +54,8 @@ public class ClientboundSyncResourceCostPacket {
         buf.writeInt(this.getPopulation());
         buf.writeUtf(this.getId());
     }
-    public static ClientboundSyncResourceCostPacket decode(FriendlyByteBuf buf) {
-        return new ClientboundSyncResourceCostPacket(buf);
-    }
-
-    public static boolean handle(ClientboundSyncResourceCostPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ConfigClientEvents.loadConfigData(msg, ctx));
-            success.set(true);
-        });
-        context.setPacketHandled(true);
-        return success.get();
+    public static void handle(ClientboundSyncResourceCostPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> ConfigClientEvents.loadConfigData(packet));
     }
 
     public int getFood() {

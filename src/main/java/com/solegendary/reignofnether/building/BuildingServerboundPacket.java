@@ -1,5 +1,11 @@
 package com.solegendary.reignofnether.building;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
@@ -11,7 +17,6 @@ import com.solegendary.reignofnether.building.custombuilding.CustomBuilding;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingServerEvents;
 import com.solegendary.reignofnether.building.production.ProductionItem;
 import com.solegendary.reignofnether.hud.HudClientEvents;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.sandbox.SandboxServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -20,15 +25,22 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Rotation;
-import net.neoforged.neoforge.network.NetworkEvent;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 import static com.solegendary.reignofnether.building.BuildingUtils.findBuilding;
 
-public class BuildingServerboundPacket {
+public class BuildingServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<BuildingServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:building_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, BuildingServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(BuildingServerboundPacket::encode, BuildingServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<BuildingServerboundPacket> type() {
+        return TYPE;
+    }
     // pos is used to identify the building object serverside
     public String itemName; // name of the building or production item // PLACE, START_PRODUCTION, CANCEL_PRODUCTION
     public BlockPos buildingPos; // required for all actions (used to identify the relevant building)
@@ -66,7 +78,7 @@ public class BuildingServerboundPacket {
             action = BuildingAction.PLACE;
             itemName = ReignOfNetherRegistries.BUILDING.getKey(building).toString();
         }
-        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(action, itemName,
+        PacketDistributor.sendToServer(new BuildingServerboundPacket(action, itemName,
                 originPos, BlockPos.ZERO, rotation, ownerName, builderUnitIds, isDiagonalBridge));
     }
     public static void placeAndQueueBuilding(Building building, BlockPos originPos, Rotation rotation,
@@ -77,50 +89,50 @@ public class BuildingServerboundPacket {
             action = BuildingAction.PLACE_AND_QUEUE;
             itemName = ReignOfNetherRegistries.BUILDING.getKey(building).toString();
         }
-        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(action, itemName,
+        PacketDistributor.sendToServer(new BuildingServerboundPacket(action, itemName,
                 originPos, BlockPos.ZERO, rotation, ownerName, builderUnitIds, isDiagonalBridge));
     }
     public static void cancelBuilding(BlockPos buildingPos, String ownerName) {
-        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+        PacketDistributor.sendToServer(new BuildingServerboundPacket(
                 BuildingAction.DESTROY,
                 "", buildingPos, BlockPos.ZERO, Rotation.NONE, ownerName, new int[0], false));
     }
     public static void setRallyPoint(BlockPos buildingPos, BlockPos rallyPos) {
-        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+        PacketDistributor.sendToServer(new BuildingServerboundPacket(
                 BuildingAction.SET_RALLY_POINT,
                 "", buildingPos, rallyPos, Rotation.NONE, "", new int[0], false));
     }
     public static void addRallyPoint(BlockPos buildingPos, BlockPos rallyPos) {
-        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+        PacketDistributor.sendToServer(new BuildingServerboundPacket(
                 BuildingAction.ADD_RALLY_POINT,
                 "", buildingPos, rallyPos, Rotation.NONE, "", new int[0], false));
     }
     public static void setRallyPointEntity(BlockPos buildingPos, int entityId) {
-        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+        PacketDistributor.sendToServer(new BuildingServerboundPacket(
                 BuildingAction.SET_RALLY_POINT_ENTITY,
                 "", buildingPos, BlockPos.ZERO, Rotation.NONE, "", new int[]{ entityId }, false));
     }
     public static void startProduction(ProductionItem item) {
         BuildingClientEvents.switchHudToIdlestBuilding();
         if (HudClientEvents.hudSelectedPlacement instanceof ProductionPlacement pp) {
-                PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+                PacketDistributor.sendToServer(new BuildingServerboundPacket(
                         BuildingAction.START_PRODUCTION,
                         ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item).toString(),
                         pp.originPos, BlockPos.ZERO, Rotation.NONE, "", new int[0], false));
         }
     }
     public static void cancelProduction(BlockPos buildingPos, ProductionItem item, boolean frontItem) {
-        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+        PacketDistributor.sendToServer(new BuildingServerboundPacket(
                 frontItem ? BuildingAction.CANCEL_PRODUCTION : BuildingAction.CANCEL_BACK_PRODUCTION,
                 ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item).toString(), buildingPos, BlockPos.ZERO, Rotation.NONE, "", new int[0], false));
     }
     public static void checkStockpileChests(BlockPos chestPos) {
-        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+        PacketDistributor.sendToServer(new BuildingServerboundPacket(
                 BuildingAction.CHECK_STOCKPILE_CHEST,
                 "", chestPos, BlockPos.ZERO, Rotation.NONE, "", new int[0], false));
     }
     public static void requestReplacement(BlockPos buildingPos) {
-        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+        PacketDistributor.sendToServer(new BuildingServerboundPacket(
                 BuildingAction.REQUEST_REPLACEMENT,
                 "", buildingPos, BlockPos.ZERO, Rotation.NONE, "", new int[0], false));
     }
@@ -160,9 +172,8 @@ public class BuildingServerboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
             BuildingPlacement building = null;
             if (!List.of(BuildingAction.PLACE, BuildingAction.PLACE_AND_QUEUE, BuildingAction.PLACE_CUSTOM, BuildingAction.PLACE_AND_QUEUE_CUSTOM).contains(this.action)) {
                 building = findBuilding(false, this.buildingPos);
@@ -170,10 +181,9 @@ public class BuildingServerboundPacket {
                     return;
             }
 
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = (ServerPlayer) context.player();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("Sender for unit action packet was null");
-                success.set(false);
                 return;
             }
             else if (((newBuildingAuthActions.contains(this.action) &&
@@ -184,7 +194,6 @@ public class BuildingServerboundPacket {
                     !AlliancesServerEvents.canControlAlly(player.getName().getString(), ownerName)) {
 
                 ReignOfNether.LOGGER.warn("BuildingServerboundPacket: Tried to process packet from " + player.getName() + " for " + ownerName);
-                success.set(false);
                 return;
             }
             ReignOfNether.LOGGER.info("[Building] {} performed {} for {} (itemName: {}, pos: {})", player.getName(), this.action, this.ownerName, this.itemName, this.buildingPos);
@@ -250,9 +259,6 @@ public class BuildingServerboundPacket {
                     BuildingServerEvents.replaceClientBuilding(buildingPos);
                 }
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

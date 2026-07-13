@@ -1,17 +1,25 @@
 package com.solegendary.reignofnether.sounds;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class SoundClientboundPacket {
+public class SoundClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<SoundClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:sound_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, SoundClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(SoundClientboundPacket::encode, SoundClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<SoundClientboundPacket> type() {
+        return TYPE;
+    }
 
     SoundAction soundAction;
     BlockPos bp;
@@ -21,36 +29,28 @@ public class SoundClientboundPacket {
     int tickDuration;
 
     public static void playSoundAtPos(SoundAction soundAction, BlockPos bp) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new SoundClientboundPacket(soundAction, bp, "", 1.0f, -1));
+        PacketDistributor.sendToAllPlayers(new SoundClientboundPacket(soundAction, bp, "", 1.0f, -1));
     }
     public static void playSoundAtPos(SoundAction soundAction, BlockPos bp, float volume) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new SoundClientboundPacket(soundAction, bp, "", volume, -1));
+        PacketDistributor.sendToAllPlayers(new SoundClientboundPacket(soundAction, bp, "", volume, -1));
     }
     public static void playFadeableLoopingSoundAtPos(SoundAction soundAction, BlockPos bp, float volume, int id, int tickDuration) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new SoundClientboundPacket(soundAction, bp, "", volume, id, tickDuration));
+        PacketDistributor.sendToAllPlayers(new SoundClientboundPacket(soundAction, bp, "", volume, id, tickDuration));
     }
     public static void playSoundForAllPlayers(SoundAction soundAction) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), "", 1.0f, -1));
+        PacketDistributor.sendToAllPlayers(new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), "", 1.0f, -1));
     }
     public static void playSoundForAllPlayers(SoundAction soundAction, float volume) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), "", volume, -1));
+        PacketDistributor.sendToAllPlayers(new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), "", volume, -1));
     }
     public static void playSoundForPlayer(SoundAction soundAction, String name) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), name, 1.0f, -1));
+        PacketDistributor.sendToAllPlayers(new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), name, 1.0f, -1));
     }
     public static void playSoundForPlayer(SoundAction soundAction, String name, float volume) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), name, volume, -1));
+        PacketDistributor.sendToAllPlayers(new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), name, volume, -1));
     }
     public static void stopSoundWithId(int id) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new SoundClientboundPacket(SoundAction.STOP_SOUND, new BlockPos(0,0,0), "", 0f, id));
+        PacketDistributor.sendToAllPlayers(new SoundClientboundPacket(SoundAction.STOP_SOUND, new BlockPos(0,0,0), "", 0f, id));
     }
 
     public SoundClientboundPacket(SoundAction soundAction, BlockPos bp, String playerName, float volume, int id) {
@@ -90,12 +90,10 @@ public class SoundClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                    () -> () -> {
+        context.enqueueWork(() -> {
+            {
                         if (soundAction == SoundAction.STOP_SOUND) {
                             SoundClientEvents.stopSound(id);
                         } else if (id >= 0) {
@@ -109,10 +107,7 @@ public class SoundClientboundPacket {
                         }
                         else
                             SoundClientEvents.playSoundAtPos(soundAction, bp, volume);
-                        success.set(true);
-                    });
+                    }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

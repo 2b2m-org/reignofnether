@@ -1,20 +1,28 @@
 package com.solegendary.reignofnether.alliance;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.resources.ResourcesAction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class AllianceClientboundPacket {
+public class AllianceClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<AllianceClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:alliance_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, AllianceClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(AllianceClientboundPacket::encode, AllianceClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<AllianceClientboundPacket> type() {
+        return TYPE;
+    }
 
     // pos is used to identify the building object serverside
     AllianceAction action;
@@ -23,33 +31,27 @@ public class AllianceClientboundPacket {
     public boolean boolValue;
 
     public static void addAlliance(String playerName1, String playerName2) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new AllianceClientboundPacket(AllianceAction.ACCEPT_REQUEST, playerName1, playerName2, true));
+        PacketDistributor.sendToAllPlayers(new AllianceClientboundPacket(AllianceAction.ACCEPT_REQUEST, playerName1, playerName2, true));
     }
 
     public static void addPendingAlliance(String toPlayer, String fromPlayer) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new AllianceClientboundPacket(AllianceAction.REQUEST, toPlayer, fromPlayer, true));
+        PacketDistributor.sendToAllPlayers(new AllianceClientboundPacket(AllianceAction.REQUEST, toPlayer, fromPlayer, true));
     }
 
     public static void cancelPendingAlliance(String toPlayer, String fromPlayer) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new AllianceClientboundPacket(AllianceAction.CANCEL_REQUEST, toPlayer, fromPlayer, true));
+        PacketDistributor.sendToAllPlayers(new AllianceClientboundPacket(AllianceAction.CANCEL_REQUEST, toPlayer, fromPlayer, true));
     }
 
     public static void removeAlliance(String playerName1, String playerName2) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new AllianceClientboundPacket(AllianceAction.DISBAND, playerName1, playerName2, false));
+        PacketDistributor.sendToAllPlayers(new AllianceClientboundPacket(AllianceAction.DISBAND, playerName1, playerName2, false));
     }
 
     public static void resetAlliances() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new AllianceClientboundPacket(AllianceAction.DISBAND, "", "", true));
+        PacketDistributor.sendToAllPlayers(new AllianceClientboundPacket(AllianceAction.DISBAND, "", "", true));
     }
 
     public static void setAllyControl(String playerName1, boolean setValue) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new AllianceClientboundPacket(AllianceAction.SET_ALLY_CONTROL, playerName1, "", setValue));
+        PacketDistributor.sendToAllPlayers(new AllianceClientboundPacket(AllianceAction.SET_ALLY_CONTROL, playerName1, "", setValue));
     }
 
     public AllianceClientboundPacket(
@@ -79,11 +81,10 @@ public class AllianceClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+        context.enqueueWork(() -> {
+            {
                 switch (this.action) {
 
                     case REQUEST -> {
@@ -110,10 +111,7 @@ public class AllianceClientboundPacket {
                             AlliancesClient.playersWithAlliedControl.remove(player1);
                     }
                 }
-                success.set(true);
-            });
+            }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

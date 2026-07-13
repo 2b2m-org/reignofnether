@@ -1,7 +1,12 @@
 package com.solegendary.reignofnether.ability;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
@@ -9,18 +14,25 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class AbilityServerboundPacket {
+public class AbilityServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<AbilityServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:ability_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, AbilityServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(AbilityServerboundPacket::encode, AbilityServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<AbilityServerboundPacket> type() {
+        return TYPE;
+    }
 
     private final int unitId;
     private final UnitAction unitAction;
 
     public static void rankUpAbility(int unitId, UnitAction abilityAction) {
-        PacketHandler.INSTANCE.sendToServer(new AbilityServerboundPacket(unitId, abilityAction));
+        PacketDistributor.sendToServer(new AbilityServerboundPacket(unitId, abilityAction));
     }
 
     public AbilityServerboundPacket(
@@ -42,14 +54,12 @@ public class AbilityServerboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
 
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = (ServerPlayer) context.player();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("AbilityServerboundPacket: Sender was null");
-                success.set(false);
                 return;
             }
             for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
@@ -57,7 +67,6 @@ public class AbilityServerboundPacket {
 
                     if (!player.getName().getString().equals(unit.getOwnerName())) {
                         ReignOfNether.LOGGER.warn("AbilityServerboundPacket: Tried to process packet from " + player.getName() + " for: " + unit.getOwnerName());
-                        success.set(false);
                         return;
                     }
 
@@ -69,9 +78,6 @@ public class AbilityServerboundPacket {
                     }
                 }
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

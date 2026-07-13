@@ -1,16 +1,25 @@
 package com.solegendary.reignofnether.debug;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.function.Supplier;
 
 // Server → client snapshot of perf counters. Sent once per second while /rts-debug is enabled.
-public class RtsDebugStatsClientboundPacket {
+public class RtsDebugStatsClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<RtsDebugStatsClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:rts_debug_stats_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, RtsDebugStatsClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(RtsDebugStatsClientboundPacket::encode, RtsDebugStatsClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<RtsDebugStatsClientboundPacket> type() {
+        return TYPE;
+    }
 
     private final int pathsAvg;
     private final int queueAvg;
@@ -20,8 +29,7 @@ public class RtsDebugStatsClientboundPacket {
     private final double pathE2eMs;     // avg submit -> delivered time (incl. queue wait)
 
     public static void broadcast(int pathsAvg, int queueAvg, int stuckAvg, double tickTime, double pathComputeMs, double pathE2eMs) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new RtsDebugStatsClientboundPacket(pathsAvg, queueAvg, stuckAvg, tickTime, pathComputeMs, pathE2eMs));
+        PacketDistributor.sendToAllPlayers(new RtsDebugStatsClientboundPacket(pathsAvg, queueAvg, stuckAvg, tickTime, pathComputeMs, pathE2eMs));
     }
 
     public RtsDebugStatsClientboundPacket(int pathsAvg, int queueAvg, int stuckAvg, double tickTime, double pathComputeMs, double pathE2eMs) {
@@ -51,18 +59,16 @@ public class RtsDebugStatsClientboundPacket {
         buffer.writeDouble(this.pathE2eMs);
     }
 
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
+            {
                 RtsDebugClientEvents.pathsAvg = this.pathsAvg;
                 RtsDebugClientEvents.queueAvg = this.queueAvg;
                 RtsDebugClientEvents.stuckAvg = this.stuckAvg;
                 RtsDebugClientEvents.tickTime = this.tickTime;
                 RtsDebugClientEvents.pathComputeMs = this.pathComputeMs;
                 RtsDebugClientEvents.pathE2eMs = this.pathE2eMs;
-            });
+            }
         });
-        ctx.get().setPacketHandled(true);
-        return true;
     }
 }

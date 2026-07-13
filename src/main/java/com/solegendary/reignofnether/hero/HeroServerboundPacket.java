@@ -1,24 +1,36 @@
 package com.solegendary.reignofnether.hero;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ability.HeroAbility;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.neoforge.network.NetworkEvent;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class HeroServerboundPacket {
+public class HeroServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<HeroServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:hero_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, HeroServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(HeroServerboundPacket::encode, HeroServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<HeroServerboundPacket> type() {
+        return TYPE;
+    }
 
     private final int unitId;
     private final HeroAction heroAction;
 
     public static void requestHeroSync(int unitId) {
-        PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(unitId, HeroAction.REQUEST_SYNC));
+        PacketDistributor.sendToServer(new HeroServerboundPacket(unitId, HeroAction.REQUEST_SYNC));
     }
 
     public HeroServerboundPacket(
@@ -40,9 +52,8 @@ public class HeroServerboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
             if (heroAction == HeroAction.REQUEST_SYNC) {
                 for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
                     if (entity.getId() == this.unitId && entity instanceof HeroUnit hero) {
@@ -50,9 +61,6 @@ public class HeroServerboundPacket {
                     }
                 }
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

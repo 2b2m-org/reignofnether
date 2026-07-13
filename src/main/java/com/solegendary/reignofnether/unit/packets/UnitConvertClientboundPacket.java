@@ -1,27 +1,36 @@
 package com.solegendary.reignofnether.unit.packets;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.util.ArrayUtil;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 // send a list of the old units ids that have been converted into new units (with new ids) so the client can retain
 // these units' selections, goals and continue the same actions they were taking
-public class UnitConvertClientboundPacket {
+public class UnitConvertClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<UnitConvertClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:unit_convert_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, UnitConvertClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(UnitConvertClientboundPacket::encode, UnitConvertClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<UnitConvertClientboundPacket> type() {
+        return TYPE;
+    }
 
     private final String ownerName; // the player that owns these units
     private final int[] oldUnitIds; // units to be controlled
     private final int[] newUnitIds; // units to be controlled
 
     public static void syncConvertedUnits(String ownerName, List<Integer> oldUnitIds, List<Integer> newUnitIds) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new UnitConvertClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new UnitConvertClientboundPacket(
                 ownerName,
                 ArrayUtil.intListToArray(oldUnitIds),
                 ArrayUtil.intListToArray(newUnitIds)
@@ -52,13 +61,9 @@ public class UnitConvertClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
             UnitClientEvents.syncConvertedUnits(ownerName, oldUnitIds, newUnitIds);
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

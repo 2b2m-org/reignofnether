@@ -1,20 +1,28 @@
 package com.solegendary.reignofnether.resources;
 
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.player.PlayerServerEvents;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class ResourcesClientboundPacket {
+public class ResourcesClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<ResourcesClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:resources_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, ResourcesClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(ResourcesClientboundPacket::encode, ResourcesClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<ResourcesClientboundPacket> type() {
+        return TYPE;
+    }
 
     // pos is used to identify the building object serverside
     ResourcesAction action;
@@ -27,8 +35,7 @@ public class ResourcesClientboundPacket {
 
     public static void syncResources(ArrayList<Resources> resourcesList) {
         for (Resources resources : resourcesList)
-            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new ResourcesClientboundPacket(ResourcesAction.SYNC,
+            PacketDistributor.sendToAllPlayers(new ResourcesClientboundPacket(ResourcesAction.SYNC,
                     resources.ownerName,
                     resources.food,
                     resources.wood,
@@ -40,8 +47,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void addSubtractResources(Resources resources) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new ResourcesClientboundPacket(ResourcesAction.ADD_SUBTRACT,
+        PacketDistributor.sendToAllPlayers(new ResourcesClientboundPacket(ResourcesAction.ADD_SUBTRACT,
                 resources.ownerName,
                 resources.food,
                 resources.wood,
@@ -53,8 +59,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void addSubtractResourcesInstantly(Resources resources) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new ResourcesClientboundPacket(ResourcesAction.ADD_SUBTRACT_INSTANT,
+        PacketDistributor.sendToAllPlayers(new ResourcesClientboundPacket(ResourcesAction.ADD_SUBTRACT_INSTANT,
                 resources.ownerName,
                 resources.food,
                 resources.wood,
@@ -83,8 +88,7 @@ public class ResourcesClientboundPacket {
 
                 assert msg != null;
 
-                PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                    new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
+                PacketDistributor.sendToAllPlayers(new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
                         ownerName,
                         0,
                         0,
@@ -98,8 +102,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void warnInsufficientPopulation(String ownerName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
+        PacketDistributor.sendToAllPlayers(new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
                         ownerName,
                         0,
                         0,
@@ -111,8 +114,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void warnFullGraveyard(String ownerName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
+        PacketDistributor.sendToAllPlayers(new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
                         ownerName,
                         0,
                         0,
@@ -124,8 +126,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void warnMaxPopulation(String ownerName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
+        PacketDistributor.sendToAllPlayers(new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
                 ownerName,
                 0,
                 0,
@@ -137,8 +138,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void showFloatingText(Resources res, BlockPos pos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new ResourcesClientboundPacket(ResourcesAction.SHOW_FLOATING_TEXT,
+        PacketDistributor.sendToAllPlayers(new ResourcesClientboundPacket(ResourcesAction.SHOW_FLOATING_TEXT,
                 res.ownerName,
                 res.food,
                 res.wood,
@@ -182,11 +182,10 @@ public class ResourcesClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+        context.enqueueWork(() -> {
+            {
                 switch (this.action) {
                     case SYNC -> ResourcesClientEvents.syncResources(new Resources(this.ownerName,
                         this.food,
@@ -212,10 +211,7 @@ public class ResourcesClientboundPacket {
                             this.ore
                         ), this.pos);
                 }
-                success.set(true);
-            });
+            }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

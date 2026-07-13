@@ -1,23 +1,35 @@
 package com.solegendary.reignofnether.fogofwar;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class FogOfWarServerboundPacket {
+public class FogOfWarServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<FogOfWarServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:fog_of_war_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, FogOfWarServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(FogOfWarServerboundPacket::encode, FogOfWarServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<FogOfWarServerboundPacket> type() {
+        return TYPE;
+    }
 
     boolean enable;
 
     public static void setServerFog(boolean enable) {
         Minecraft MC = Minecraft.getInstance();
         if (MC.player != null)
-            PacketHandler.INSTANCE.sendToServer(new FogOfWarServerboundPacket(enable));
+            PacketDistributor.sendToServer(new FogOfWarServerboundPacket(enable));
     }
 
     // packet-handler functions
@@ -34,27 +46,21 @@ public class FogOfWarServerboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
 
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = (ServerPlayer) context.player();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("FogOfWarServerboundPacket: Sender was null");
-                success.set(false);
                 return;
             } else if (!player.hasPermissions(4)) {
                 ReignOfNether.LOGGER.warn("FogOfWarServerboundPacket: Tried to process packet from " + player.getName() + " with insufficient permissions");
-                success.set(false);
                 return;
             }
 
             ReignOfNether.LOGGER.info("[FogOfWar] {} set fog of war to {}", player.getName(), enable);
 
             FogOfWarServerEvents.setEnabled(enable);
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

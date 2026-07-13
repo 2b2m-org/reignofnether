@@ -1,22 +1,30 @@
 package com.solegendary.reignofnether.hero;
 
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ability.HeroAbility;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class HeroClientboundPacket {
+public class HeroClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<HeroClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:hero_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, HeroClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(HeroClientboundPacket::encode, HeroClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<HeroClientboundPacket> type() {
+        return TYPE;
+    }
 
     HeroAction action;
     int unitId;
@@ -24,43 +32,35 @@ public class HeroClientboundPacket {
     int abilityIndex;
 
     public static void setExperience(int unitId, int value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new HeroClientboundPacket(HeroAction.SET_EXPERIENCE, unitId, value, 0));
+        PacketDistributor.sendToAllPlayers(new HeroClientboundPacket(HeroAction.SET_EXPERIENCE, unitId, value, 0));
     }
 
     public static void setSkillPoints(int unitId, int value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new HeroClientboundPacket(HeroAction.SET_SKILL_POINTS, unitId, value, 0));
+        PacketDistributor.sendToAllPlayers(new HeroClientboundPacket(HeroAction.SET_SKILL_POINTS, unitId, value, 0));
     }
 
     public static void setCharges(int unitId, int value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new HeroClientboundPacket(HeroAction.SET_CHARGES, unitId, value, 0));
+        PacketDistributor.sendToAllPlayers(new HeroClientboundPacket(HeroAction.SET_CHARGES, unitId, value, 0));
     }
 
     public static void setAbilityRank(int unitId, int rank, int abilityIndex) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new HeroClientboundPacket(HeroAction.SET_ABILITY_RANK, unitId, rank, abilityIndex));
+        PacketDistributor.sendToAllPlayers(new HeroClientboundPacket(HeroAction.SET_ABILITY_RANK, unitId, rank, abilityIndex));
     }
 
     public static void setMana(int unitId, float value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new HeroClientboundPacket(HeroAction.SET_MANA, unitId, value, 0));
+        PacketDistributor.sendToAllPlayers(new HeroClientboundPacket(HeroAction.SET_MANA, unitId, value, 0));
     }
 
     public static void setMaxMana(int unitId, float value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new HeroClientboundPacket(HeroAction.SET_MAX_MANA, unitId, value, 0));
+        PacketDistributor.sendToAllPlayers(new HeroClientboundPacket(HeroAction.SET_MAX_MANA, unitId, value, 0));
     }
 
     public static void activateAbilityClientside(int unitId, int abilityIndex) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new HeroClientboundPacket(HeroAction.ACTIVATE_ABILITY_CLIENTSIDE, unitId, 0, abilityIndex));
+        PacketDistributor.sendToAllPlayers(new HeroClientboundPacket(HeroAction.ACTIVATE_ABILITY_CLIENTSIDE, unitId, 0, abilityIndex));
     }
 
     public static void deactivateAbilityClientside(int unitId, int abilityIndex) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new HeroClientboundPacket(HeroAction.DEACTIVATE_ABILITY_CLIENTSIDE, unitId, 0, abilityIndex));
+        PacketDistributor.sendToAllPlayers(new HeroClientboundPacket(HeroAction.DEACTIVATE_ABILITY_CLIENTSIDE, unitId, 0, abilityIndex));
     }
 
     public HeroClientboundPacket(HeroAction action, int unitId, float value, int abilityIndex) {
@@ -85,12 +85,10 @@ public class HeroClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> {
+        context.enqueueWork(() -> {
+            {
                     HeroUnit hero = null;
                     for(LivingEntity entity : UnitClientEvents.getAllUnits())
                         if (entity.getId() == unitId && entity instanceof HeroUnit)
@@ -114,10 +112,7 @@ public class HeroClientboundPacket {
                             case DEACTIVATE_ABILITY_CLIENTSIDE -> hero.deactivateAbilityClientside(abilityIndex);
                         }
                     }
-                    success.set(true);
-                });
+                }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

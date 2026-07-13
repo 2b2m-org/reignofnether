@@ -17,6 +17,7 @@ import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.registrars.ItemRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.registrars.ParticleRegistrar;
+import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.registrars.ServerEventRegistrar;
 import com.solegendary.reignofnether.registrars.SoundRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCosts;
@@ -51,6 +52,7 @@ public final class ReignOfNether {
         ProductionItems.init();
         MobEffectRegistrar.init(modBus);
         ParticleRegistrar.init(modBus);
+        modBus.addListener(PacketHandler::register);
         CommandArgumentRegistrar.init(modBus);
         BuildingSelectorOptions.bootStrap();
 

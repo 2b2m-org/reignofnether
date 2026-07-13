@@ -1,5 +1,9 @@
 package com.solegendary.reignofnether.building;
 
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.buildings.placements.PortalPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
@@ -7,22 +11,26 @@ import com.solegendary.reignofnether.building.custombuilding.CustomBuilding;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingClientEvents;
 import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.building.production.ProductionItem;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Rotation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 import static com.solegendary.reignofnether.building.BuildingUtils.findBuilding;
 
-public class BuildingClientboundPacket {
+public class BuildingClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<BuildingClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:building_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, BuildingClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(BuildingClientboundPacket::encode, BuildingClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<BuildingClientboundPacket> type() {
+        return TYPE;
+    }
     public static final ResourceLocation EMPTY = ResourceLocation.fromNamespaceAndPath("", "");
 
     // pos is used to identify the building object serverside
@@ -57,7 +65,7 @@ public class BuildingClientboundPacket {
         BlockPos portalDestination,
         boolean forPlayerLoggingIn
     ) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new BuildingClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new BuildingClientboundPacket(
             building instanceof CustomBuilding ? BuildingAction.PLACE_CUSTOM : BuildingAction.PLACE,
             building instanceof CustomBuilding ? EMPTY : ReignOfNetherRegistries.BUILDING.getKey(building),
             building.name,
@@ -94,12 +102,11 @@ public class BuildingClientboundPacket {
                 false
         );
         packet.partialBlocksDestroyed = partialBlocksDestroyed;
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
+        PacketDistributor.sendToAllPlayers(packet);
     }
 
     public static void startProduction(BlockPos buildingPos, ProductionItem item) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new BuildingClientboundPacket(BuildingAction.START_PRODUCTION,
+        PacketDistributor.sendToAllPlayers(new BuildingClientboundPacket(BuildingAction.START_PRODUCTION,
                 ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item),
                 "",
                 buildingPos
@@ -108,8 +115,7 @@ public class BuildingClientboundPacket {
     }
 
     public static void cancelProduction(BlockPos buildingPos, ProductionItem item, boolean frontItem) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new BuildingClientboundPacket(frontItem
+        PacketDistributor.sendToAllPlayers(new BuildingClientboundPacket(frontItem
                                           ? BuildingAction.CANCEL_PRODUCTION
                                           : BuildingAction.CANCEL_BACK_PRODUCTION,
                 ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item),
@@ -120,8 +126,7 @@ public class BuildingClientboundPacket {
     }
 
     public static void changePortal(BlockPos buildingPos, PortalPlacement.PortalType type) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new BuildingClientboundPacket(BuildingAction.CHANGE_PORTAL,
+        PacketDistributor.sendToAllPlayers(new BuildingClientboundPacket(BuildingAction.CHANGE_PORTAL,
                 EMPTY,
                 "",
                 buildingPos,
@@ -141,20 +146,17 @@ public class BuildingClientboundPacket {
     }
 
     public static void clearQueue(BlockPos buildingPos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new BuildingClientboundPacket(BuildingAction.CLEAR_PRODUCTION, EMPTY,"", buildingPos)
+        PacketDistributor.sendToAllPlayers(new BuildingClientboundPacket(BuildingAction.CLEAR_PRODUCTION, EMPTY,"", buildingPos)
         );
     }
 
     public static void completeProduction(BlockPos buildingPos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new BuildingClientboundPacket(BuildingAction.COMPLETE_PRODUCTION, EMPTY,"", buildingPos)
+        PacketDistributor.sendToAllPlayers(new BuildingClientboundPacket(BuildingAction.COMPLETE_PRODUCTION, EMPTY,"", buildingPos)
         );
     }
 
     public static void removeBuilding(BlockPos buildingPos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new BuildingClientboundPacket(BuildingAction.REMOVE, EMPTY, "", buildingPos)
+        PacketDistributor.sendToAllPlayers(new BuildingClientboundPacket(BuildingAction.REMOVE, EMPTY, "", buildingPos)
         );
     }
 
@@ -254,11 +256,10 @@ public class BuildingClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+        context.enqueueWork(() -> {
+            {
                 BuildingPlacement building = null;
                 if (this.action != BuildingAction.PLACE &&
                     this.action != BuildingAction.PLACE_CUSTOM) {
@@ -353,10 +354,7 @@ public class BuildingClientboundPacket {
                         BuildingClientEvents.removeBuilding(buildingPos);
                     }
                 }
-                success.set(true);
-            });
+            }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

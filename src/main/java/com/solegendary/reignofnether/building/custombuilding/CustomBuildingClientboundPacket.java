@@ -1,6 +1,9 @@
 package com.solegendary.reignofnether.building.custombuilding;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -9,17 +12,22 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class CustomBuildingClientboundPacket {
+public class CustomBuildingClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<CustomBuildingClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:custom_building_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, CustomBuildingClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(CustomBuildingClientboundPacket::encode, CustomBuildingClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<CustomBuildingClientboundPacket> type() {
+        return TYPE;
+    }
 
     // pos is used to identify the building object serverside
     public String playerName;
@@ -36,7 +44,7 @@ public class CustomBuildingClientboundPacket {
     public static void registerCustomBuilding(String playerName, CustomBuilding building) {
         CompoundTag commandsTag = new CompoundTag();
         commandsTag.put("commands", building.commandsNbt);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new CustomBuildingClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new CustomBuildingClientboundPacket(
                 playerName, building.name, new BlockPos(building.structureSize), building.structureNbt, building.attributesNbt, commandsTag
         ));
     }
@@ -104,17 +112,13 @@ public class CustomBuildingClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
+            {
                 CustomBuildingClientEvents.registerCustomBuilding(
                         playerName, name, structureSize, structureNbt, attributesNbt, commandsNbt.getList("commands", Tag.TAG_COMPOUND)
                 );
-                success.set(true);
-            });
+            }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

@@ -1,17 +1,25 @@
 package com.solegendary.reignofnether.hero;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.unit.HeroUnitSave;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class FallenHeroClientboundPacket {
+public class FallenHeroClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<FallenHeroClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:fallen_hero_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, FallenHeroClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(FallenHeroClientboundPacket::encode, FallenHeroClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<FallenHeroClientboundPacket> type() {
+        return TYPE;
+    }
 
     public String uuid;
     public String name;
@@ -24,8 +32,7 @@ public class FallenHeroClientboundPacket {
     public int ability4Rank;
 
     public static void addFallenHero(HeroUnitSave heroUnitSave) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new FallenHeroClientboundPacket(heroUnitSave));
+        PacketDistributor.sendToAllPlayers(new FallenHeroClientboundPacket(heroUnitSave));
     }
 
     public FallenHeroClientboundPacket(HeroUnitSave heroUnitSave) {
@@ -65,12 +72,10 @@ public class FallenHeroClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> {
+        context.enqueueWork(() -> {
+            {
                     HeroClientEvents.addFallenHero(new HeroUnitSave(
                         uuid,
                         name,
@@ -83,10 +88,7 @@ public class FallenHeroClientboundPacket {
                         ability3Rank,
                         ability4Rank
                     ));
-                    success.set(true);
-                });
+                }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

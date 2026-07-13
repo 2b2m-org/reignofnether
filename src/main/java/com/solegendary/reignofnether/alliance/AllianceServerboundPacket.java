@@ -1,23 +1,35 @@
 package com.solegendary.reignofnether.alliance;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class AllianceServerboundPacket {
+public class AllianceServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<AllianceServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:alliance_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, AllianceServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(AllianceServerboundPacket::encode, AllianceServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<AllianceServerboundPacket> type() {
+        return TYPE;
+    }
 
     AllianceAction action;
     public String targetPlayerName;
     public boolean boolValue;
 
     public static void doAllianceAction(AllianceAction action, String targetPlayerName) {
-        PacketHandler.INSTANCE.sendToServer(new AllianceServerboundPacket(
+        PacketDistributor.sendToServer(new AllianceServerboundPacket(
                 action,
                 targetPlayerName,
                 false
@@ -25,7 +37,7 @@ public class AllianceServerboundPacket {
     }
 
     public static void doAllianceAction(AllianceAction action, boolean value) {
-        PacketHandler.INSTANCE.sendToServer(new AllianceServerboundPacket(
+        PacketDistributor.sendToServer(new AllianceServerboundPacket(
                 action,
                 "",
                 value
@@ -51,14 +63,12 @@ public class AllianceServerboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
 
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = (ServerPlayer) context.player();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("AbilityServerboundPacket: Sender was null");
-                success.set(false);
                 return;
             }
             ReignOfNether.LOGGER.info("[Alliance] {} performed {} (target: {}, boolValue: {})", player.getName(), action, targetPlayerName, boolValue);
@@ -69,9 +79,6 @@ public class AllianceServerboundPacket {
                 case DISBAND -> MiscUtil.runPlayerCommand(player, "disband " + targetPlayerName);
                 case SET_ALLY_CONTROL -> MiscUtil.runPlayerCommand(player, "allycontrol " + boolValue);
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

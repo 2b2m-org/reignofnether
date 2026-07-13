@@ -1,15 +1,27 @@
 package com.solegendary.reignofnether.research;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class ResearchServerboundPacket {
+public class ResearchServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<ResearchServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:research_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, ResearchServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(ResearchServerboundPacket::encode, ResearchServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<ResearchServerboundPacket> type() {
+        return TYPE;
+    }
 
     public String playerName;
     public String itemName;
@@ -18,10 +30,10 @@ public class ResearchServerboundPacket {
     public int value;
 
     public static void addCheat(String playerName, String itemName) {
-        PacketHandler.INSTANCE.sendToServer(new ResearchServerboundPacket(playerName, itemName, true, true, 0));
+        PacketDistributor.sendToServer(new ResearchServerboundPacket(playerName, itemName, true, true, 0));
     }
     public static void removeCheat(String playerName, String itemName) {
-        PacketHandler.INSTANCE.sendToServer(new ResearchServerboundPacket(playerName, itemName, false, true, 0));
+        PacketDistributor.sendToServer(new ResearchServerboundPacket(playerName, itemName, false, true, 0));
     }
 
     public ResearchServerboundPacket(String playerName, String itemName, boolean add, boolean isCheat, int value) {
@@ -49,18 +61,15 @@ public class ResearchServerboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
 
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = (ServerPlayer) context.player();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("ResearchServerboundPacket (cheats): Sender was null");
-                success.set(false);
                 return;
             } else if (!player.getName().getString().equals(this.playerName)) {
                 ReignOfNether.LOGGER.warn("ResearchServerboundPacket (cheats): Tried to process packet from " + player.getName() + " for id: " + this.playerName);
-                success.set(false);
                 return;
             }
 
@@ -68,7 +77,6 @@ public class ResearchServerboundPacket {
                 ReignOfNether.LOGGER.info("[Research] {} {} cheat research: {}", player.getName(), add ? "added" : "removed", this.itemName);
                 if (!player.hasPermissions(4)) {
                     ReignOfNether.LOGGER.warn("ResearchServerboundPacket (cheats): Tried to process packet from " + player.getName() + " with insufficient permissions");
-                    success.set(false);
                     return;
                 }
                 if (add) {
@@ -80,9 +88,6 @@ public class ResearchServerboundPacket {
                     ResearchClientboundPacket.removeCheat(this.playerName, this.itemName);
                 }
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

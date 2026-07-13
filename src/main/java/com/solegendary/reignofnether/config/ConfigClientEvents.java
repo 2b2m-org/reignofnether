@@ -16,11 +16,9 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.network.NetworkEvent;
 
 import java.util.ArrayList;
 import java.util.Locale;
-import java.util.function.Supplier;
 
 @OnlyIn(Dist.CLIENT)
 public class ConfigClientEvents {
@@ -66,7 +64,7 @@ public class ConfigClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
     //Load config data from server
-    public static void loadConfigData(ClientboundSyncResourceCostPacket msg, Supplier<NetworkEvent.Context> ctx) {
+    public static void loadConfigData(ClientboundSyncResourceCostPacket msg) {
         String key = msg.getId();
         if(ResourceCost.ENTRIES.containsKey(key)) {
             ResourceCost rescost = ResourceCost.ENTRIES.get(key);

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
@@ -29,7 +31,6 @@ import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.player.PlayerServerboundPacket;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.research.ResearchClient;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.resources.ResourceName;
@@ -282,7 +283,7 @@ public class UnitClientEvents {
                 lastClientUAIActioned = actionItem;
             }
 
-            PacketHandler.INSTANCE.sendToServer(new UnitActionServerboundPacket(
+            PacketDistributor.sendToServer(new UnitActionServerboundPacket(
                 MC.player.getName().getString(),
                 action, unitId, unitIds,
                 preselectedBlockPos,
@@ -306,7 +307,7 @@ public class UnitClientEvents {
                 actionItem.action(MC.level);
             }
             if (serverside) {
-                PacketHandler.INSTANCE.sendToServer(new UnitActionServerboundPacket(
+                PacketDistributor.sendToServer(new UnitActionServerboundPacket(
                         MC.player.getName().getString(),
                         action, unitId, unitIds,
                         preselectedBlockPos,
@@ -372,7 +373,7 @@ public class UnitClientEvents {
             );
             actionItem.action(MC.level);
 
-            PacketHandler.INSTANCE.sendToServer(new UnitActionServerboundPacket(
+            PacketDistributor.sendToServer(new UnitActionServerboundPacket(
                 playerName,
                 action,
                 targetEntityId,
@@ -908,7 +909,7 @@ ticksToNextVisCheck -= 1;
                     MiscUtil.addUnitCheckpoint(unit, targetBp, true);
                 }
 
-                PacketHandler.INSTANCE.sendToServer(new UnitActionServerboundPacket(
+                PacketDistributor.sendToServer(new UnitActionServerboundPacket(
                     playerName,
                     UnitAction.MOVE, -1, singleUnitId,
                     targetBp,
@@ -1525,7 +1526,7 @@ ticksToNextVisCheck -= 1;
     @SubscribeEvent
     public static void onKeyPress(ScreenEvent.KeyPressed.Pre evt) {
         if (Keybindings.altMod.isDown() && evt.getKeyCode() == GLFW.GLFW_KEY_SPACE && !getAllUnits().isEmpty()) {
-            PacketHandler.INSTANCE.sendToServer(new UnitActionServerboundPacket(
+            PacketDistributor.sendToServer(new UnitActionServerboundPacket(
                     "",
                     UnitAction.DEBUG1, 0, new int[]{0},
                     new BlockPos(0,0,0),
@@ -1533,7 +1534,7 @@ ticksToNextVisCheck -= 1;
             ));
         }
         if (Keybindings.ctrlMod.isDown() && evt.getKeyCode() == GLFW.GLFW_KEY_SPACE && !getAllUnits().isEmpty()) {
-            PacketHandler.INSTANCE.sendToServer(new UnitActionServerboundPacket(
+            PacketDistributor.sendToServer(new UnitActionServerboundPacket(
                     "",
                     UnitAction.DEBUG2, 0, new int[]{0},
                     new BlockPos(0,0,0),

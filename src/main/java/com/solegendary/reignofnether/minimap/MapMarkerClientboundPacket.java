@@ -1,14 +1,23 @@
 package com.solegendary.reignofnether.minimap;
 
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class MapMarkerClientboundPacket {
+public class MapMarkerClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<MapMarkerClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:map_marker_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, MapMarkerClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(MapMarkerClientboundPacket::encode, MapMarkerClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<MapMarkerClientboundPacket> type() {
+        return TYPE;
+    }
     private final int x;
     private final int z;
     private final String playerName;
@@ -31,16 +40,12 @@ public class MapMarkerClientboundPacket {
         buffer.writeUtf(this.playerName);
     }
 
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
+            {
                 MinimapClientEvents.addMapMarker(x, z, playerName);
-                success.set(true);
-            });
+            }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }
 

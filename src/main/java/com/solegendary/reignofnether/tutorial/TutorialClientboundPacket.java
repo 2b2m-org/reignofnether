@@ -1,31 +1,36 @@
 package com.solegendary.reignofnether.tutorial;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class TutorialClientboundPacket {
+public class TutorialClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<TutorialClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:tutorial_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, TutorialClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(TutorialClientboundPacket::encode, TutorialClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<TutorialClientboundPacket> type() {
+        return TYPE;
+    }
 
     private final TutorialAction action;
     private final TutorialStage stage;
 
     public static void enableTutorial() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new TutorialClientboundPacket(TutorialAction.ENABLE, TutorialStage.INTRO));
+        PacketDistributor.sendToAllPlayers(new TutorialClientboundPacket(TutorialAction.ENABLE, TutorialStage.INTRO));
     }
     public static void disableTutorial() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new TutorialClientboundPacket(TutorialAction.DISABLE, TutorialStage.INTRO));
+        PacketDistributor.sendToAllPlayers(new TutorialClientboundPacket(TutorialAction.DISABLE, TutorialStage.INTRO));
     }
     public static void loadTutorialStage(TutorialStage stage) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new TutorialClientboundPacket(TutorialAction.LOAD_STAGE, stage));
+        PacketDistributor.sendToAllPlayers(new TutorialClientboundPacket(TutorialAction.LOAD_STAGE, stage));
     }
 
     public TutorialClientboundPacket(TutorialAction action, TutorialStage stage) {
@@ -44,20 +49,16 @@ public class TutorialClientboundPacket {
     }
 
     // client-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> {
+        context.enqueueWork(() -> {
+            {
                     switch (action) {
                         case ENABLE -> TutorialClientEvents.setEnabled(true);
                         case DISABLE -> TutorialClientEvents.setEnabled(false);
                         case LOAD_STAGE -> TutorialClientEvents.loadStage(stage);
                     }
-                });
+                }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

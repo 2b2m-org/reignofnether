@@ -1,21 +1,29 @@
 package com.solegendary.reignofnether.unit.packets;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class UnitSyncWorkerClientBoundPacket {
+public class UnitSyncWorkerClientBoundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<UnitSyncWorkerClientBoundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:unit_sync_worker_client_bound");
+    public static final StreamCodec<FriendlyByteBuf, UnitSyncWorkerClientBoundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(UnitSyncWorkerClientBoundPacket::encode, UnitSyncWorkerClientBoundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<UnitSyncWorkerClientBoundPacket> type() {
+        return TYPE;
+    }
 
     private final int entityId;
     private final boolean isBuilding; // for workers to show arms swinging
@@ -28,8 +36,7 @@ public class UnitSyncWorkerClientBoundPacket {
         if (entity instanceof WorkerUnit workerUnit) {
             BlockPos bp = workerUnit.getGatherResourceGoal().getGatherTarget();
 
-            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitSyncWorkerClientBoundPacket(entity.getId(),
+            PacketDistributor.sendToAllPlayers(new UnitSyncWorkerClientBoundPacket(entity.getId(),
                     workerUnit.getBuildRepairGoal().isBuilding(),
                     workerUnit.getGatherResourceGoal().isGathering(),
                     workerUnit.getGatherResourceGoal().getTargetResourceName(),
@@ -76,12 +83,10 @@ public class UnitSyncWorkerClientBoundPacket {
     }
 
     // client-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> {
+        context.enqueueWork(() -> {
+            {
                     UnitClientEvents.syncWorkerUnit(
                         this.entityId,
                         this.isBuilding,
@@ -89,9 +94,7 @@ public class UnitSyncWorkerClientBoundPacket {
                         this.gatherName,
                         this.gatherPos.equals(new BlockPos(0,0,0)) ? null : this.gatherPos,
                         this.gatherTicks);
-                });
+                }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

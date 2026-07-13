@@ -1,20 +1,28 @@
 package com.solegendary.reignofnether.unit.packets;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitSyncAction;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class UnitSyncAbilityClientboundPacket {
+public class UnitSyncAbilityClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<UnitSyncAbilityClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:unit_sync_ability_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, UnitSyncAbilityClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(UnitSyncAbilityClientboundPacket::encode, UnitSyncAbilityClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<UnitSyncAbilityClientboundPacket> type() {
+        return TYPE;
+    }
 
     private final UnitSyncAction syncAction;
     private final int entityId;
@@ -32,8 +40,7 @@ public class UnitSyncAbilityClientboundPacket {
             for (int i = 0; i < abilities.size(); i++) {
                 abilityCharges[i] = abilities.get(i).getCharges(unit);
             }
-            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                    new UnitSyncAbilityClientboundPacket(
+            PacketDistributor.sendToAllPlayers(new UnitSyncAbilityClientboundPacket(
                         UnitSyncAction.SYNC_ABILITIES,
                         entity.getId(),
                         abilityCooldowns,
@@ -72,12 +79,10 @@ public class UnitSyncAbilityClientboundPacket {
     }
 
     // client-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> {
+        context.enqueueWork(() -> {
+            {
                     switch (this.syncAction) {
                         case SYNC_ABILITIES -> {
                             for (LivingEntity entity : UnitClientEvents.getAllUnits()) {
@@ -94,9 +99,7 @@ public class UnitSyncAbilityClientboundPacket {
                             }
                         }
                     }
-                });
+                }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

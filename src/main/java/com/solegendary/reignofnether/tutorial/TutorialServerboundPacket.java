@@ -1,23 +1,35 @@
 package com.solegendary.reignofnether.tutorial;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class TutorialServerboundPacket {
+public class TutorialServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<TutorialServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:tutorial_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, TutorialServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(TutorialServerboundPacket::encode, TutorialServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<TutorialServerboundPacket> type() {
+        return TYPE;
+    }
 
     TutorialAction action;
     TutorialStage stage;
 
     public static void doServerAction(TutorialAction action) {
-        PacketHandler.INSTANCE.sendToServer(new TutorialServerboundPacket(action, TutorialStage.INTRO));
+        PacketDistributor.sendToServer(new TutorialServerboundPacket(action, TutorialStage.INTRO));
     }
 
     public static void saveStage(TutorialStage stage) {
-        PacketHandler.INSTANCE.sendToServer(new TutorialServerboundPacket(TutorialAction.SAVE_STAGE, stage));
+        PacketDistributor.sendToServer(new TutorialServerboundPacket(TutorialAction.SAVE_STAGE, stage));
     }
 
     // packet-handler functions
@@ -37,9 +49,8 @@ public class TutorialServerboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
             switch (action) {
                 case SAVE_STAGE -> TutorialServerEvents.saveStage(stage);
                 case SET_DAY_TIME -> TutorialServerEvents.setDayTime();
@@ -56,9 +67,6 @@ public class TutorialServerboundPacket {
                 case SPAWN_MONSTER_BASE_ARMY -> TutorialServerEvents.spawnMonsterBaseArmy();
                 case SPAWN_FRIENDLY_ARMY -> TutorialServerEvents.spawnFriendlyArmy();
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

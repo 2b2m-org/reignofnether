@@ -1,20 +1,28 @@
 package com.solegendary.reignofnether.unit.packets;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class UnitSyncMobEffectsClientboundPacket {
+public class UnitSyncMobEffectsClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<UnitSyncMobEffectsClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:unit_sync_mob_effects_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, UnitSyncMobEffectsClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(UnitSyncMobEffectsClientboundPacket::encode, UnitSyncMobEffectsClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<UnitSyncMobEffectsClientboundPacket> type() {
+        return TYPE;
+    }
 
     private final int entityId;
     private final int effectId;
@@ -22,14 +30,12 @@ public class UnitSyncMobEffectsClientboundPacket {
     private final int duration;
 
     public static void addEffectClientside(LivingEntity entity, MobEffectInstance mei) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitSyncMobEffectsClientboundPacket(entity.getId(), MobEffect.getId(mei.getEffect()), mei.getAmplifier(), mei.getDuration())
+        PacketDistributor.sendToAllPlayers(new UnitSyncMobEffectsClientboundPacket(entity.getId(), MobEffect.getId(mei.getEffect()), mei.getAmplifier(), mei.getDuration())
         );
     }
 
     public static void removeEffectClientside(LivingEntity entity, MobEffect me) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitSyncMobEffectsClientboundPacket(entity.getId(), MobEffect.getId(me), 0, 0)
+        PacketDistributor.sendToAllPlayers(new UnitSyncMobEffectsClientboundPacket(entity.getId(), MobEffect.getId(me), 0, 0)
         );
     }
 
@@ -61,16 +67,12 @@ public class UnitSyncMobEffectsClientboundPacket {
     }
 
     // client-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> {
+        context.enqueueWork(() -> {
+            {
                     UnitClientEvents.syncMobEffect(this.entityId, this.effectId, this.amplifier, this.duration);
-                });
+                }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

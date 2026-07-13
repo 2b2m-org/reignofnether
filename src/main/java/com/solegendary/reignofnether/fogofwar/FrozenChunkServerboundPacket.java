@@ -1,6 +1,11 @@
 package com.solegendary.reignofnether.fogofwar;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.sounds.SoundClientEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -8,12 +13,19 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.IPlantable;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class FrozenChunkServerboundPacket {
+public class FrozenChunkServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<FrozenChunkServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:frozen_chunk_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, FrozenChunkServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(FrozenChunkServerboundPacket::encode, FrozenChunkServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<FrozenChunkServerboundPacket> type() {
+        return TYPE;
+    }
 
     BlockPos renderChunkOrigin;
 
@@ -35,7 +47,7 @@ public class FrozenChunkServerboundPacket {
             }
         }
         if (MC.player != null)
-            PacketHandler.INSTANCE.sendToServer(new FrozenChunkServerboundPacket(renderChunkOrigin));
+            PacketDistributor.sendToServer(new FrozenChunkServerboundPacket(renderChunkOrigin));
     }
 
     // packet-handler functions
@@ -52,13 +64,9 @@ public class FrozenChunkServerboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
             FogOfWarServerEvents.syncClientBlocks(this.renderChunkOrigin);
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

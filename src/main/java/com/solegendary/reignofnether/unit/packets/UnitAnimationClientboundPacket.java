@@ -1,20 +1,28 @@
 package com.solegendary.reignofnether.unit.packets;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.unit.UnitAnimationAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class UnitAnimationClientboundPacket {
+public class UnitAnimationClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<UnitAnimationClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:unit_animation_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, UnitAnimationClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(UnitAnimationClientboundPacket::encode, UnitAnimationClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<UnitAnimationClientboundPacket> type() {
+        return TYPE;
+    }
 
     private final UnitAnimationAction animAction;
     private final int entityId;
@@ -25,8 +33,7 @@ public class UnitAnimationClientboundPacket {
 
     // no targets
     public static void sendBasicPacket(UnitAnimationAction animAction, LivingEntity entity) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitAnimationClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new UnitAnimationClientboundPacket(
                         animAction,
                         entity.getId(),
                         0,0,0,0
@@ -35,8 +42,7 @@ public class UnitAnimationClientboundPacket {
     }
 
     public static void sendEntityPacket(UnitAnimationAction animAction, LivingEntity entity, LivingEntity target) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitAnimationClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new UnitAnimationClientboundPacket(
                         animAction,
                         entity.getId(), target.getId(),
                         0,0,0)
@@ -44,8 +50,7 @@ public class UnitAnimationClientboundPacket {
     }
 
     public static void sendBlockPosPacket(UnitAnimationAction animAction, LivingEntity entity, BlockPos bp) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitAnimationClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new UnitAnimationClientboundPacket(
                         animAction,
                         entity.getId(), 0,
                         bp.getX(), bp.getY(), bp.getZ())
@@ -53,8 +58,7 @@ public class UnitAnimationClientboundPacket {
     }
 
     public static void sendEatFoodPacket(LivingEntity entity, int itemId) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitAnimationClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new UnitAnimationClientboundPacket(
                         UnitAnimationAction.EAT_FOOD_ITEM,
                         entity.getId(), itemId,
                         0,0,0)
@@ -99,12 +103,10 @@ public class UnitAnimationClientboundPacket {
     }
 
     // client-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> {
+        context.enqueueWork(() -> {
+            {
                     switch (this.animAction) {
                         case EAT_FOOD_ITEM -> UnitClientEvents.syncUnitEatingFood(this.entityId, this.targetId);
                         case NON_KEYFRAME_START -> UnitClientEvents.syncUnitAnimation(this.animAction, true,
@@ -114,9 +116,7 @@ public class UnitAnimationClientboundPacket {
                         case NON_KEYFRAME_ATTACK -> UnitClientEvents.playAttackAnimation(this.entityId);
                         default -> UnitClientEvents.playKeyframeAnimation(this.animAction, this.entityId);
                     }
-                });
+                }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

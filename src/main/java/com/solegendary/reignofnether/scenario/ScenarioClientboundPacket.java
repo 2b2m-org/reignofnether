@@ -1,15 +1,24 @@
 package com.solegendary.reignofnether.scenario;
 
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class ScenarioClientboundPacket {
+public class ScenarioClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<ScenarioClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:scenario_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, ScenarioClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(ScenarioClientboundPacket::encode, ScenarioClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<ScenarioClientboundPacket> type() {
+        return TYPE;
+    }
 
     public ScenarioAction action;
     public CompoundTag roleNbt;
@@ -30,10 +39,9 @@ public class ScenarioClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
+            {
 
                 switch (this.action) {
                     case LOAD_SCENARIO_ROLE -> {
@@ -47,10 +55,7 @@ public class ScenarioClientboundPacket {
                         }
                     }
                 }
-                success.set(true);
-            });
+            }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

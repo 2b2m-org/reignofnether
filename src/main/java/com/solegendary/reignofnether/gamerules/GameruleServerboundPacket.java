@@ -1,86 +1,98 @@
 package com.solegendary.reignofnether.gamerules;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameRules;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class GameruleServerboundPacket {
+public class GameruleServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<GameruleServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:gamerule_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, GameruleServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(GameruleServerboundPacket::encode, GameruleServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<GameruleServerboundPacket> type() {
+        return TYPE;
+    }
 
     GameruleAction action;
     String playerName;
     Long value;
 
     public static void setLogFalling(boolean logFalling) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
             new GameruleServerboundPacket(GameruleAction.SET_LOG_FALLING, "", logFalling ? 1L : 0L));
     }
     public static void setNeutralAggro(boolean neutralAggro) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
                 new GameruleServerboundPacket(GameruleAction.SET_NEUTRAL_AGGRO, "", neutralAggro ? 1L : 0L));
     }
     public static void setMaxPopulation(long maxPopulation) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
             new GameruleServerboundPacket(GameruleAction.SET_MAX_POPULATION, "", maxPopulation));
     }
     public static void setUnitGriefing(boolean unitGriefing) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
             new GameruleServerboundPacket(GameruleAction.SET_UNIT_GRIEFING, "", unitGriefing ? 1L : 0L));
     }
     public static void setPlayerGriefing(boolean playerGriefing) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
             new GameruleServerboundPacket(GameruleAction.SET_PLAYER_GRIEFING, "", playerGriefing ? 1L : 0L));
     }
     public static void setGroundYLevel(long groundYLevel) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
             new GameruleServerboundPacket(GameruleAction.SET_GROUND_Y_LEVEL, "", groundYLevel));
     }
     public static void setFlyingMaxYLevel(long flyingMaxYLevel) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
             new GameruleServerboundPacket(GameruleAction.SET_FLYING_MAX_Y_LEVEL, "", flyingMaxYLevel));
     }
     public static void setAllowBeacons(boolean allowBeacons) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
             new GameruleServerboundPacket(GameruleAction.SET_ALLOW_BEACONS, "", allowBeacons ? 1L : 0L));
     }
     public static void setPvpModesOnly(boolean pvpModesOnly) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
             new GameruleServerboundPacket(GameruleAction.SET_PVP_MODES_ONLY, "", pvpModesOnly ? 1L : 0L));
     }
     public static void setBeaconWinMinutes(long beaconWinMinutes) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
                 new GameruleServerboundPacket(GameruleAction.SET_BEACON_WIN_MINUTES, "", beaconWinMinutes));
     }
     public static void setSlantedBuilding(boolean slantedBuilding) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
                 new GameruleServerboundPacket(GameruleAction.SET_SLANTED_BUILDING, "", slantedBuilding ? 1L : 0L));
     }
     public static void setAllowedHeroes(long allowedHeroes) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
                 new GameruleServerboundPacket(GameruleAction.SET_ALLOWED_HEROES, "", allowedHeroes));
     }
     public static void setLockAlliances(boolean lockAlliances) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
                 new GameruleServerboundPacket(GameruleAction.SET_LOCK_ALLIANCES, "", lockAlliances ? 1L : 0L));
     }
     public static void setCoopMode(boolean coopMode) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
                 new GameruleServerboundPacket(GameruleAction.SET_COOP_MODE, "", coopMode ? 1L : 0L));
     }
     public static void setRtsPathfinding(boolean rtsPathfinding) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
                 new GameruleServerboundPacket(GameruleAction.SET_RTS_PATHFINDING, "", rtsPathfinding ? 1L : 0L));
     }
     public static void setAnimalSpawnYDiff(long animalSpawnYDiff) {
-        PacketHandler.INSTANCE.sendToServer(
+        PacketDistributor.sendToServer(
                 new GameruleServerboundPacket(GameruleAction.SET_ANIMAL_SPAWN_Y_DIFF, "", animalSpawnYDiff));
     }
 
@@ -104,18 +116,15 @@ public class GameruleServerboundPacket {
 
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
+            ServerPlayer player = (ServerPlayer) context.player();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("GameruleServerboundPacket: Sender was null");
-                success.set(false);
                 return;
             }
             else if (!player.hasPermissions(4)) {
                 ReignOfNether.LOGGER.warn("GameruleServerboundPacket: Tried to process packet from " + player.getName() + " with insufficient permissions");
-                success.set(false);
                 return;
             }
             MinecraftServer server = player.level().getServer();
@@ -192,9 +201,6 @@ public class GameruleServerboundPacket {
                     GameruleClientboundPacket.setAnimalSpawnYDiff(value);
                 }
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

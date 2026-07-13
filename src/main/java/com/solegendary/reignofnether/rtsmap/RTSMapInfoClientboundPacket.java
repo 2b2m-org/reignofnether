@@ -1,22 +1,30 @@
 package com.solegendary.reignofnether.rtsmap;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.function.Supplier;
 
-public class RTSMapInfoClientboundPacket {
+public class RTSMapInfoClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<RTSMapInfoClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:rts_map_info_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, RTSMapInfoClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(RTSMapInfoClientboundPacket::encode, RTSMapInfoClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<RTSMapInfoClientboundPacket> type() {
+        return TYPE;
+    }
 
     private final RTSMapInfoAction action;
     private final String value;
 
     public static void sendValue(RTSMapInfoAction action, String value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new RTSMapInfoClientboundPacket(action, value));
+        PacketDistributor.sendToAllPlayers(new RTSMapInfoClientboundPacket(action, value));
     }
 
     public RTSMapInfoClientboundPacket(RTSMapInfoAction action, String value) {
@@ -34,9 +42,9 @@ public class RTSMapInfoClientboundPacket {
         buffer.writeUtf(this.value);
     }
 
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
+            {
                 switch (action) {
                     case SET_MODE -> RTSMapInfoClientEvents.selectedMode = value;
                     case ADD_MODE -> {
@@ -48,9 +56,7 @@ public class RTSMapInfoClientboundPacket {
                     case ADD_AUTHOR -> RTSMapInfoClientEvents.authors.add(value);
                     case SET_VERSION -> RTSMapInfoClientEvents.version = value;
                 }
-            });
+            }
         });
-        ctx.get().setPacketHandled(true);
-        return true;
     }
 }

@@ -1,6 +1,5 @@
 package com.solegendary.reignofnether.config;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -19,7 +18,7 @@ public class ConfigVanillaServerEvents {
             //rebake from serverside configs
             //System.out.println("Attempted to send packet to rebake from server..");
             for(String id : ResourceCost.ENTRIES.keySet()) {
-                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(serverPlayerSupplier),
+                PacketDistributor.sendToPlayer(serverPlayerSupplier.get(),
                         new ClientboundSyncResourceCostPacket(ResourceCost.ENTRIES.get(id))
                 );
             }

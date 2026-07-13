@@ -1,16 +1,28 @@
 package com.solegendary.reignofnether.sandbox;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.NetworkEvent;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class SandboxServerboundPacket {
+public class SandboxServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<SandboxServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:sandbox_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, SandboxServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(SandboxServerboundPacket::encode, SandboxServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<SandboxServerboundPacket> type() {
+        return TYPE;
+    }
 
     public SandboxAction sandboxAction;
     public String playerName;
@@ -20,25 +32,25 @@ public class SandboxServerboundPacket {
 
     public static void spawnUnit(SandboxAction sandboxAction, String playerName, String unitName, BlockPos blockPos) {
         if (!unitName.isBlank())
-            PacketHandler.INSTANCE.sendToServer(new SandboxServerboundPacket(sandboxAction, playerName, unitName, blockPos,  new int[]{}));
+            PacketDistributor.sendToServer(new SandboxServerboundPacket(sandboxAction, playerName, unitName, blockPos,  new int[]{}));
     }
     public static void setAnchor(BlockPos blockPos, int[] entityIds) {
-        PacketHandler.INSTANCE.sendToServer(new SandboxServerboundPacket(SandboxAction.SET_ANCHOR, "", "", blockPos, entityIds));
+        PacketDistributor.sendToServer(new SandboxServerboundPacket(SandboxAction.SET_ANCHOR, "", "", blockPos, entityIds));
     }
     public static void resetToAnchor(int[] entityIds) {
-        PacketHandler.INSTANCE.sendToServer(new SandboxServerboundPacket(SandboxAction.RESET_TO_ANCHOR, "", "", new BlockPos(0,0,0), entityIds));
+        PacketDistributor.sendToServer(new SandboxServerboundPacket(SandboxAction.RESET_TO_ANCHOR, "", "", new BlockPos(0,0,0), entityIds));
     }
     public static void removeAnchor(int[] entityIds) {
-        PacketHandler.INSTANCE.sendToServer(new SandboxServerboundPacket(SandboxAction.REMOVE_ANCHOR, "", "", new BlockPos(0,0,0), entityIds));
+        PacketDistributor.sendToServer(new SandboxServerboundPacket(SandboxAction.REMOVE_ANCHOR, "", "", new BlockPos(0,0,0), entityIds));
     }
     public static void setUnitOwner(int[] entityIds, String ownerName) {
-        PacketHandler.INSTANCE.sendToServer(new SandboxServerboundPacket(SandboxAction.SET_UNIT_OWNER, ownerName, "", new BlockPos(0,0,0), entityIds));
+        PacketDistributor.sendToServer(new SandboxServerboundPacket(SandboxAction.SET_UNIT_OWNER, ownerName, "", new BlockPos(0,0,0), entityIds));
     }
     public static void setBuildingOwner(BlockPos pos, String ownerName) {
-        PacketHandler.INSTANCE.sendToServer(new SandboxServerboundPacket(SandboxAction.SET_BUILDING_OWNER, ownerName, "", pos,  new int[]{}));
+        PacketDistributor.sendToServer(new SandboxServerboundPacket(SandboxAction.SET_BUILDING_OWNER, ownerName, "", pos,  new int[]{}));
     }
     public static void removeBuilding(BlockPos pos) {
-        PacketHandler.INSTANCE.sendToServer(new SandboxServerboundPacket(SandboxAction.REMOVE_BUILDING, "", "", pos, new int[]{}));
+        PacketDistributor.sendToServer(new SandboxServerboundPacket(SandboxAction.REMOVE_BUILDING, "", "", pos, new int[]{}));
     }
 
     public SandboxServerboundPacket(SandboxAction sandboxAction, String playerName, String unitName, BlockPos blockPos, int[] entityIds) {
@@ -66,19 +78,16 @@ public class SandboxServerboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
 
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = (ServerPlayer) context.player();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("SandboxServerboundPacket: Sender was null");
-                success.set(false);
                 return;
             }
             else if (!SandboxServer.isAnyoneASandboxPlayer()) {
                 ReignOfNether.LOGGER.warn("SandboxServerboundPacket: Tried to process packet from " + player.getName() + " while sandbox is disabled");
-                success.set(false);
                 return;
             }
 
@@ -91,9 +100,6 @@ public class SandboxServerboundPacket {
                 case SET_BUILDING_OWNER -> SandboxServer.setBuildingOwner(this.blockPos, this.playerName);
                 case REMOVE_BUILDING -> SandboxServer.removeBuilding(this.blockPos);
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.minimap;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
@@ -24,7 +26,6 @@ import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.player.PlayerServerboundPacket;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.startpos.StartPos;
 import com.solegendary.reignofnether.startpos.StartPosClientEvents;
 import com.solegendary.reignofnether.tutorial.TutorialClientEvents;
@@ -191,7 +192,7 @@ public class MinimapClientEvents {
         }
         BlockPos markerPos = getWorldPosOnMinimap(mouseX, mouseY, false);
         if (markerPos != null) {
-            PacketHandler.INSTANCE.sendToServer(new MapMarkerServerboundPacket(markerPos.getX(), markerPos.getZ()));
+            PacketDistributor.sendToServer(new MapMarkerServerboundPacket(markerPos.getX(), markerPos.getZ()));
         }
     }
 
@@ -1274,7 +1275,7 @@ public class MinimapClientEvents {
 					} else {
 						MiscUtil.addUnitCheckpoint(unit, targetBp, true);
 					}
-					PacketHandler.INSTANCE.sendToServer(new UnitActionServerboundPacket(
+					PacketDistributor.sendToServer(new UnitActionServerboundPacket(
 						MC.player.getName().getString(),
 						UnitAction.MOVE, -1, singleUnitId,
 						targetBp,

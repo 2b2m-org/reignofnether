@@ -1,23 +1,31 @@
 package com.solegendary.reignofnether.player;
 
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.matchstart.MatchEndClientEvents;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 // Sent to all clients once a match ends, carrying the final scoreboard so the
 // end-of-match stats screen (MatchEndScreen) can be rendered. Scores otherwise
 // only exist server-side, so this is the only way the client learns them.
-public class MatchStatsClientboundPacket {
+public class MatchStatsClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<MatchStatsClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:match_stats_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, MatchStatsClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(MatchStatsClientboundPacket::encode, MatchStatsClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<MatchStatsClientboundPacket> type() {
+        return TYPE;
+    }
 
     // one results-table row per player that took part in the match
     public static class MatchStatRow {
@@ -40,8 +48,7 @@ public class MatchStatsClientboundPacket {
     private final List<MatchStatRow> rows;
 
     public static void broadcast(long gameDurationTicks, List<MatchStatRow> rows) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new MatchStatsClientboundPacket(gameDurationTicks, rows));
+        PacketDistributor.sendToAllPlayers(new MatchStatsClientboundPacket(gameDurationTicks, rows));
     }
 
     public MatchStatsClientboundPacket(long gameDurationTicks, List<MatchStatRow> rows) {
@@ -75,16 +82,11 @@ public class MatchStatsClientboundPacket {
         }
     }
 
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                    () -> () -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
+            {
                         MatchEndClientEvents.receive(gameDurationTicks, rows);
-                        success.set(true);
-                    });
+                    }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

@@ -1,6 +1,9 @@
 package com.solegendary.reignofnether.ability;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.time.TimeClientEvents;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitAnimationAction;
@@ -16,15 +19,20 @@ import com.solegendary.reignofnether.unit.units.villagers.WindcallerUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class AbilityClientboundPacket {
+public class AbilityClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<AbilityClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:ability_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, AbilityClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(AbilityClientboundPacket::encode, AbilityClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<AbilityClientboundPacket> type() {
+        return TYPE;
+    }
 
     private final int unitId;
     private final boolean isSettingCooldown;
@@ -44,26 +52,22 @@ public class AbilityClientboundPacket {
 
     public static void sendSetCooldownPacket(int unitId, UnitAction unitAction, float cooldown) {
         setServersideCooldown(unitId, unitAction, cooldown);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new AbilityClientboundPacket(unitId, true, unitAction, cooldown, new BlockPos(0,0,0))
+        PacketDistributor.sendToAllPlayers(new AbilityClientboundPacket(unitId, true, unitAction, cooldown, new BlockPos(0,0,0))
         );
     }
 
     public static void doAbility(int unitId, UnitAction unitAction, float value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new AbilityClientboundPacket(unitId, false, unitAction, value, new BlockPos(0,0,0))
+        PacketDistributor.sendToAllPlayers(new AbilityClientboundPacket(unitId, false, unitAction, value, new BlockPos(0,0,0))
         );
     }
 
     public static void doAbility(int unitId, UnitAction unitAction, boolean value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new AbilityClientboundPacket(unitId, false, unitAction, value ? 1f : 0f, new BlockPos(0,0,0))
+        PacketDistributor.sendToAllPlayers(new AbilityClientboundPacket(unitId, false, unitAction, value ? 1f : 0f, new BlockPos(0,0,0))
         );
     }
 
     public static void doAbility(int unitId, UnitAction unitAction, float value, BlockPos pos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new AbilityClientboundPacket(unitId, false, unitAction, value, pos)
+        PacketDistributor.sendToAllPlayers(new AbilityClientboundPacket(unitId, false, unitAction, value, pos)
         );
     }
 
@@ -98,12 +102,10 @@ public class AbilityClientboundPacket {
     }
 
     // client-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> {
+        context.enqueueWork(() -> {
+            {
                     Unit unit = null;
                     for (LivingEntity entity : UnitClientEvents.getAllUnits()) {
                         if (entity.getId() == this.unitId && entity instanceof Unit) {
@@ -142,9 +144,7 @@ public class AbilityClientboundPacket {
                         if (unit instanceof WretchedWraithUnit wraithUnit)
                             wraithUnit.blizzard();
                     }
-                });
+                }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

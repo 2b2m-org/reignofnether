@@ -1,5 +1,11 @@
 package com.solegendary.reignofnether.player;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
@@ -7,7 +13,6 @@ import com.solegendary.reignofnether.gamemode.ClientGameModeHelper;
 import com.solegendary.reignofnether.gamemode.GameMode;
 import com.solegendary.reignofnether.gamemode.GameModeServerboundPacket;
 import com.solegendary.reignofnether.hud.HudClientEvents;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.startpos.StartPosServerEvents;
 import com.solegendary.reignofnether.survival.SurvivalClientEvents;
 import com.solegendary.reignofnether.survival.SurvivalServerboundPacket;
@@ -23,15 +28,22 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.NetworkEvent;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class PlayerServerboundPacket {
+public class PlayerServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<PlayerServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:player_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, PlayerServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(PlayerServerboundPacket::encode, PlayerServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<PlayerServerboundPacket> type() {
+        return TYPE;
+    }
     PlayerAction action;
     public int playerId;
     public double x;
@@ -41,7 +53,7 @@ public class PlayerServerboundPacket {
     public static void teleportPlayer(Double x, Double y, Double z) {
         Minecraft MC = Minecraft.getInstance();
         if (MC.player != null) {
-            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(PlayerAction.TELEPORT,
+            PacketDistributor.sendToServer(new PlayerServerboundPacket(PlayerAction.TELEPORT,
                 MC.player.getId(),
                 x, y, z
             ));
@@ -51,7 +63,7 @@ public class PlayerServerboundPacket {
     public static void enableOrthoview() {
         Minecraft MC = Minecraft.getInstance();
         if (MC.player != null) {
-            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(PlayerAction.ENABLE_ORTHOVIEW,
+            PacketDistributor.sendToServer(new PlayerServerboundPacket(PlayerAction.ENABLE_ORTHOVIEW,
                 MC.player.getId(),
                 0d, 0d, 0d
             ));
@@ -61,7 +73,7 @@ public class PlayerServerboundPacket {
     public static void disableOrthoview() {
         Minecraft MC = Minecraft.getInstance();
         if (MC.player != null) {
-            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(PlayerAction.DISABLE_ORTHOVIEW,
+            PacketDistributor.sendToServer(new PlayerServerboundPacket(PlayerAction.DISABLE_ORTHOVIEW,
                 MC.player.getId(),
                 0d, 0d, 0d
             ));
@@ -90,7 +102,7 @@ public class PlayerServerboundPacket {
                 ));
                 default -> PlayerAction.START_RTS_SANDBOX;
             };
-            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(playerAction, MC.player.getId(), x, y, z));
+            PacketDistributor.sendToServer(new PlayerServerboundPacket(playerAction, MC.player.getId(), x, y, z));
             GameModeServerboundPacket.setAndLockAllClientGameModes(ClientGameModeHelper.gameMode);
             if (ClientGameModeHelper.gameMode == GameMode.SURVIVAL) {
                 SurvivalServerboundPacket.startSurvivalMode(SurvivalClientEvents.difficulty);
@@ -153,14 +165,14 @@ public class PlayerServerboundPacket {
         Minecraft MC = Minecraft.getInstance();
         if (MC.player != null && MC.level != null) {
             GameModeServerboundPacket.setAndLockAllClientGameModes(ClientGameModeHelper.gameMode);
-            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(PlayerAction.START_RTS_EVERYONE, MC.player.getId(), 0d,0d,0d));
+            PacketDistributor.sendToServer(new PlayerServerboundPacket(PlayerAction.START_RTS_EVERYONE, MC.player.getId(), 0d,0d,0d));
         }
     }
 
         public static void cancelStartRTSEveryone() {
         Minecraft MC = Minecraft.getInstance();
         if (MC.player != null && MC.level != null) {
-            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(PlayerAction.CANCEL_START_RTS_EVERYONE, MC.player.getId(), 0d,0d,0d));
+            PacketDistributor.sendToServer(new PlayerServerboundPacket(PlayerAction.CANCEL_START_RTS_EVERYONE, MC.player.getId(), 0d,0d,0d));
         }
     }
      */
@@ -168,23 +180,23 @@ public class PlayerServerboundPacket {
     public static void startRTSScenario(int roleIndex) {
         Minecraft MC = Minecraft.getInstance();
         if (MC.player != null && MC.level != null) {
-            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(PlayerAction.START_RTS_SCENARIO, MC.player.getId(), (double) roleIndex, 0d, 0d));
+            PacketDistributor.sendToServer(new PlayerServerboundPacket(PlayerAction.START_RTS_SCENARIO, MC.player.getId(), (double) roleIndex, 0d, 0d));
         }
     }
 
 
     public static void resetRTS() {
-        PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(PlayerAction.RESET_RTS, -1, 0d, 0d, 0d));
+        PacketDistributor.sendToServer(new PlayerServerboundPacket(PlayerAction.RESET_RTS, -1, 0d, 0d, 0d));
     }
 
     public static void publishScenario() {
-        PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(PlayerAction.PUBLISH_SCENARIO_MAP, -1, 0d, 0d, 0d));
+        PacketDistributor.sendToServer(new PlayerServerboundPacket(PlayerAction.PUBLISH_SCENARIO_MAP, -1, 0d, 0d, 0d));
     }
 
     public static void surrender() {
         Minecraft MC = Minecraft.getInstance();
         if (MC.player != null) {
-            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(
+            PacketDistributor.sendToServer(new PlayerServerboundPacket(
                 PlayerAction.DEFEAT,
                 MC.player.getId(),
                 0d, 0d, 0d
@@ -193,14 +205,14 @@ public class PlayerServerboundPacket {
     }
 
     public static void enableRTSSyncing() {
-        PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(
+        PacketDistributor.sendToServer(new PlayerServerboundPacket(
             PlayerAction.ENABLE_RTS_SYNCING,
             -1, 0d, 0d, 0d
         ));
     }
 
     public static void disableRTSSyncing() {
-        PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(
+        PacketDistributor.sendToServer(new PlayerServerboundPacket(
             PlayerAction.DISABLE_RTS_SYNCING,
             -1, 0d, 0d, 0d
         ));
@@ -209,7 +221,7 @@ public class PlayerServerboundPacket {
     public static void requestMarketRates() {
         Minecraft MC = Minecraft.getInstance();
         if (MC.player != null) {
-            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(
+            PacketDistributor.sendToServer(new PlayerServerboundPacket(
                 PlayerAction.REQUEST_MARKET_RATES,
                 MC.player.getId(),
                 0d, 0d, 0d
@@ -257,22 +269,18 @@ public class PlayerServerboundPacket {
     );
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
 
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = (ServerPlayer) context.player();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("PlayerServerboundPacket: Sender was null");
-                success.set(false);
                 return;
             } else if (playerId != -1 && player.getId() != playerId) {
                 ReignOfNether.LOGGER.warn("PlayerServerboundPacket: Tried to process packet from " + player.getName() + " for id: " + this.playerId);
-                success.set(false);
                 return;
             } else if (opOnlyActions.contains(action) && !player.hasPermissions(4)) {
                 ReignOfNether.LOGGER.warn("PlayerServerboundPacket: Non-op player " + player.getName() + " tried to run action: " + this.action.name());
-                success.set(false);
                 return;
             }
 
@@ -305,9 +313,6 @@ public class PlayerServerboundPacket {
                 case DISABLE_RTS_SYNCING -> PlayerServerEvents.setRTSSyncingEnabled(false);
                 case REQUEST_MARKET_RATES -> PlayerServerEvents.updateMarketRates(this.playerId);
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

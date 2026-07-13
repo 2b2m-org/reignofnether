@@ -1,23 +1,32 @@
 
 package com.solegendary.reignofnether.attackwarnings;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class AttackWarningClientboundPacket {
+public class AttackWarningClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<AttackWarningClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:attack_warning_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, AttackWarningClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(AttackWarningClientboundPacket::encode, AttackWarningClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<AttackWarningClientboundPacket> type() {
+        return TYPE;
+    }
 
     private final String attackedPlayerName;
     private final BlockPos attackPos;
 
     public static void sendWarning(String attackedPlayerName, BlockPos attackPos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new AttackWarningClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new AttackWarningClientboundPacket(
                 attackedPlayerName,
                 attackPos
             ));
@@ -43,13 +52,9 @@ public class AttackWarningClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
             AttackWarningClientEvents.checkAndTriggerAttackWarning(attackedPlayerName, attackPos);
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

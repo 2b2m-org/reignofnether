@@ -1,6 +1,9 @@
 package com.solegendary.reignofnether.unit.packets;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
@@ -10,15 +13,20 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class UnitSyncClientboundPacket {
+public class UnitSyncClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<UnitSyncClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:unit_sync_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, UnitSyncClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(UnitSyncClientboundPacket::encode, UnitSyncClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<UnitSyncClientboundPacket> type() {
+        return TYPE;
+    }
 
     private final UnitSyncAction syncAction;
     private final int entityId;
@@ -34,22 +42,19 @@ public class UnitSyncClientboundPacket {
     private final String ownerName;
 
     public static void sendLeavePacket(LivingEntity entity) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitSyncClientboundPacket(UnitSyncAction.LEAVE_LEVEL,
+        PacketDistributor.sendToAllPlayers(new UnitSyncClientboundPacket(UnitSyncAction.LEAVE_LEVEL,
                         entity.getId(),0,0,0,0,0,0,0,0,0, "")
         );
     }
 
     public static void sendSyncOwnerNamePacket(Unit unit) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitSyncClientboundPacket(UnitSyncAction.SYNC_OWNERNAME,
+        PacketDistributor.sendToAllPlayers(new UnitSyncClientboundPacket(UnitSyncAction.SYNC_OWNERNAME,
                         ((LivingEntity) unit).getId(),0,0,0,0,0,0,0,0,0, unit.getOwnerName())
         );
     }
 
     public static void sendSyncScenarioRoleIndexPacket(Unit unit) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitSyncClientboundPacket(UnitSyncAction.SYNC_SCENARIO_ROLE_INDEX,
+        PacketDistributor.sendToAllPlayers(new UnitSyncClientboundPacket(UnitSyncAction.SYNC_SCENARIO_ROLE_INDEX,
                         ((LivingEntity) unit).getId(), unit.getScenarioRoleIndex(),0,0,0,0,0,0,0,0, "")
         );
     }
@@ -62,8 +67,7 @@ public class UnitSyncClientboundPacket {
         if (entity instanceof Unit unit)
             owner = unit.getOwnerName();
 
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new UnitSyncClientboundPacket(UnitSyncAction.SYNC_STATS,
+        PacketDistributor.sendToAllPlayers(new UnitSyncClientboundPacket(UnitSyncAction.SYNC_STATS,
                 entity.getId(), 0,
                 entity.getHealth(),
                 entity.getAbsorptionAmount(),
@@ -74,16 +78,14 @@ public class UnitSyncClientboundPacket {
 
     public static void sendSyncResourcesPacket(Unit unit) {
         Resources res = Resources.getTotalResourcesFromItems(unit.getItems());
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-            new UnitSyncClientboundPacket(UnitSyncAction.SYNC_RESOURCES,
+        PacketDistributor.sendToAllPlayers(new UnitSyncClientboundPacket(UnitSyncAction.SYNC_RESOURCES,
                 ((LivingEntity) unit).getId(), 0,0,0,0,0,0,
                 res.food, res.wood, res.ore, "")
         );
     }
 
     public static void makeVillagerVeteran(LivingEntity entity) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitSyncClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new UnitSyncClientboundPacket(
                         UnitSyncAction.MAKE_VILLAGER_VETERAN,
                         entity.getId(), 0,
                         0, 0,0,0,0,0,0,0, "")
@@ -91,8 +93,7 @@ public class UnitSyncClientboundPacket {
     }
 
     public static void sendSyncAnchorPosPacket(LivingEntity entity, BlockPos bp) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitSyncClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new UnitSyncClientboundPacket(
                         UnitSyncAction.SYNC_ANCHOR_POS,
                         entity.getId(), 0,0,
                         0, bp.getX(), bp.getY(), bp.getZ(),0,0,0, "")
@@ -100,8 +101,7 @@ public class UnitSyncClientboundPacket {
     }
 
     public static void sendRemoveAnchorPosPacket(LivingEntity entity) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new UnitSyncClientboundPacket(
+        PacketDistributor.sendToAllPlayers(new UnitSyncClientboundPacket(
                         UnitSyncAction.SYNC_ANCHOR_POS,
                         entity.getId(), 0,0,
                         0,0,0,0,0,0,0, "")
@@ -169,12 +169,10 @@ public class UnitSyncClientboundPacket {
     }
 
     // client-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> {
+        context.enqueueWork(() -> {
+            {
                     switch (this.syncAction) {
                         case LEAVE_LEVEL -> UnitClientEvents.onEntityLeave(this.entityId);
                         case SYNC_OWNERNAME -> UnitClientEvents.syncOwnerName(this.entityId, ownerName);
@@ -197,9 +195,7 @@ public class UnitSyncClientboundPacket {
                         );
                         case REMOVE_ANCHOR_POS -> UnitClientEvents.removeAnchorPos(this.entityId);
                     }
-                });
+                }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

@@ -1,34 +1,39 @@
 package com.solegendary.reignofnether.fogofwar;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class FrozenChunkClientboundPacket {
+public class FrozenChunkClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<FrozenChunkClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:frozen_chunk_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, FrozenChunkClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(FrozenChunkClientboundPacket::encode, FrozenChunkClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<FrozenChunkClientboundPacket> type() {
+        return TYPE;
+    }
 
     FrozenChunkAction action;
     BlockPos blockPos;
 
     public static void setBuildingDestroyedServerside(BlockPos buildingOrigin) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new FrozenChunkClientboundPacket(FrozenChunkAction.SET_BUILDING_DESTROYED, buildingOrigin));
+        PacketDistributor.sendToAllPlayers(new FrozenChunkClientboundPacket(FrozenChunkAction.SET_BUILDING_DESTROYED, buildingOrigin));
     }
 
     public static void setBuildingBuiltServerside(BlockPos buildingOrigin) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new FrozenChunkClientboundPacket(FrozenChunkAction.SET_BUILDING_BUILT, buildingOrigin));
+        PacketDistributor.sendToAllPlayers(new FrozenChunkClientboundPacket(FrozenChunkAction.SET_BUILDING_BUILT, buildingOrigin));
     }
 
     public static void unmuteChunks() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new FrozenChunkClientboundPacket(FrozenChunkAction.UNMUTE, new BlockPos(0,0,0)));
+        PacketDistributor.sendToAllPlayers(new FrozenChunkClientboundPacket(FrozenChunkAction.UNMUTE, new BlockPos(0,0,0)));
     }
 
     // packet-handler functions
@@ -48,21 +53,16 @@ public class FrozenChunkClientboundPacket {
     }
 
     // client-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                    () -> () -> {
+        context.enqueueWork(() -> {
+            {
                         switch (action) {
                             case SET_BUILDING_DESTROYED -> FogOfWarClientEvents.setBuildingDestroyedServerside(blockPos);
                             case SET_BUILDING_BUILT -> FogOfWarClientEvents.setBuildingBuiltServerside(blockPos);
                             case UNMUTE -> FogOfWarClientEvents.unmuteChunks();
                         }
-                        success.set(true);
-                    });
+                    }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

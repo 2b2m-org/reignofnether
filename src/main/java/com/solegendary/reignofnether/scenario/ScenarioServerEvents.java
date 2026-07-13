@@ -7,7 +7,6 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -89,7 +88,7 @@ public class ScenarioServerEvents {
 
     public static void syncScenarioRoles() {
         for (ScenarioRole role : scenarioRoles) {
-            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new ScenarioClientboundPacket(
+            PacketDistributor.sendToAllPlayers(new ScenarioClientboundPacket(
                     ScenarioAction.LOAD_SCENARIO_ROLE, role.nbt
             ));
         }

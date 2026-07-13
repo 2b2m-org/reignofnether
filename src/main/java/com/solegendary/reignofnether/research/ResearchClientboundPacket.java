@@ -1,18 +1,26 @@
 package com.solegendary.reignofnether.research;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class ResearchClientboundPacket {
+public class ResearchClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<ResearchClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:research_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, ResearchClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(ResearchClientboundPacket::encode, ResearchClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<ResearchClientboundPacket> type() {
+        return TYPE;
+    }
 
     public String playerName;
     public String itemName;
@@ -21,20 +29,16 @@ public class ResearchClientboundPacket {
     public int value;
 
     public static void addCheat(String playerName, String itemName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new ResearchClientboundPacket(playerName, itemName, true, true, 0));
+        PacketDistributor.sendToAllPlayers(new ResearchClientboundPacket(playerName, itemName, true, true, 0));
     }
     public static void addCheatWithValue(String playerName, String itemName, int value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new ResearchClientboundPacket(playerName, itemName, true, true, value));
+        PacketDistributor.sendToAllPlayers(new ResearchClientboundPacket(playerName, itemName, true, true, value));
     }
     public static void removeCheat(String playerName, String itemName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new ResearchClientboundPacket(playerName, itemName, false, true, 0));
+        PacketDistributor.sendToAllPlayers(new ResearchClientboundPacket(playerName, itemName, false, true, 0));
     }
     public static void addResearch(String playerName, String itemName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new ResearchClientboundPacket(playerName, itemName, true, false, 0));
+        PacketDistributor.sendToAllPlayers(new ResearchClientboundPacket(playerName, itemName, true, false, 0));
     }
 
     public ResearchClientboundPacket(String playerName, String itemName, boolean add, boolean isCheat, int value) {
@@ -62,12 +66,10 @@ public class ResearchClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                    () -> () -> {
+        context.enqueueWork(() -> {
+            {
                         if (Minecraft.getInstance().player.getName().getString().equals(this.playerName)) {
                             if (isCheat) {
                                 if (value > 0)
@@ -81,10 +83,7 @@ public class ResearchClientboundPacket {
                                     ResearchClient.addResearch(this.playerName, ResourceLocation.tryParse(this.itemName));
                             }
                         }
-                        success.set(true);
-                    });
+                    }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

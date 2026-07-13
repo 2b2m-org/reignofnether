@@ -1,27 +1,34 @@
 package com.solegendary.reignofnether.gamemode;
 
-import com.solegendary.reignofnether.registrars.PacketHandler;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.startpos.StartPosClientEvents;
 import com.solegendary.reignofnether.startpos.StartPosServerboundPacket;
 import com.solegendary.reignofnether.faction.Faction;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class GameModeClientboundPacket {
+public class GameModeClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<GameModeClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:game_mode_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, GameModeClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(GameModeClientboundPacket::encode, GameModeClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<GameModeClientboundPacket> type() {
+        return TYPE;
+    }
 
     public GameMode gameMode;
 
     // sets the gamemode of all players
     // unlocked and reset back to
     public static void setAndLockAllClientGameModes(GameMode mode) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new GameModeClientboundPacket(mode));
+        PacketDistributor.sendToAllPlayers(new GameModeClientboundPacket(mode));
     }
 
     public GameModeClientboundPacket(GameMode gameMode) {
@@ -37,12 +44,10 @@ public class GameModeClientboundPacket {
     }
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
+    public void handle(IPayloadContext context) {
 
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                    () -> () -> {
+        context.enqueueWork(() -> {
+            {
                         if (gameMode != GameMode.NONE) {
                             ClientGameModeHelper.gameModeLocked = true;
                             ClientGameModeHelper.gameMode = this.gameMode;
@@ -53,10 +58,7 @@ public class GameModeClientboundPacket {
                         } else {
                             ClientGameModeHelper.gameModeLocked = false;
                         }
-                        success.set(true);
-                    });
+                    }
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

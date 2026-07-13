@@ -1,5 +1,11 @@
 package com.solegendary.reignofnether.scenario;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingClientboundPacket;
@@ -8,7 +14,6 @@ import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.sandbox.SandboxServer;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
@@ -20,15 +25,22 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.neoforge.network.NetworkEvent;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 import static com.solegendary.reignofnether.scenario.ScenarioAction.*;
 
-public class ScenarioServerboundPacket {
+public class ScenarioServerboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<ScenarioServerboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:scenario_serverbound");
+    public static final StreamCodec<FriendlyByteBuf, ScenarioServerboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(ScenarioServerboundPacket::encode, ScenarioServerboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<ScenarioServerboundPacket> type() {
+        return TYPE;
+    }
 
     public ScenarioAction action;
     public int roleIndex;
@@ -41,12 +53,12 @@ public class ScenarioServerboundPacket {
 
     public static void setUnitRole(int roleIndex, int unitId) {
         if (!MiscUtil.isConnected()) return;
-        PacketHandler.INSTANCE.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SET_UNIT_ROLE, roleIndex, 0,0,0, false, unitId, ""));
+        PacketDistributor.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SET_UNIT_ROLE, roleIndex, 0,0,0, false, unitId, ""));
     }
 
     public static void setBuildingRole(int roleIndex, BlockPos bp) {
         if (!MiscUtil.isConnected()) return;
-        PacketHandler.INSTANCE.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SET_BUILDING_ROLE, roleIndex, bp.getX(), bp.getY(), bp.getZ(), false, 0, ""));
+        PacketDistributor.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SET_BUILDING_ROLE, roleIndex, bp.getX(), bp.getY(), bp.getZ(), false, 0, ""));
     }
 
     public static void setStartingResources(int roleIndex, ResourceName resName, int amount) {
@@ -58,12 +70,12 @@ public class ScenarioServerboundPacket {
             case NONE -> null;
         };
         if (scenarioAction != null)
-            PacketHandler.INSTANCE.sendToServer(new ScenarioServerboundPacket(scenarioAction, roleIndex, 0,0,0, false, amount, ""));
+            PacketDistributor.sendToServer(new ScenarioServerboundPacket(scenarioAction, roleIndex, 0,0,0, false, amount, ""));
     }
 
     public static void setTeamNumber(int roleIndex, int teamNumber) {
         if (!MiscUtil.isConnected()) return;
-        PacketHandler.INSTANCE.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SET_ROLE_TEAM_NUMBER, roleIndex, 0,0,0, false, teamNumber, ""));
+        PacketDistributor.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SET_ROLE_TEAM_NUMBER, roleIndex, 0,0,0, false, teamNumber, ""));
     }
 
     public static void setRoleFaction(int roleIndex, Faction faction) {
@@ -74,22 +86,22 @@ public class ScenarioServerboundPacket {
             case PIGLINS -> ScenarioAction.SET_ROLE_FACTION_PIGLIN;
             default -> ScenarioAction.SET_ROLE_FACTION_NEUTRAL;
         };
-        PacketHandler.INSTANCE.sendToServer(new ScenarioServerboundPacket(scenarioAction, roleIndex, 0,0,0, false, 0, ""));
+        PacketDistributor.sendToServer(new ScenarioServerboundPacket(scenarioAction, roleIndex, 0,0,0, false, 0, ""));
     }
 
     public static void setRoleIsNpc(int roleIndex, boolean isNpc) {
         if (!MiscUtil.isConnected()) return;
-        PacketHandler.INSTANCE.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SET_ROLE_NPC, roleIndex, 0,0,0, isNpc, 0, ""));
+        PacketDistributor.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SET_ROLE_NPC, roleIndex, 0,0,0, isNpc, 0, ""));
     }
 
     public static void setRoleName(int roleIndex, String name) {
         if (!MiscUtil.isConnected()) return;
-        PacketHandler.INSTANCE.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SET_ROLE_NAME, roleIndex, 0,0,0, false, 0, name));
+        PacketDistributor.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SET_ROLE_NAME, roleIndex, 0,0,0, false, 0, name));
     }
 
     public static void saveScenario() {
         if (!MiscUtil.isConnected()) return;
-        PacketHandler.INSTANCE.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SAVE_SCENARIO, 0, 0,0,0, false, 0, ""));
+        PacketDistributor.sendToServer(new ScenarioServerboundPacket(ScenarioAction.SAVE_SCENARIO, 0, 0,0,0, false, 0, ""));
     }
 
     public ScenarioServerboundPacket(ScenarioAction action, int roleIndex, int x, int y, int z,
@@ -134,9 +146,8 @@ public class ScenarioServerboundPacket {
     );
 
     // server-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
             if (!SandboxServer.isAnyoneASandboxPlayer())
                 return;
 
@@ -161,7 +172,7 @@ public class ScenarioServerboundPacket {
                 }
                 case SET_ROLE_TEAM_NUMBER -> {
                     role.teamNumber = intValue;
-                    ServerPlayer serverPlayer = ctx.get().getSender();
+                    ServerPlayer serverPlayer = (ServerPlayer) context.player();
                     if (serverPlayer != null) {
                         MinecraftServer server = serverPlayer.level().getServer();
                         if (server != null) {
@@ -192,9 +203,6 @@ public class ScenarioServerboundPacket {
                 }
                 case SAVE_SCENARIO -> ScenarioServerEvents.saveScenarioRoles();
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }

@@ -1,28 +1,38 @@
 package com.solegendary.reignofnether.ability;
 
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.buildings.monsters.Graveyard;
 import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
 import com.solegendary.reignofnether.building.buildings.villagers.Blacksmith;
 import com.solegendary.reignofnether.building.buildings.villagers.Library;
-import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitAction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.neoforge.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-public class BuildingAbilityClientboundPacket {
+public class BuildingAbilityClientboundPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<BuildingAbilityClientboundPacket> TYPE =
+        CustomPacketPayload.createType("reignofnether:building_ability_clientbound");
+    public static final StreamCodec<FriendlyByteBuf, BuildingAbilityClientboundPacket> STREAM_CODEC =
+        StreamCodec.ofMember(BuildingAbilityClientboundPacket::encode, BuildingAbilityClientboundPacket::new);
+
+    @Override
+    public CustomPacketPayload.Type<BuildingAbilityClientboundPacket> type() {
+        return TYPE;
+    }
 
     UnitAction abilityAction;
     BlockPos buildingPos;
 
     public static void doAbility(UnitAction ability, BlockPos buildingPos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new BuildingAbilityClientboundPacket(ability, buildingPos));
+        PacketDistributor.sendToAllPlayers(new BuildingAbilityClientboundPacket(ability, buildingPos));
     }
 
     // packet-handler functions
@@ -42,9 +52,8 @@ public class BuildingAbilityClientboundPacket {
     }
 
     // client-side packet-consuming functions
-    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
-        final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+    public void handle(IPayloadContext context) {
+        context.enqueueWork(() -> {
             BuildingPlacement building = BuildingUtils.findBuilding(true, buildingPos);
             if (building != null && building.getBuilding() instanceof Library) {
                 Ability ability = null;
@@ -73,9 +82,6 @@ public class BuildingAbilityClientboundPacket {
                 else if (abilityAction == UnitAction.SET_GRAVEYARD_RELEASE_OFF)
                     gy.autoRelease = false;
             }
-            success.set(true);
         });
-        ctx.get().setPacketHandled(true);
-        return success.get();
     }
 }
