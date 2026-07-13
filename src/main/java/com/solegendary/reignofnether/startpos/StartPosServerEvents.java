@@ -56,14 +56,18 @@ public class StartPosServerEvents {
     }
 
     public static void setPlayerReady(String playerName, boolean ready) {
-        boolean shouldStartGame = true;
+        StartPos playerPos = null;
         for (StartPos startPos : startPoses) {
-            if (startPos.playerName.equals(playerName))
-                startPos.ready = ready;
-            if (startPos.enabled && (!startPos.ready || startPos.playerName.isBlank()))
-                shouldStartGame = false;
+            if (startPos.enabled && startPos.playerName.equals(playerName)) {
+                playerPos = startPos;
+                break;
+            }
         }
-        if (shouldStartGame) {
+        if (playerPos == null || (ready && !isPlayableFaction(playerPos.faction)))
+            return;
+
+        playerPos.ready = ready;
+        if (canStartGame()) {
             startGameCountdown();
         } else if (startingGame) {
             cancelStartGameCountdown(false);
@@ -72,6 +76,27 @@ public class StartPosServerEvents {
             StartPosClientboundPacket.readyPlayer(playerName);
         else
             StartPosClientboundPacket.unreadyPlayer(playerName);
+    }
+
+    static boolean isReservableFaction(Faction faction) {
+        return faction == Faction.NONE || isPlayableFaction(faction);
+    }
+
+    private static boolean isPlayableFaction(Faction faction) {
+        return faction == Faction.VILLAGERS || faction == Faction.MONSTERS ||
+                faction == Faction.PIGLINS || faction == Faction.RANDOM;
+    }
+
+    private static boolean canStartGame() {
+        boolean hasEnabledPos = false;
+        for (StartPos startPos : startPoses) {
+            if (!startPos.enabled)
+                continue;
+            hasEnabledPos = true;
+            if (startPos.playerName.isBlank() || !startPos.ready || !isPlayableFaction(startPos.faction))
+                return false;
+        }
+        return hasEnabledPos;
     }
 
     public static void setPosEnabled(BlockPos pos, boolean enable) {

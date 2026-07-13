@@ -717,14 +717,14 @@ public class MatchStartScreen extends Screen {
         String name = Minecraft.getInstance().player.getName().getString();
         if (pos.playerName.isBlank()) {
             StartPosClientEvents.selectedFaction = faction;
-            StartPosServerboundPacket.reservePos(pos.pos, faction, name);
+            StartPosServerboundPacket.reservePos(pos.pos, faction);
         } else if (pos.playerName.equals(name)) {
             if (pos.faction == faction) {
                 StartPosClientEvents.selectedFaction = Faction.NONE;
-                StartPosServerboundPacket.reservePos(pos.pos, Faction.NONE, name);
+                StartPosServerboundPacket.reservePos(pos.pos, Faction.NONE);
             } else {
                 StartPosClientEvents.selectedFaction = faction;
-                StartPosServerboundPacket.reservePos(pos.pos, faction, name);
+                StartPosServerboundPacket.reservePos(pos.pos, faction);
             }
         }
         if (pos.ready) {
@@ -738,17 +738,16 @@ public class MatchStartScreen extends Screen {
         if (pos.playerName.equals(name)) {
             StartPosServerboundPacket.unreservePos(pos.pos);
         } else if (pos.playerName.isBlank()) {
-            StartPosServerboundPacket.reservePos(pos.pos, StartPosClientEvents.selectedFaction, name);
+            StartPosServerboundPacket.reservePos(pos.pos, StartPosClientEvents.selectedFaction);
         }
     }
 
     private void toggleReady(StartPos pos) {
         if (Minecraft.getInstance().player == null) return;
-        String name = Minecraft.getInstance().player.getName().getString();
         if (pos.ready) {
-            StartPosServerboundPacket.unreadyPlayer(name);
+            StartPosServerboundPacket.unreadyPlayer();
         } else {
-            StartPosServerboundPacket.readyPlayer(name);
+            StartPosServerboundPacket.readyPlayer();
         }
     }
 

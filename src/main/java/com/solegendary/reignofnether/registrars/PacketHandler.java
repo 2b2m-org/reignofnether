@@ -54,7 +54,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 // Registers all play-phase client/server payloads.
 public final class PacketHandler {
-    private static final String PROTOCOL_VERSION = "1";
+    private static final String PROTOCOL_VERSION = "2";
 
     private PacketHandler() { }
 

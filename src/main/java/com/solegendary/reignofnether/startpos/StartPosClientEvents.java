@@ -96,7 +96,7 @@ public class StartPosClientEvents {
                 () -> hasReservedPos() && selectedFaction != Faction.NONE,
                 () -> {
                     if (MC.player != null)
-                        StartPosServerboundPacket.readyPlayer(MC.player.getName().getString());
+                        StartPosServerboundPacket.readyPlayer();
                 },
                 null,
                 getReadyButtonTooltip()
@@ -140,7 +140,7 @@ public class StartPosClientEvents {
                 () -> true,
                 () -> {
                     if (MC.player != null)
-                        StartPosServerboundPacket.unreadyPlayer(MC.player.getName().getString());
+                        StartPosServerboundPacket.unreadyPlayer();
                 },
                 null,
                 List.of(

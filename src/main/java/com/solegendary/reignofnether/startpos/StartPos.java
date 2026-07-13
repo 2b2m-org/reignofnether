@@ -116,7 +116,7 @@ public class StartPos {
                     if (StartPosClientEvents.getPos() == this)
                         StartPosServerboundPacket.unreservePos(pos);
                     else {
-                        StartPosServerboundPacket.reservePos(pos, StartPosClientEvents.selectedFaction, localPlayerName);
+                        StartPosServerboundPacket.reservePos(pos, StartPosClientEvents.selectedFaction);
                     }
                 })
                 .onRightClick(() -> {
