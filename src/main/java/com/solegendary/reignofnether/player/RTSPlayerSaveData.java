@@ -10,6 +10,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.saveddata.SavedData;
 
@@ -63,7 +64,11 @@ public class RTSPlayerSaveData extends SavedData {
                 tradeRates.put(TradeAction.ORE_FOR_FOOD, ptag.contains("oreFoodRate") ? ptag.getInt("oreFoodRate") : TradeResources.START_RATE);
                 tradeRates.put(TradeAction.ORE_FOR_WOOD, ptag.contains("oreWoodRate") ? ptag.getInt("oreWoodRate") : TradeResources.START_RATE);
 
-                data.rtsPlayers.add(RTSPlayer.getFromSave(name, id, ticksWithoutCapitol, faction, beaconOwnerTicks, scores, scenarioRoleIndex, tradeRates));
+                boolean aiControlled = ptag.getBoolean("aiControlled");
+                BlockPos aiHomePos = ptag.contains("aiHomePos") ? BlockPos.of(ptag.getLong("aiHomePos")) : null;
+
+                data.rtsPlayers.add(RTSPlayer.getFromSave(name, id, ticksWithoutCapitol, faction, beaconOwnerTicks,
+                        scores, scenarioRoleIndex, tradeRates, aiControlled, aiHomePos));
 
                 ReignOfNether.LOGGER.info("RTSPlayerSaveData.load: " + name + "|" + id + "|" + faction);
             }
@@ -91,6 +96,9 @@ public class RTSPlayerSaveData extends SavedData {
             cTag.putInt("woodOreRate", p.tradeRates.get(TradeAction.WOOD_FOR_ORE));
             cTag.putInt("oreFoodRate", p.tradeRates.get(TradeAction.ORE_FOR_FOOD));
             cTag.putInt("oreWoodRate", p.tradeRates.get(TradeAction.ORE_FOR_WOOD));
+            cTag.putBoolean("aiControlled", p.aiControlled);
+            if (p.aiHomePos != null)
+                cTag.putLong("aiHomePos", p.aiHomePos.asLong());
             list.add(cTag);
 
             //ReignOfNether.LOGGER.info("RTSPlayerSaveData.save: " + p.name + "|" + p.id + "|" + p.faction);

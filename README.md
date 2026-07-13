@@ -33,6 +33,20 @@ The jar is written to `build/libs/reignofnether-1.3.8a-1.21.1.jar`. Copy that ex
 
 Published Minecraft 1.20.1 versions still use their matching Forge release. Mod versions 1.1.3 and earlier use Forge 1.19.2.
 
+## Basic AI opponents
+
+Operators can add AI-controlled RTS players from the server console or in-game chat:
+
+```text
+/rts-bot add <name> <villagers|monsters|piglins> [x y z]
+/rts-bot list
+/rts-bot remove <name>
+```
+
+If the position is omitted, the bot starts near the command source. The bot uses normal resource costs and the same gathering, construction, production, and combat command paths as a human player. It builds a small economy, trains a mixed basic army, and attacks enemy structures after reaching five military units.
+
+For faster development matches, `/rts-bot speed <name> true` enables the existing accelerated build, production, and gathering timings for that bot. Set it back to `false` for normal match timing. Bot ownership and home positions are saved across server restarts; tutorial NPC bots remain separately scripted.
+
 ## License
 
 GNU General Public License v3.0

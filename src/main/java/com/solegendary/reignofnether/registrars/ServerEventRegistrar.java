@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.registrars;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.attackwarnings.AttackWarningServerEvents;
 import com.solegendary.reignofnether.blocks.BlockServerEvents;
+import com.solegendary.reignofnether.bot.BotServerEvents;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingServerEvents;
 import com.solegendary.reignofnether.commands.CommandsServerEvents;
@@ -45,6 +46,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(GameruleServerEvents.class);
         vanillaEventBus.register(BlockServerEvents.class);
         vanillaEventBus.register(PlayerServerEvents.class);
+        vanillaEventBus.register(BotServerEvents.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);
