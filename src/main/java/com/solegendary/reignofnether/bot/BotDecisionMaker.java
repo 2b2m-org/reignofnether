@@ -101,16 +101,14 @@ public final class BotDecisionMaker {
     public static ArmyOrder chooseArmyOrder(BotDifficulty difficulty, BotPersonality personality,
                                              int armyPopulation, int visibleEnemyPopulation,
                                              boolean attackCommitted,
-                                             boolean homeThreat,
-                                             boolean rangedFlyingThreat) {
+                                             boolean homeThreat) {
         if (homeThreat)
             return ArmyOrder.DEFEND;
         int retreatPopulation = retreatPopulation(difficulty, personality);
         if (attackCommitted && retreatPopulation > 0 && armyPopulation < retreatPopulation
                 && visibleEnemyPopulation >= armyPopulation)
             return ArmyOrder.RETREAT;
-        if (attackCommitted || rangedFlyingThreat
-                || armyPopulation >= attackPopulation(difficulty, personality))
+        if (attackCommitted || armyPopulation >= attackPopulation(difficulty, personality))
             return ArmyOrder.ATTACK_MOVE;
         return ArmyOrder.HOLD;
     }
@@ -137,15 +135,13 @@ public final class BotDecisionMaker {
     }
 
     public static boolean shouldFocusEnemyArmy(boolean enemyThreatensHome, boolean attackCommitted,
-                                                int armyPopulation, int nearbyEnemyPopulation,
-                                                boolean hasRangedResponder, boolean flyingEnemyVisible) {
-        return nearbyEnemyPopulation > 0 && ((hasRangedResponder && flyingEnemyVisible)
-                || enemyThreatensHome || !attackCommitted
+                                                int armyPopulation, int nearbyEnemyPopulation) {
+        return nearbyEnemyPopulation > 0 && (enemyThreatensHome || !attackCommitted
                 || nearbyEnemyPopulation * 3 >= armyPopulation);
     }
 
     static int rangedTargetPriority(boolean threatensHome, boolean flying) {
-        return (threatensHome ? 0 : 2) + (flying ? 0 : 1);
+        return (flying ? 0 : 2) + (threatensHome ? 0 : 1);
     }
 
     public static ScoutWaypointDecision evaluateScoutWaypoint(boolean reached, double bestDistance,

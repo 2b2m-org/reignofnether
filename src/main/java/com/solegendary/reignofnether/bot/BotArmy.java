@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -117,7 +118,7 @@ final class BotArmy {
 
         BotDecisionMaker.ArmyOrder armyOrder = BotDecisionMaker.chooseArmyOrder(
                 difficulty, personality, mainPopulation, tacticalEnemyPopulation,
-                attackCommitted, homeThreat, rangedFlyingThreat);
+                attackCommitted, homeThreat);
         if (armyOrder == BotDecisionMaker.ArmyOrder.DEFEND) {
             BlockPos target = defenseTarget.getClosestGroundPos(armyPos, 1);
             if (rangedFlyingThreat)
@@ -143,7 +144,7 @@ final class BotArmy {
         }
 
         if (shouldEngageEnemyArmy(tacticalEnemyArmy, mainPopulation, player.aiHomePos,
-                attackCommitted, hasRangedResponder)) {
+                attackCommitted)) {
             if (objective != null)
                 objectiveLastProgressTick = tick;
             LivingEntity groundTarget = selectGroundTarget(
@@ -348,17 +349,13 @@ final class BotArmy {
     }
 
     private boolean shouldEngageEnemyArmy(List<LivingEntity> enemies, int armyPopulation, BlockPos homePos,
-                                          boolean attackCommitted, boolean hasRangedResponder) {
-        List<LivingEntity> eligibleEnemies = hasRangedResponder
-                ? enemies
-                : enemies.stream().filter(enemy -> !isFlying(enemy)).toList();
-        boolean homeThreat = eligibleEnemies.stream().anyMatch(enemy ->
+                                          boolean attackCommitted) {
+        List<LivingEntity> groundEnemies = enemies.stream().filter(enemy -> !isFlying(enemy)).toList();
+        boolean homeThreat = groundEnemies.stream().anyMatch(enemy ->
                 enemy.blockPosition().distSqr(homePos) <= HOME_INTERCEPTION_DISTANCE_SQR);
-        boolean flyingEnemyVisible = enemies.stream().anyMatch(BotArmy::isFlying);
-        int enemyPopulation = BotSelf.population(eligibleEnemies);
+        int enemyPopulation = BotSelf.population(groundEnemies);
         return BotDecisionMaker.shouldFocusEnemyArmy(
-                homeThreat, attackCommitted, armyPopulation, enemyPopulation,
-                hasRangedResponder, flyingEnemyVisible);
+                homeThreat, attackCommitted, armyPopulation, enemyPopulation);
     }
 
     private LivingEntity selectGroundTarget(List<LivingEntity> enemies, BlockPos armyPos, BlockPos homePos) {
@@ -494,7 +491,8 @@ final class BotArmy {
         int[] rangedIds = army.stream()
                 .filter(RangedAttackerUnit.class::isInstance)
                 .filter(entity -> !(entity instanceof Unit unit)
-                        || unit.getTargetGoal().getTarget() != rangedTarget
+                        || !(entity instanceof Mob mob)
+                        || mob.getTarget() != rangedTarget
                         || !unit.getTargetGoal().forced)
                 .mapToInt(LivingEntity::getId)
                 .toArray();

@@ -169,7 +169,7 @@ class BotDecisionMakerTest {
                 int target = BotDecisionMaker.targetArmyPopulation(difficulty, personality);
                 assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
                         BotDecisionMaker.chooseArmyOrder(difficulty, personality, target - 3,
-                                0, false, false, false),
+                                0, false, false),
                         () -> difficulty + "/" + personality + " gate must be reachable with a scout reserved");
             }
         }
@@ -256,45 +256,43 @@ class BotDecisionMakerTest {
         assertAll(
                 () -> assertEquals(BotDecisionMaker.ArmyOrder.DEFEND,
                         BotDecisionMaker.chooseArmyOrder(BotDifficulty.EASY, BotPersonality.STEADY,
-                                1, 1, false, true, false)),
+                                1, 1, false, true)),
                 () -> assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
                         BotDecisionMaker.chooseArmyOrder(BotDifficulty.MEDIUM, BotPersonality.STEADY,
-                                24, 0, false, false, false)),
+                                24, 0, false, false)),
                 () -> assertEquals(BotDecisionMaker.ArmyOrder.RETREAT,
                         BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
-                                15, 15, true, false, false)),
+                                15, 15, true, false)),
                 () -> assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
                         BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
-                                15, 3, true, false, false)),
+                                15, 3, true, false)),
                 () -> assertEquals(BotDecisionMaker.ArmyOrder.HOLD,
                         BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
-                                15, 0, false, false, false)),
-                () -> assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
+                                15, 0, false, false)),
+                () -> assertEquals(BotDecisionMaker.ArmyOrder.HOLD,
                         BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
-                                3, 6, false, false, true)),
+                                3, 6, false, false)),
                 () -> assertTrue(BotDecisionMaker.shouldFocusEnemyArmy(
-                        false, true, 36, 12, false, false)),
+                        false, true, 36, 12)),
                 () -> assertFalse(BotDecisionMaker.shouldFocusEnemyArmy(
-                        false, true, 36, 9, false, false)),
+                        false, true, 36, 9)),
                 () -> assertTrue(BotDecisionMaker.shouldFocusEnemyArmy(
-                        true, true, 36, 3, false, false)),
+                        true, true, 36, 3)),
                 () -> assertTrue(BotDecisionMaker.shouldDefend(BotPersonality.TURTLE, true, false)),
                 () -> assertTrue(BotDecisionMaker.shouldDefend(BotPersonality.RUSHER, true, true))
         );
     }
 
     @Test
-    void rangedRespondersEngageIsolatedFlyersAndPrioritizeHomeThreats() {
+    void rangedTargetingPrioritizesFlyersWithoutOpeningTheStrategicGate() {
         assertAll(
-                () -> assertTrue(BotDecisionMaker.shouldFocusEnemyArmy(
-                        false, true, 36, 3, true, true)),
                 () -> assertFalse(BotDecisionMaker.shouldFocusEnemyArmy(
-                        false, true, 36, 3, false, true)),
+                        false, true, 36, 3)),
                 () -> assertTrue(BotDecisionMaker.rangedTargetPriority(true, true)
-                        < BotDecisionMaker.rangedTargetPriority(true, false)),
-                () -> assertTrue(BotDecisionMaker.rangedTargetPriority(true, false)
                         < BotDecisionMaker.rangedTargetPriority(false, true)),
                 () -> assertTrue(BotDecisionMaker.rangedTargetPriority(false, true)
+                        < BotDecisionMaker.rangedTargetPriority(true, false)),
+                () -> assertTrue(BotDecisionMaker.rangedTargetPriority(true, false)
                         < BotDecisionMaker.rangedTargetPriority(false, false))
         );
     }
