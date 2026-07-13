@@ -1,10 +1,19 @@
 package com.solegendary.reignofnether.bot;
 
 public final class BotDecisionMaker {
+    private static final double SCOUT_PROGRESS_BLOCKS = 4;
+    private static final int SCOUT_STALL_TICKS = 600;
+
     public enum ArmyUnitChoice {
         NONE,
         MELEE,
         RANGED
+    }
+
+    public enum ScoutWaypointDecision {
+        KEEP,
+        PROGRESS,
+        REPLACE
     }
 
     private BotDecisionMaker() {
@@ -71,5 +80,16 @@ public final class BotDecisionMaker {
         if (difficulty == BotDifficulty.HARD && productionBuilding)
             return 1;
         return difficulty == BotDifficulty.HARD ? 2 : 1;
+    }
+
+    public static ScoutWaypointDecision evaluateScoutWaypoint(boolean reached, double bestDistance,
+                                                               double currentDistance, int ticksSinceProgress) {
+        if (reached)
+            return ScoutWaypointDecision.REPLACE;
+        if (currentDistance <= bestDistance - SCOUT_PROGRESS_BLOCKS)
+            return ScoutWaypointDecision.PROGRESS;
+        if (ticksSinceProgress >= SCOUT_STALL_TICKS)
+            return ScoutWaypointDecision.REPLACE;
+        return ScoutWaypointDecision.KEEP;
     }
 }

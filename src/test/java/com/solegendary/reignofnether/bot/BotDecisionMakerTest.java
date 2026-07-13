@@ -150,6 +150,20 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void progressingScoutDoesNotRotateAtTheOldAbsoluteTimeout() {
+        assertAll(
+                () -> assertEquals(BotDecisionMaker.ScoutWaypointDecision.PROGRESS,
+                        BotDecisionMaker.evaluateScoutWaypoint(false, 150, 140, 600)),
+                () -> assertEquals(BotDecisionMaker.ScoutWaypointDecision.KEEP,
+                        BotDecisionMaker.evaluateScoutWaypoint(false, 140, 138, 100)),
+                () -> assertEquals(BotDecisionMaker.ScoutWaypointDecision.REPLACE,
+                        BotDecisionMaker.evaluateScoutWaypoint(false, 140, 140, 600)),
+                () -> assertEquals(BotDecisionMaker.ScoutWaypointDecision.REPLACE,
+                        BotDecisionMaker.evaluateScoutWaypoint(true, 12, 12, 0))
+        );
+    }
+
+    @Test
     void decisionsAreDeterministicAtEveryDifficulty() {
         BotDecisionContext context = new BotDecisionContext(
                 true, true, 7, 7, 20, false, 1, 3,

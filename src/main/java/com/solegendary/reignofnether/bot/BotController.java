@@ -36,7 +36,6 @@ import java.util.Map;
 
 public final class BotController {
     private static final int TARGET_REVISIT_TICKS = 600;
-    private static final int SCOUT_TARGET_TIMEOUT_TICKS = 600;
     private static final double SCOUT_REACHED_DISTANCE_SQR = 144;
     private static final int[][] SCOUT_DIRECTIONS = {
             {1, 0}, {0, 1}, {-1, 0}, {0, -1},
@@ -51,7 +50,8 @@ public final class BotController {
     private BlockPos supplyPortalOrigin;
     private BuildingPlacement attackTarget;
     private BlockPos scoutTarget;
-    private int scoutTargetSetTick;
+    private double scoutBestDistance;
+    private int scoutLastProgressTick;
     private int scoutWaypointIndex;
     private boolean attackCommitted;
     private int nextDecisionTick;
@@ -300,6 +300,7 @@ public final class BotController {
         if (army.isEmpty()) {
             attackCommitted = false;
             attackTarget = null;
+            clearScoutTarget();
             nextAttackTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -310,6 +311,7 @@ public final class BotController {
             ReignOfNether.LOGGER.info("[Bot] {} retreating with {} units", ownerName, army.size());
             attackCommitted = false;
             attackTarget = null;
+            clearScoutTarget();
             nextAttackTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -348,7 +350,7 @@ public final class BotController {
                 BlockPos.ZERO
         );
         attackCommitted = true;
-        scoutTarget = null;
+        clearScoutTarget();
         if (selectedNewTarget) {
             ReignOfNether.LOGGER.info("[Bot] {} attacking {} at {} with {} units",
                     ownerName, attackTarget.ownerName, attackTarget.originPos, ids.length);
@@ -376,22 +378,52 @@ public final class BotController {
                 BlockPos adjustedTarget = ground.above();
                 if (!adjustedTarget.equals(scoutTarget)) {
                     scoutTarget = adjustedTarget;
+                    resetScoutProgress(army, tick);
                     moveArmy(army, scoutTarget);
                 }
             }
         }
 
-        boolean reached = scoutTarget != null && army.stream()
-                .anyMatch(entity -> entity.blockPosition().distSqr(scoutTarget) <= SCOUT_REACHED_DISTANCE_SQR);
-        boolean timedOut = scoutTarget != null && tick - scoutTargetSetTick >= SCOUT_TARGET_TIMEOUT_TICKS;
-        if (scoutTarget != null && !reached && !timedOut)
-            return;
+        if (scoutTarget != null) {
+            double currentDistance = closestArmyDistance(army, scoutTarget);
+            BotDecisionMaker.ScoutWaypointDecision decision = BotDecisionMaker.evaluateScoutWaypoint(
+                    currentDistance * currentDistance <= SCOUT_REACHED_DISTANCE_SQR,
+                    scoutBestDistance,
+                    currentDistance,
+                    tick - scoutLastProgressTick
+            );
+            if (decision == BotDecisionMaker.ScoutWaypointDecision.PROGRESS) {
+                scoutBestDistance = currentDistance;
+                scoutLastProgressTick = tick;
+                return;
+            }
+            if (decision == BotDecisionMaker.ScoutWaypointDecision.KEEP)
+                return;
+        }
 
         scoutTarget = nextScoutTarget(level, player.aiHomePos);
-        scoutTargetSetTick = tick;
+        resetScoutProgress(army, tick);
         moveArmy(army, scoutTarget);
         ReignOfNether.LOGGER.info("[Bot] {} scouting at {} with {} units",
                 ownerName, scoutTarget, army.size());
+    }
+
+    private void resetScoutProgress(List<LivingEntity> army, int tick) {
+        scoutBestDistance = closestArmyDistance(army, scoutTarget);
+        scoutLastProgressTick = tick;
+    }
+
+    private static double closestArmyDistance(List<LivingEntity> army, BlockPos target) {
+        return army.stream()
+                .mapToDouble(entity -> Math.sqrt(entity.blockPosition().distSqr(target)))
+                .min()
+                .orElse(Double.POSITIVE_INFINITY);
+    }
+
+    private void clearScoutTarget() {
+        scoutTarget = null;
+        scoutBestDistance = 0;
+        scoutLastProgressTick = 0;
     }
 
     private BlockPos nextScoutTarget(ServerLevel level, BlockPos home) {
