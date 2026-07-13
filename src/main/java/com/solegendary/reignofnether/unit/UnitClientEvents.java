@@ -937,7 +937,7 @@ ticksToNextVisCheck -= 1;
 
             // draw outlines on all (pre)selected units but only draw once per unit based on conditions
             // don't render preselection outlines if mousing over HUD
-            var vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(MyRenderer.LINES_NO_DEPTH_TEST);
+            var selectionOutlineBuffer = MC.renderBuffers().bufferSource().getBuffer(MyRenderer.LINES_NO_DEPTH_TEST);
             if (OrthoviewClientEvents.isEnabled()) {
                 // evaluate conditions that will remain constant during the rendering stage
                 boolean isMouseOverAnyButtonOrHud = HudClientEvents.isMouseOverAnyButtonOrHud();
@@ -958,11 +958,11 @@ ticksToNextVisCheck -= 1;
                     boolean isSelected = selectedUnits.contains(entity);
 
                     if (isPreselected && isLeftClickAttack && !targetingSelf && !isMouseOverAnyButtonOrHud)
-                        MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), vertexConsumer, entityAABB, 1.0f, 0.3f, 0.3f, 1.0f, false);
+                        MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), selectionOutlineBuffer, entityAABB, 1.0f, 0.3f, 0.3f, 1.0f, false);
                     else if (isSelected)
-                        MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), vertexConsumer, entityAABB, 1.0f, 1.0f, 1.0f, 1.0f, false);
+                        MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), selectionOutlineBuffer, entityAABB, 1.0f, 1.0f, 1.0f, 1.0f, false);
                     else if (isPreselected && !isMouseOverAnyButtonOrHud)
-                        MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), vertexConsumer, entityAABB, 1.0f, 1.0f, 1.0f, isRightClickDown ? 1.0f : 0.5f, false);
+                        MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), selectionOutlineBuffer, entityAABB, 1.0f, 1.0f, 1.0f, isRightClickDown ? 1.0f : 0.5f, false);
                 }
             }
 
@@ -1005,7 +1005,8 @@ ticksToNextVisCheck -= 1;
 
                 // always-shown highlights to indicate unit relationships
                 if (OrthoviewClientEvents.isEnabled()) {
-                    MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), vertexConsumer, entityAABB, 1.0f, 1.0f, 1.0f, alpha, excludeMaxY);
+                    var relationshipOutlineBuffer = MC.renderBuffers().bufferSource().getBuffer(MyRenderer.LINES_NO_DEPTH_TEST);
+                    MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), relationshipOutlineBuffer, entityAABB, 1.0f, 1.0f, 1.0f, alpha, excludeMaxY);
                 }
 
                 MyRenderer.drawBoxBottom(evt.getPoseStack(), entityAABB, r, g, b, 0.5f);
