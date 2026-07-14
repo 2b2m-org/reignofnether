@@ -167,7 +167,8 @@ public final class BotController {
                 BuildingServerEvents.getTotalPopulationSupply(ownerName),
                 self.supplyUnderConstruction(strategy),
                 strategy.worker().getCost(false, ownerName).population,
-                armyPopulationCost(strategy),
+                Math.max(strategy.melee().getCost(false, ownerName).population,
+                        strategy.ranged().getCost(false, ownerName).population),
                 self.building(strategy.farm()) != null,
                 military != null,
                 military != null && military.isBuilt && (!strategy.usesTransformingPortals()
@@ -208,7 +209,7 @@ public final class BotController {
                                     boolean meleeOnly) {
         int workersAndQueued = self.workers().size() + self.countQueued(strategy.worker());
         if (BotDecisionMaker.shouldTrainWorker(difficulty, personality,
-                workersAndQueued, armyAndQueuedPopulation(strategy), armyPopulationCost(strategy))
+                workersAndQueued, armyAndQueuedPopulation(strategy))
                 && trainAt(self.building(strategy.capitol()), strategy.worker(), "worker", difficulty))
             return;
         trainArmy(strategy, difficulty, personality, meleeOnly);
@@ -218,11 +219,6 @@ public final class BotController {
         return BotSelf.population(self.army())
                 + self.queuedPopulation(strategy.melee())
                 + self.queuedPopulation(strategy.ranged());
-    }
-
-    private int armyPopulationCost(BotStrategy strategy) {
-        return Math.max(strategy.melee().getCost(false, ownerName).population,
-                strategy.ranged().getCost(false, ownerName).population);
     }
 
     private boolean buildStructure(ServerLevel level, RTSPlayer player, Building building, ProductionItem transform,

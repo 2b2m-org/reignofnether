@@ -74,34 +74,33 @@ public final class BotDecisionMaker {
             return BotGoal.BUILD_MILITARY;
         if (!context.militaryReady())
             return shouldTrainWorker(difficulty, personality,
-                    context.workersAndQueued(), context.armyAndQueuedPopulation(),
-                    context.armyPopulationCost())
+                    context.workersAndQueued(), context.armyAndQueuedPopulation())
                     ? BotGoal.TRAIN_WORKER
                     : BotGoal.WAIT_FOR_MILITARY;
         if (shouldTrainWorker(difficulty, personality,
-                context.workersAndQueued(), context.armyAndQueuedPopulation(),
-                context.armyPopulationCost()))
+                context.workersAndQueued(), context.armyAndQueuedPopulation()))
             return BotGoal.TRAIN_WORKER;
         return BotGoal.TRAIN_ARMY;
     }
 
-    static int openingArmyPopulation(BotDifficulty difficulty, BotPersonality personality,
-                                     int armyUnitPopulation) {
+    static int openingArmyPopulation(BotDifficulty difficulty, BotPersonality personality) {
         if (difficulty != BotDifficulty.HARD)
             return 0;
-        return attackPopulation(BotDifficulty.MEDIUM, personality) + Math.max(1, armyUnitPopulation);
+        return switch (personality) {
+            case RUSHER -> 8;
+            case STEADY -> 12;
+            case TURTLE -> 16;
+        };
     }
 
     static boolean shouldTrainWorker(BotDifficulty difficulty, BotPersonality personality,
-                                     int workersAndQueued, int armyAndQueuedPopulation,
-                                     int armyUnitPopulation) {
+                                     int workersAndQueued, int armyAndQueuedPopulation) {
         int targetWorkers = targetWorkers(difficulty, personality);
         if (workersAndQueued >= targetWorkers)
             return false;
         int initialWorkers = Math.min(targetWorkers, 5);
-        return workersAndQueued < initialWorkers
-                || armyAndQueuedPopulation >= openingArmyPopulation(
-                        difficulty, personality, armyUnitPopulation);
+        return workersAndQueued != initialWorkers
+                || armyAndQueuedPopulation >= openingArmyPopulation(difficulty, personality);
     }
 
     public static int foodWorkerCount(BotDifficulty difficulty, BotPersonality personality,
@@ -115,7 +114,7 @@ public final class BotDecisionMaker {
                     : Math.max(1, (totalWorkers * 3 + 4) / 5);
             case HARD -> productionPriority
                     ? Math.max(1, totalWorkers - (personality == BotPersonality.TURTLE ? 2 : 1))
-                    : Math.max(1, (totalWorkers * 4) / 9);
+                    : Math.max(Math.min(3, totalWorkers - 1), (totalWorkers * 4) / 9);
         };
     }
 

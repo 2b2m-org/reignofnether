@@ -98,17 +98,22 @@ class BotDecisionMakerTest {
                 () -> assertEquals(BotGoal.WAIT_FOR_MILITARY,
                         BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                        true, true, 7, 0, 7, 40, false, 1, 3,
+                                        true, true, 5, 0, 5, 40, false, 1, 3,
                                         true, true, false))),
                 () -> assertEquals(BotGoal.TRAIN_ARMY,
                         BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                        true, true, 7, 26, 33, 60, false, 1, 3,
+                                        true, true, 5, 11, 16, 40, false, 1, 3,
                                         true, true, true))),
                 () -> assertEquals(BotGoal.TRAIN_WORKER,
                         BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                        true, true, 7, 27, 34, 60, false, 1, 3,
+                                        true, true, 5, 12, 17, 40, false, 1, 3,
+                                        true, true, true))),
+                () -> assertEquals(BotGoal.TRAIN_WORKER,
+                        BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
+                                new BotDecisionContext(
+                                        true, true, 6, 0, 6, 40, false, 1, 3,
                                         true, true, true))),
                 () -> assertEquals(BotGoal.TRAIN_WORKER,
                         BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.TURTLE,
@@ -129,20 +134,16 @@ class BotDecisionMakerTest {
     }
 
     @Test
-    void hardOpeningArmyMatchesMediumPressureWithAScoutReserve() {
+    void hardOpeningArmySizeReflectsPersonality() {
         assertAll(
-                () -> assertEquals(23, BotDecisionMaker.openingArmyPopulation(
-                        BotDifficulty.HARD, BotPersonality.RUSHER, 3)),
-                () -> assertEquals(27, BotDecisionMaker.openingArmyPopulation(
-                        BotDifficulty.HARD, BotPersonality.STEADY, 3)),
-                () -> assertEquals(31, BotDecisionMaker.openingArmyPopulation(
-                        BotDifficulty.HARD, BotPersonality.TURTLE, 3)),
-                () -> assertEquals(25, BotDecisionMaker.openingArmyPopulation(
-                        BotDifficulty.HARD, BotPersonality.STEADY, 1)),
-                () -> assertEquals(26, BotDecisionMaker.openingArmyPopulation(
-                        BotDifficulty.HARD, BotPersonality.STEADY, 2)),
+                () -> assertEquals(8, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.RUSHER)),
+                () -> assertEquals(12, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.STEADY)),
+                () -> assertEquals(16, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.TURTLE)),
                 () -> assertEquals(0, BotDecisionMaker.openingArmyPopulation(
-                        BotDifficulty.MEDIUM, BotPersonality.TURTLE, 3))
+                        BotDifficulty.MEDIUM, BotPersonality.TURTLE))
         );
     }
 
@@ -463,8 +464,10 @@ class BotDecisionMakerTest {
                         BotDifficulty.MEDIUM, BotPersonality.STEADY, 5, false)),
                 () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(
                         BotDifficulty.MEDIUM, BotPersonality.STEADY, 5, true)),
-                () -> assertEquals(2, BotDecisionMaker.foodWorkerCount(
+                () -> assertEquals(3, BotDecisionMaker.foodWorkerCount(
                         BotDifficulty.HARD, BotPersonality.STEADY, 5, false)),
+                () -> assertEquals(3, BotDecisionMaker.foodWorkerCount(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 4, false)),
                 () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(
                         BotDifficulty.HARD, BotPersonality.STEADY, 5, true)),
                 () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(
