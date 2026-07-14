@@ -210,6 +210,30 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void retreatDisciplineScalesByDifficultyAndPersonality() {
+        assertAll(
+                () -> assertEquals(1, BotDecisionMaker.retreatPopulation(
+                        BotDifficulty.EASY, BotPersonality.RUSHER)),
+                () -> assertEquals(1, BotDecisionMaker.retreatPopulation(
+                        BotDifficulty.EASY, BotPersonality.STEADY)),
+                () -> assertEquals(5, BotDecisionMaker.retreatPopulation(
+                        BotDifficulty.EASY, BotPersonality.TURTLE)),
+                () -> assertEquals(8, BotDecisionMaker.retreatPopulation(
+                        BotDifficulty.MEDIUM, BotPersonality.RUSHER)),
+                () -> assertEquals(12, BotDecisionMaker.retreatPopulation(
+                        BotDifficulty.MEDIUM, BotPersonality.STEADY)),
+                () -> assertEquals(16, BotDecisionMaker.retreatPopulation(
+                        BotDifficulty.MEDIUM, BotPersonality.TURTLE)),
+                () -> assertEquals(20, BotDecisionMaker.retreatPopulation(
+                        BotDifficulty.HARD, BotPersonality.RUSHER)),
+                () -> assertEquals(24, BotDecisionMaker.retreatPopulation(
+                        BotDifficulty.HARD, BotPersonality.STEADY)),
+                () -> assertEquals(28, BotDecisionMaker.retreatPopulation(
+                        BotDifficulty.HARD, BotPersonality.TURTLE))
+        );
+    }
+
+    @Test
     void uncommittedArmiesRespectPersonalityAttackThresholds() {
         for (BotDifficulty difficulty : BotDifficulty.values())
             for (BotPersonality personality : BotPersonality.values()) {
@@ -460,7 +484,7 @@ class BotDecisionMakerTest {
                                 24, 0, false, false)),
                 () -> assertEquals(BotDecisionMaker.ArmyOrder.RETREAT,
                         BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
-                                11, 11, true, false)),
+                                15, 15, true, false)),
                 () -> assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
                         BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
                                 15, 3, true, false)),

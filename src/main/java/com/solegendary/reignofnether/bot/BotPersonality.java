@@ -4,24 +4,24 @@ import java.util.Locale;
 import java.util.Optional;
 
 public enum BotPersonality {
-    STEADY(0, 0, 0, 3, 2, 5),
-    RUSHER(-1, -4, -4, 4, 1, 4),
-    TURTLE(1, 4, 4, 2, 3, 5);
+    STEADY(0, 0, 0, 0, 2, 5),
+    RUSHER(-1, -4, -4, -4, 1, 4),
+    TURTLE(1, 4, 4, 4, 3, 5);
 
     private final int workerOffset;
     private final int armyPopulationOffset;
     private final int attackPopulationOffset;
-    private final int retreatDivisor;
+    private final int retreatPopulationOffset;
     private final int rangedNumerator;
     private final int compositionDenominator;
 
     BotPersonality(int workerOffset, int armyPopulationOffset, int attackPopulationOffset,
-                   int retreatDivisor,
+                   int retreatPopulationOffset,
                    int rangedNumerator, int compositionDenominator) {
         this.workerOffset = workerOffset;
         this.armyPopulationOffset = armyPopulationOffset;
         this.attackPopulationOffset = attackPopulationOffset;
-        this.retreatDivisor = retreatDivisor;
+        this.retreatPopulationOffset = retreatPopulationOffset;
         this.rangedNumerator = rangedNumerator;
         this.compositionDenominator = compositionDenominator;
     }
@@ -38,8 +38,8 @@ public enum BotPersonality {
         return attackPopulationOffset;
     }
 
-    int retreatDivisor() {
-        return retreatDivisor;
+    int retreatPopulationOffset() {
+        return retreatPopulationOffset;
     }
 
     int rangedNumerator() {

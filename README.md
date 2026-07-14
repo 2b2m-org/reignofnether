@@ -74,9 +74,9 @@ Personalities are fair strategic tradeoffs layered on top of any difficulty:
 
 | Personality | Economy and timing | Army style | Target and defense style |
 | --- | --- | --- | --- |
-| Rusher | 1 fewer worker; attacks 6 population earlier | 25% ranged; 6-population-smaller army | attacks the nearest known structure; recalls committed armies only for critical buildings |
+| Rusher | 1 fewer worker; attacks 4 population earlier | 25% ranged; 4-population-smaller army; commits longer before regrouping | attacks the nearest known structure; recalls committed armies only for critical buildings |
 | Steady | baseline economy and timing | 40% ranged; baseline army size | prioritizes the enemy capitol, then production |
-| Turtle | 1 extra worker; attacks 6 population later | 60% ranged; 6-population-larger army | prioritizes production and recalls committed armies to defend threatened buildings |
+| Turtle | 1 extra worker; attacks 4 population later | 60% ranged; 4-population-larger army; regroups sooner when pressured | prioritizes production and recalls committed armies to defend threatened buildings |
 
 Bots use normal resource costs and the same gathering, construction, production, and combat command paths as human players. They defend recently damaged buildings, replace fallen builders, and fall back to nearby food sources while their farm regrows. With fog of war disabled, the map is visible to every player and bot. With fog enabled, bots remember structures discovered by their own buildings or their team's units, plus structures revealed by normal game rules, and attack-move while scouting when they have no known target.
 

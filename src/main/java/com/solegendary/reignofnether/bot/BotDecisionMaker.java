@@ -218,7 +218,7 @@ public final class BotDecisionMaker {
     }
 
     public static int retreatPopulation(BotDifficulty difficulty, BotPersonality personality) {
-        return Math.max(1, attackPopulation(difficulty, personality) / personality.retreatDivisor());
+        return Math.max(1, difficulty.retreatPopulation() + personality.retreatPopulationOffset());
     }
 
     public static boolean shouldDefend(BotPersonality personality, boolean attackReady,
