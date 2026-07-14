@@ -694,6 +694,8 @@ class BotDecisionMakerTest {
     @Test
     void progressingScoutDoesNotRotateAtTheOldAbsoluteTimeout() {
         assertAll(
+                () -> assertFalse(BotDecisionMaker.reachedScoutWaypoint(-48, 0, -56, 0)),
+                () -> assertTrue(BotDecisionMaker.reachedScoutWaypoint(-52, 0, -56, 0)),
                 () -> assertEquals(BotDecisionMaker.ScoutWaypointDecision.PROGRESS,
                         BotDecisionMaker.evaluateScoutWaypoint(false, 150, 140, 600)),
                 () -> assertEquals(BotDecisionMaker.ScoutWaypointDecision.KEEP,

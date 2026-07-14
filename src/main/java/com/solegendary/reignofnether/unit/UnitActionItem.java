@@ -98,9 +98,14 @@ public class UnitActionItem {
     }
 
     private boolean isRedundantMove(Unit unit, BlockPos targetPos) {
+        if (unit.hasLivingTarget()
+                || unit.getTargetGoal().getTarget() != null
+                || (unit instanceof AttackerUnit attacker
+                    && attacker.getAttackMoveTarget() != null))
+            return false;
+
         LivingEntity le = (LivingEntity) unit;
         MoveToTargetBlockGoal goal = unit.getMoveGoal();
-
         if (goal != null && !le.level().isClientSide()) {
             BlockPos bp = goal.getMoveTarget();
             if (bp != null) {

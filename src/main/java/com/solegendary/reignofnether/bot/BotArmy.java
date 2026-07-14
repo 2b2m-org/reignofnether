@@ -44,7 +44,8 @@ final class BotArmy {
     private static final double SURVIVAL_DEFENSE_DISTANCE_SQR = 128 * 128;
     private static final double ARMY_INTERCEPTION_DISTANCE_SQR = 48 * 48;
     private static final double OBJECTIVE_PROGRESS_DISTANCE = 2;
-    private static final double SCOUT_REACHED_DISTANCE_SQR = 144;
+    private static final double PURSUIT_REACHED_DISTANCE_SQR = 144;
+    private static final double SCOUT_ADVICE_REACHED_DISTANCE_SQR = 144;
     private static final int BEACON_GARRISON_MARGIN = 6;
     private static final int BEACON_RETRY_TICKS = 600;
     private static final int BEACON_INTEL_MEMORY_TICKS = 1200;
@@ -270,7 +271,7 @@ final class BotArmy {
                         <= DEFENSE_DISTANCE_SQR)
                 .toList());
         if (pursuitTarget != null && tacticalGroundEnemyMilitary.isEmpty()
-                && armyPos.distSqr(pursuitTarget) <= SCOUT_REACHED_DISTANCE_SQR)
+                && armyPos.distSqr(pursuitTarget) <= PURSUIT_REACHED_DISTANCE_SQR)
             clearPursuit();
         boolean pressVisibleAdvantage = BotDecisionMaker.shouldPressVisibleAdvantage(
                 difficulty, personality, mainPopulation, visibleEnemyArmyPopulation);
@@ -766,9 +767,16 @@ final class BotArmy {
 
         if (scoutTarget != null) {
             moveUnit(scout, scoutTarget);
-            double currentDistance = Math.sqrt(scout.blockPosition().distSqr(scoutTarget));
+            BlockPos scoutPosition = scout.blockPosition();
+            double currentDistanceSqr = scoutPosition.distSqr(scoutTarget);
+            double currentDistance = Math.sqrt(currentDistanceSqr);
+            boolean reached = scoutAdviceTarget == null
+                    ? BotDecisionMaker.reachedScoutWaypoint(
+                            scoutPosition.getX(), scoutPosition.getZ(),
+                            scoutTarget.getX(), scoutTarget.getZ())
+                    : currentDistanceSqr <= SCOUT_ADVICE_REACHED_DISTANCE_SQR;
             BotDecisionMaker.ScoutWaypointDecision decision = BotDecisionMaker.evaluateScoutWaypoint(
-                    currentDistance * currentDistance <= SCOUT_REACHED_DISTANCE_SQR,
+                    reached,
                     scoutBestDistance,
                     currentDistance,
                     tick - scoutLastProgressTick

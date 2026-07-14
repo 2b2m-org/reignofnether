@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.time.TimeUtils;
 import com.solegendary.reignofnether.unit.UnitAction;
 
 public final class BotDecisionMaker {
+    private static final int BLOCKS_PER_CHUNK = 16;
     private static final double SCOUT_PROGRESS_BLOCKS = 4;
     private static final int SCOUT_STALL_TICKS = 600;
     private static final int WORKER_DANGER_DISTANCE_SQR = 24 * 24;
@@ -310,5 +311,12 @@ public final class BotDecisionMaker {
         if (ticksSinceProgress >= SCOUT_STALL_TICKS)
             return ScoutWaypointDecision.REPLACE;
         return ScoutWaypointDecision.KEEP;
+    }
+
+    static boolean reachedScoutWaypoint(int scoutX, int scoutZ, int waypointX, int waypointZ) {
+        return Math.floorDiv(scoutX, BLOCKS_PER_CHUNK)
+                == Math.floorDiv(waypointX, BLOCKS_PER_CHUNK)
+                && Math.floorDiv(scoutZ, BLOCKS_PER_CHUNK)
+                == Math.floorDiv(waypointZ, BLOCKS_PER_CHUNK);
     }
 }
