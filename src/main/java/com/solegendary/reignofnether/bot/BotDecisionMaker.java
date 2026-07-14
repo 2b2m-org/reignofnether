@@ -165,11 +165,11 @@ public final class BotDecisionMaker {
         };
     }
 
-    public static int beaconGuardCount(BotPersonality personality) {
+    public static int beaconGuardPopulation(BotPersonality personality) {
         return switch (personality) {
-            case RUSHER -> 1;
-            case STEADY -> 2;
-            case TURTLE -> 3;
+            case RUSHER -> 3;
+            case STEADY -> 6;
+            case TURTLE -> 9;
         };
     }
 

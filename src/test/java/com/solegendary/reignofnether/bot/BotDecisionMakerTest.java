@@ -282,12 +282,12 @@ class BotDecisionMakerTest {
     @Test
     void beaconGarrisonsAndAurasExpressPersonalityWithoutGeneratingResources() {
         assertAll(
-                () -> assertEquals(1,
-                        BotDecisionMaker.beaconGuardCount(BotPersonality.RUSHER)),
-                () -> assertEquals(2,
-                        BotDecisionMaker.beaconGuardCount(BotPersonality.STEADY)),
                 () -> assertEquals(3,
-                        BotDecisionMaker.beaconGuardCount(BotPersonality.TURTLE)),
+                        BotDecisionMaker.beaconGuardPopulation(BotPersonality.RUSHER)),
+                () -> assertEquals(6,
+                        BotDecisionMaker.beaconGuardPopulation(BotPersonality.STEADY)),
+                () -> assertEquals(9,
+                        BotDecisionMaker.beaconGuardPopulation(BotPersonality.TURTLE)),
                 () -> assertEquals(UnitAction.BEACON_STRENGTH,
                         BotDecisionMaker.beaconAuraAction(BotPersonality.RUSHER)),
                 () -> assertEquals(UnitAction.BEACON_REGENERATION,

@@ -171,7 +171,7 @@ final class BotArmy {
         if (beaconOrder == BotDecisionMaker.BeaconOrder.GARRISON) {
             activateBeaconAura(beacon, personality);
             List<LivingEntity> guards = reconcileBeaconGuards(
-                    main, beacon, BotDecisionMaker.beaconGuardCount(personality));
+                    main, beacon, BotDecisionMaker.beaconGuardPopulation(personality));
             garrisonBeacon(guards, beacon);
             main = main.stream()
                     .filter(entity -> !beaconGuardIds.contains(entity.getId()))
@@ -556,25 +556,37 @@ final class BotArmy {
     }
 
     private List<LivingEntity> reconcileBeaconGuards(List<LivingEntity> army, BeaconPlacement beacon,
-                                                      int targetCount) {
+                                                      int targetPopulation) {
         beaconGuardIds.removeIf(id -> army.stream().noneMatch(entity -> entity.getId() == id));
-        int guardCount = Math.min(targetCount, army.size());
-        while (beaconGuardIds.size() > guardCount)
-            beaconGuardIds.remove(beaconGuardIds.stream().max(Integer::compareTo).orElseThrow());
-        int missingGuards = guardCount - beaconGuardIds.size();
-        if (missingGuards > 0)
-            army.stream()
-                    .filter(entity -> !beaconGuardIds.contains(entity.getId()))
-                    .sorted(Comparator
-                            .comparingInt((LivingEntity entity) -> isFlying(entity) ? 1 : 0)
-                            .thenComparingDouble(entity -> entity.position().distanceToSqr(
-                                    beacon.centrePos.getX(),
-                                    beacon.minCorner.getY(),
-                                    beacon.centrePos.getZ()))
-                            .thenComparingInt(BotSelf::population)
-                            .thenComparingInt(LivingEntity::getId))
-                    .limit(missingGuards)
-                    .forEach(entity -> beaconGuardIds.add(entity.getId()));
+        List<LivingEntity> retained = army.stream()
+                .filter(entity -> beaconGuardIds.contains(entity.getId()))
+                .sorted(Comparator.comparingInt(LivingEntity::getId))
+                .toList();
+        int guardPopulation = BotSelf.population(retained);
+        for (int index = retained.size() - 1; index >= 0 && guardPopulation > targetPopulation; index--) {
+            LivingEntity entity = retained.get(index);
+            beaconGuardIds.remove(entity.getId());
+            guardPopulation -= BotSelf.population(entity);
+        }
+
+        List<LivingEntity> candidates = army.stream()
+                .filter(entity -> !beaconGuardIds.contains(entity.getId()))
+                .sorted(Comparator
+                        .comparingInt((LivingEntity entity) -> isFlying(entity) ? 1 : 0)
+                        .thenComparingDouble(entity -> entity.position().distanceToSqr(
+                                beacon.centrePos.getX(),
+                                beacon.minCorner.getY(),
+                                beacon.centrePos.getZ()))
+                        .thenComparingInt(BotSelf::population)
+                        .thenComparingInt(LivingEntity::getId))
+                .toList();
+        for (LivingEntity entity : candidates) {
+            int population = BotSelf.population(entity);
+            if (guardPopulation + population <= targetPopulation) {
+                beaconGuardIds.add(entity.getId());
+                guardPopulation += population;
+            }
+        }
         return army.stream()
                 .filter(entity -> beaconGuardIds.contains(entity.getId()))
                 .toList();
