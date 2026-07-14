@@ -186,7 +186,7 @@ public final class BotDecisionMaker {
                                                 int armyPopulation, int visibleEnemyPopulation) {
         return difficulty == BotDifficulty.HARD
                 && visibleEnemyPopulation >= MIN_VISIBLE_ADVANTAGE_POPULATION
-                && armyPopulation >= targetArmyPopulation(difficulty, personality) - 12
+                && armyPopulation >= retreatPopulation(difficulty, personality)
                 && armyPopulation * 4 >= visibleEnemyPopulation * 5;
     }
 
