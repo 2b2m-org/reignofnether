@@ -68,7 +68,7 @@ Army budgets use the mod's population costs rather than unit head counts, giving
 | --- | --- | --- | --- |
 | Easy | 4 workers, food-heavy split | 1 unit ahead | attacks at 12 population; smaller 24-population army |
 | Medium | 5 workers, balanced split | 2 units ahead | attacks at 24 population; may regroup below 12 when pressured; balanced 36-population army |
-| Hard | 9 workers, construction-aware split | 3 units ahead | attacks at 36 population, reinforces toward 48, may regroup below 24 when pressured |
+| Hard | 9 workers, construction-aware split | 3 units ahead | finishes its 48-population army before attacking; may regroup below 24 when pressured |
 
 Personalities are fair strategic tradeoffs layered on top of any difficulty:
 

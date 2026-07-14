@@ -6,7 +6,7 @@ import java.util.Optional;
 public enum BotDifficulty {
     EASY(60, 4, 1, 24, 12, 1, 300, 400, 1),
     MEDIUM(20, 5, 2, 36, 24, 12, 100, 200, 2),
-    HARD(10, 9, 3, 48, 36, 24, 40, 100, 2);
+    HARD(10, 9, 3, 48, 45, 24, 40, 100, 2);
 
     private final int decisionIntervalTicks;
     private final int targetWorkers;

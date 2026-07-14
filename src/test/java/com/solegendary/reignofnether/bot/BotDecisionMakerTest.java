@@ -141,7 +141,7 @@ class BotDecisionMakerTest {
                 () -> assertEquals(48, BotDifficulty.HARD.targetArmyPopulation()),
                 () -> assertEquals(12, BotDifficulty.EASY.attackPopulation()),
                 () -> assertEquals(24, BotDifficulty.MEDIUM.attackPopulation()),
-                () -> assertEquals(36, BotDifficulty.HARD.attackPopulation())
+                () -> assertEquals(45, BotDifficulty.HARD.attackPopulation())
         );
     }
 
