@@ -26,9 +26,11 @@ public class AlliancesClient {
         return canControlAlly(unit.getOwnerName());
     }
     public static boolean canControlAlly(String ownerName) {
-        return MC.player != null &&
-                (AlliancesClient.isAllied(MC.player.getName().getString(), ownerName) &&
-                        AlliancesClient.playersWithAlliedControl.contains(ownerName));
+        var owner = PlayerClientEvents.getPlayer(ownerName);
+        return MC.player != null
+                && (owner == null || !owner.aiControlled)
+                && AlliancesClient.isAllied(MC.player.getName().getString(), ownerName)
+                && AlliancesClient.playersWithAlliedControl.contains(ownerName);
     }
 
     public static void addAlliance(String owner1, String owner2) {

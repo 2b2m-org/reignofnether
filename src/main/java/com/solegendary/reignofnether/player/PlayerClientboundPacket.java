@@ -28,18 +28,24 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
 
     PlayerAction playerAction;
     String playerName;
+    String displayName;
+    boolean aiControlled;
     Long value1;
     int value2;
     Faction faction;
     TradeAction tradeAction; // for updating market rates
     BlockPos pos;
 
-    public static void addRTSPlayer(String playerName, Faction faction, Long id, int startPosColorId) {
-        PacketDistributor.sendToAllPlayers(new PlayerClientboundPacket(PlayerAction.ADD_RTS_PLAYER, playerName, id, startPosColorId, faction));
+    public static void addRTSPlayer(RTSPlayer player) {
+        PacketDistributor.sendToAllPlayers(new PlayerClientboundPacket(
+                PlayerAction.ADD_RTS_PLAYER, player.name, player.displayName, player.aiControlled,
+                (long) player.id, player.startPosColorId, player.faction));
     }
 
-    public static void addScenarioNPCRTSPlayer(String playerName, Faction faction, Long id, int scenarioRoleIndex) {
-        PacketDistributor.sendToAllPlayers(new PlayerClientboundPacket(PlayerAction.ADD_SCENARIO_NPC_RTS_PLAYER, playerName, id, scenarioRoleIndex, faction));
+    public static void addScenarioNPCRTSPlayer(RTSPlayer player) {
+        PacketDistributor.sendToAllPlayers(new PlayerClientboundPacket(
+                PlayerAction.ADD_SCENARIO_NPC_RTS_PLAYER, player.name, player.displayName, player.aiControlled,
+                (long) player.id, player.scenarioRoleIndex, player.faction));
     }
 
     public static void removeRTSPlayer(String playerName) {
@@ -105,6 +111,8 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
     public PlayerClientboundPacket(PlayerAction playerAction, String playerName, BlockPos pos) {
         this.playerAction = playerAction;
         this.playerName = playerName;
+        this.displayName = playerName;
+        this.aiControlled = false;
         this.value1 = 0L;
         this.value2 = 0;
         this.faction = Faction.NONE;
@@ -113,8 +121,15 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
     }
 
     public PlayerClientboundPacket(PlayerAction playerAction, String playerName, Long value1, int value2, Faction faction) {
+        this(playerAction, playerName, playerName, false, value1, value2, faction);
+    }
+
+    private PlayerClientboundPacket(PlayerAction playerAction, String playerName, String displayName,
+                                    boolean aiControlled, Long value1, int value2, Faction faction) {
         this.playerAction = playerAction;
         this.playerName = playerName;
+        this.displayName = displayName;
+        this.aiControlled = aiControlled;
         this.value1 = value1;
         this.value2 = value2;
         this.faction = faction;
@@ -125,6 +140,8 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
     public PlayerClientboundPacket(TradeAction tradeAction, String playerName, Long value1) {
         this.playerAction = PlayerAction.SET_MARKET_RATE;
         this.playerName = playerName;
+        this.displayName = playerName;
+        this.aiControlled = false;
         this.value1 = value1;
         this.value2 = 0;
         this.faction = Faction.NONE;
@@ -135,6 +152,8 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
     public PlayerClientboundPacket(FriendlyByteBuf buffer) {
         this.playerAction = buffer.readEnum(PlayerAction.class);
         this.playerName = buffer.readUtf();
+        this.displayName = buffer.readUtf();
+        this.aiControlled = buffer.readBoolean();
         this.value1 = buffer.readLong();
         this.value2 = buffer.readInt();
         this.faction = buffer.readEnum(Faction.class);
@@ -145,6 +164,8 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
     public void encode(FriendlyByteBuf buffer) {
         buffer.writeEnum(this.playerAction);
         buffer.writeUtf(this.playerName);
+        buffer.writeUtf(this.displayName);
+        buffer.writeBoolean(this.aiControlled);
         buffer.writeLong(this.value1);
         buffer.writeInt(this.value2);
         buffer.writeEnum(this.faction);
@@ -161,8 +182,10 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
                             case TELEPORT -> OrthoviewClientEvents.centreCameraOnPosForPlayer(playerName, pos);
                             case DEFEAT -> PlayerClientEvents.defeat(playerName);
                             case VICTORY -> PlayerClientEvents.victory(playerName);
-                            case ADD_RTS_PLAYER -> PlayerClientEvents.addRTSPlayer(playerName, faction, value1, value2);
-                            case ADD_SCENARIO_NPC_RTS_PLAYER -> PlayerClientEvents.addScenarioNPCRTSPlayer(playerName, faction, value1, value2);
+                            case ADD_RTS_PLAYER -> PlayerClientEvents.addRTSPlayer(
+                                    playerName, displayName, aiControlled, faction, value1, value2);
+                            case ADD_SCENARIO_NPC_RTS_PLAYER -> PlayerClientEvents.addScenarioNPCRTSPlayer(
+                                    playerName, displayName, faction, value1, value2);
                             case REMOVE_RTS_PLAYER -> PlayerClientEvents.removeRTSPlayer(playerName);
                             case RESET_RTS -> PlayerClientEvents.resetRTS(false);
                             case RESET_RTS_HARD -> PlayerClientEvents.resetRTS(true);

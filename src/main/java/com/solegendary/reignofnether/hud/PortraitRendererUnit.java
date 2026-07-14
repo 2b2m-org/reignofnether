@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.healthbars.HealthBarClientEvents;
 import com.solegendary.reignofnether.hud.passives.EnchantmentIcon;
+import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.resources.ResourceSource;
 import com.solegendary.reignofnether.resources.ResourceSources;
@@ -220,7 +221,7 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
         name = WordUtils.capitalize(name);
 
         if (rs != Relationship.OWNED && entity instanceof Unit unit && unit.getOwnerName().length() > 0) {
-            name += " (" + unit.getOwnerName() + ")";
+            name += " (" + PlayerClientEvents.getPlayerDisplayName(unit.getOwnerName()) + ")";
         }
 
         // draw name (unless a player, since their nametag will be rendered anyway)

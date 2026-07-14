@@ -209,14 +209,16 @@ public class BeaconPlacement extends ProductionPlacement implements RangeIndicat
                 else if (beacon.getUpgradeLevel() == 5) upgradeName = Component.translatable("buildings.reignofnether.beacon.upgrade.beacon_level5").getString();
 
                 PlayerServerEvents.sendMessageToAllPlayersNoNewlines("buildings.reignofnether.beacon.upgrade_warning",
-                        true, ownerName, upgradeName, beacon.getUpgradeLevel(), Beacon.MAX_UPGRADE_LEVEL);
+                        true, PlayerServerEvents.getPlayerDisplayName(ownerName), upgradeName,
+                        beacon.getUpgradeLevel(), Beacon.MAX_UPGRADE_LEVEL);
             } else {
                 PlayerServerEvents.sendMessageToAllPlayersNoNewlines("buildings.reignofnether.beacon." + msg,
-                        true, ownerName);
+                        true, PlayerServerEvents.getPlayerDisplayName(ownerName));
             }
             if (beacon != null && beacon.getUpgradeLevel() >= Beacon.MAX_UPGRADE_LEVEL && !msg.equals("destroy_warning")) {
                 PlayerServerEvents.sendMessageToAllPlayersNoNewlines("buildings.reignofnether.beacon.time_to_win",
-                        false, ownerName, PlayerServerEvents.getBeaconWinTime(ownerName));
+                        false, PlayerServerEvents.getPlayerDisplayName(ownerName),
+                        PlayerServerEvents.getBeaconWinTime(ownerName));
             }
             PlayerServerEvents.sendMessageToAllPlayersNoNewlines("");
             if (SurvivalServerEvents.isEnabled() && !msg.equals("destroy_warning"))

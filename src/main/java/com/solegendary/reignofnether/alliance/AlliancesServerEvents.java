@@ -29,8 +29,10 @@ public class AlliancesServerEvents {
         return canControlAlly(player, unit.getOwnerName());
     }
     public static boolean canControlAlly(String player, String ownerName) {
-        return (AlliancesServerEvents.isAllied(player, ownerName) &&
-                AlliancesServerEvents.playersWithAlliedControl.contains(ownerName));
+        RTSPlayer owner = PlayerServerEvents.getRTSPlayer(ownerName);
+        return (owner == null || !owner.aiControlled)
+                && AlliancesServerEvents.isAllied(player, ownerName)
+                && AlliancesServerEvents.playersWithAlliedControl.contains(ownerName);
     }
 
     public static void addAlliance(String owner1, String owner2) {

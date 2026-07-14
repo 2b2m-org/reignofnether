@@ -20,6 +20,7 @@ import static com.solegendary.reignofnether.player.PlayerServerEvents.TICKS_TO_R
 
 public class RTSPlayer {
     public String name;
+    public String displayName;
     public int id; // for AI, always negative
     public int ticksWithoutCapitol = 0;
     public Faction faction;
@@ -37,6 +38,7 @@ public class RTSPlayer {
 
     private RTSPlayer(String playerName, Faction faction, int id) {
         this.name = playerName;
+        this.displayName = playerName;
         this.id = id;
         this.faction = faction;
         initTradeRates();
@@ -44,6 +46,7 @@ public class RTSPlayer {
 
     private RTSPlayer(String playerName, Faction faction, int id, int startPosColorId) {
         this.name = playerName;
+        this.displayName = playerName;
         this.id = id;
         this.faction = faction;
         this.startPosColorId = startPosColorId;
@@ -74,16 +77,19 @@ public class RTSPlayer {
         }
         this.faction = faction;
         this.name = name;
+        this.displayName = name;
         initTradeRates();
     }
 
-    private RTSPlayer(String name, int id, int ticksWithoutCapitol, Faction faction, int beaconOwnerTicks,
+    private RTSPlayer(String name, String displayName, int id, int ticksWithoutCapitol,
+                      Faction faction, int beaconOwnerTicks,
                       int startPosColorId,
                       int[] scores, int scenarioRoleIndex, Map<TradeAction, Integer> tradeRates,
                       boolean aiControlled, BlockPos aiHomePos, BotDifficulty aiDifficulty,
                       BotPersonality aiPersonality, BlockPos aiMilitaryPortalOrigin,
                       BlockPos aiSupplyPortalOrigin) {
         this.name = name;
+        this.displayName = displayName;
         this.id = id;
         this.ticksWithoutCapitol = ticksWithoutCapitol;
         this.faction = faction;
@@ -100,13 +106,15 @@ public class RTSPlayer {
         this.aiSupplyPortalOrigin = aiSupplyPortalOrigin;
     }
 
-    public static RTSPlayer getFromSave(String name, int id, int ticksWithoutCapitol, Faction faction, int beaconOwnerTicks,
+    public static RTSPlayer getFromSave(String name, String displayName, int id, int ticksWithoutCapitol,
+                                        Faction faction, int beaconOwnerTicks,
                                         int startPosColorId,
                                         int[] scores, int scenarioRoleIndex, Map<TradeAction, Integer> tradeRates,
                                         boolean aiControlled, BlockPos aiHomePos, BotDifficulty aiDifficulty,
                                         BotPersonality aiPersonality, BlockPos aiMilitaryPortalOrigin,
                                         BlockPos aiSupplyPortalOrigin) {
-        return new RTSPlayer(name, id, ticksWithoutCapitol, faction, beaconOwnerTicks, startPosColorId, scores,
+        return new RTSPlayer(name, displayName, id, ticksWithoutCapitol, faction, beaconOwnerTicks,
+                startPosColorId, scores,
                 scenarioRoleIndex, tradeRates, aiControlled, aiHomePos, aiDifficulty, aiPersonality, aiMilitaryPortalOrigin,
                 aiSupplyPortalOrigin);
     }
@@ -129,14 +137,19 @@ public class RTSPlayer {
         return new RTSPlayer(name, faction);
     }
 
-    public static RTSPlayer getNewAiBot(String name, Faction faction, BlockPos homePos,
+    public static RTSPlayer getNewAiBot(String displayName, Faction faction, BlockPos homePos,
                                         BotDifficulty difficulty, BotPersonality personality) {
-        RTSPlayer bot = new RTSPlayer(name, faction);
+        RTSPlayer bot = new RTSPlayer(createAiOwnerName(), faction);
+        bot.displayName = displayName;
         bot.aiControlled = true;
         bot.aiHomePos = homePos;
         bot.aiDifficulty = difficulty;
         bot.aiPersonality = personality;
         return bot;
+    }
+
+    static String createAiOwnerName() {
+        return "ron-ai-" + UUID.randomUUID();
     }
 
     public boolean isBot() {
@@ -158,7 +171,8 @@ public class RTSPlayer {
                 this.ticksWithoutCapitol += 1;
                 if (ticksWithoutCapitol == TICKS_TO_REVEAL) {
                     if (FogOfWarServerEvents.isEnabled()) {
-                        PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.revealed", false, this.name);
+                        PlayerServerEvents.sendMessageToAllPlayers(
+                                "server.reignofnether.revealed", false, this.displayName);
                     }
                     FogOfWarClientboundPacket.revealOrHidePlayer(true, this.name);
                 }

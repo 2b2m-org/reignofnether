@@ -96,7 +96,8 @@ public class ScenarioClientEvents {
         } else {
             for (RTSPlayer rtsPlayer : PlayerClientEvents.rtsPlayers) {
                 if (rtsPlayer.scenarioRoleIndex == roleIndexToPlay) {
-                    tooltipLines.add(fcs(I18n.get("hud.gamemode.reignofnether.taken_scenario_role", rtsPlayer.name)));
+                    tooltipLines.add(fcs(I18n.get(
+                            "hud.gamemode.reignofnether.taken_scenario_role", rtsPlayer.displayName)));
                     break;
                 }
             }

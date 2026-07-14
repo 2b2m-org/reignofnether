@@ -191,6 +191,18 @@ public class PlayerServerEvents {
         return null;
     }
 
+    public static String getPlayerDisplayName(String playerName) {
+        RTSPlayer player = getRTSPlayer(playerName);
+        if (player != null)
+            return player.displayName;
+        synchronized (postGameRtsPlayers) {
+            for (RTSPlayer postGamePlayer : postGameRtsPlayers)
+                if (postGamePlayer.name.equals(playerName))
+                    return postGamePlayer.displayName;
+        }
+        return playerName;
+    }
+
     public static boolean isRTSPlayer(int id) {
         synchronized (rtsPlayers) {
             for (RTSPlayer p : rtsPlayers) {
@@ -363,7 +375,7 @@ public class PlayerServerEvents {
             PlayerClientboundPacket.removeRTSPlayer(playerName);
         }
         for (RTSPlayer rtsPlayer : rtsPlayers) {
-            PlayerClientboundPacket.addRTSPlayer(rtsPlayer.name, rtsPlayer.faction, (long) rtsPlayer.id, rtsPlayer.startPosColorId);
+            PlayerClientboundPacket.addRTSPlayer(rtsPlayer);
         }
 
         if (rtsLocked) {
@@ -444,14 +456,15 @@ public class PlayerServerEvents {
                 case PIGLINS -> EntityRegistrar.GRUNT_UNIT.get();
                 default -> null;
             };
-            rtsPlayers.add(RTSPlayer.getNewPlayer(
+            RTSPlayer newPlayer = RTSPlayer.getNewPlayer(
                     serverPlayer.getName().getString(),
                     faction,
                     serverPlayer.getId(),
                     startPosColorId
-            ));
+            );
+            rtsPlayers.add(newPlayer);
             ResourcesServerEvents.assignResources(playerName);
-            PlayerClientboundPacket.addRTSPlayer(playerName, faction, (long) serverPlayer.getId(), startPosColorId);
+            PlayerClientboundPacket.addRTSPlayer(newPlayer);
 
             ServerLevel level = (ServerLevel) serverPlayer.level();
             ArrayList<Entity> workers = new ArrayList<>();
@@ -581,7 +594,7 @@ public class PlayerServerEvents {
             ResourcesServerEvents.resetResources(bot.name);
 
             if (!TutorialServerEvents.isEnabled()) {
-                sendMessageToAllPlayers("server.reignofnether.bot_added", true, bot.name);
+                sendMessageToAllPlayers("server.reignofnether.bot_added", true, bot.displayName);
                 sendMessageToAllPlayers("server.reignofnether.total_players", false, rtsPlayers.size());
             }
             saveRTSPlayers();
@@ -634,7 +647,7 @@ public class PlayerServerEvents {
             rtsPlayers.add(rtsPlayer);
             String playerName = serverPlayer.getName().getString();
             ResourcesServerEvents.assignScenarioResources(rtsPlayer);
-            PlayerClientboundPacket.addRTSPlayer(playerName, role.faction, (long) serverPlayer.getId(), 0);
+            PlayerClientboundPacket.addRTSPlayer(rtsPlayer);
 
             for (BuildingPlacement building : BuildingServerEvents.getBuildings()) {
                 if (building.scenarioRoleIndex == roleIndex) {
@@ -667,7 +680,7 @@ public class PlayerServerEvents {
                     );
                     rtsPlayers.add(npcRtsPlayer);
                     ResourcesServerEvents.assignScenarioResources(npcRtsPlayer);
-                    PlayerClientboundPacket.addScenarioNPCRTSPlayer(scenarioRole.name, scenarioRole.faction, (long) id, scenarioRole.index);
+                    PlayerClientboundPacket.addScenarioNPCRTSPlayer(npcRtsPlayer);
                     id -= 1;
                 }
             }
@@ -974,7 +987,8 @@ public class PlayerServerEvents {
             // Remove the defeated player from the list
             rtsPlayers.removeIf(rtsPlayer -> {
                 if (rtsPlayer.name.equals(playerName)) {
-                    sendMessageToAllPlayers("server.reignofnether.is_defeated", true, playerName, reason);
+                    sendMessageToAllPlayers(
+                            "server.reignofnether.is_defeated", true, rtsPlayer.displayName, reason);
                     sendMessageToAllPlayers("server.reignofnether.players_remaining", false, (rtsPlayers.size() - 1));
 
                     postGameRtsPlayers.add(rtsPlayer);
@@ -1032,7 +1046,8 @@ public class PlayerServerEvents {
                         // Declare victory for all players in the faction group
                         for (String winner : remainingPlayers) {
                             postGameRtsPlayers.add(getRTSPlayer(winner));
-                            sendMessageToAllPlayers("server.reignofnether.victory_alliance", true, winner);
+                            sendMessageToAllPlayers("server.reignofnether.victory_alliance", true,
+                                    getPlayerDisplayName(winner));
                             PlayerClientboundPacket.victory(winner);
                         }
                         broadcastMatchStats(remainingPlayers);
@@ -1041,7 +1056,8 @@ public class PlayerServerEvents {
                     // Single remaining player - declare victory
                     RTSPlayer winner = rtsPlayers.get(0);
                     postGameRtsPlayers.add(winner);
-                    sendMessageToAllPlayers("server.reignofnether.victorious", true, winner.name);
+                    sendMessageToAllPlayers(
+                            "server.reignofnether.victorious", true, winner.displayName);
                     PlayerClientboundPacket.victory(winner.name);
                     broadcastMatchStats(Set.of(winner.name));
                 }
@@ -1054,9 +1070,11 @@ public class PlayerServerEvents {
         if (SurvivalServerEvents.isEnabled()) {
             try {
                 if (AlliancesServerEvents.getAllAllies(playerName).isEmpty())
-                    sendMessageToAllPlayers("server.reignofnether.victorious", true, playerName);
+                    sendMessageToAllPlayers("server.reignofnether.victorious", true,
+                            getPlayerDisplayName(playerName));
                 else
-                    sendMessageToAllPlayers("server.reignofnether.victory_alliance", true, playerName);
+                    sendMessageToAllPlayers("server.reignofnether.victory_alliance", true,
+                            getPlayerDisplayName(playerName));
                 PlayerClientboundPacket.victory(playerName);
                 for (String allyName : AlliancesServerEvents.getAllAllies(playerName))
                     PlayerClientboundPacket.victory(allyName);
@@ -1092,7 +1110,7 @@ public class PlayerServerEvents {
         List<MatchStatsClientboundPacket.MatchStatRow> rows = new ArrayList<>();
         for (RTSPlayer p : byName.values())
             rows.add(new MatchStatsClientboundPacket.MatchStatRow(
-                    p.name, p.faction, winnerNames.contains(p.name), p.startPosColorId,
+                    p.name, p.displayName, p.faction, winnerNames.contains(p.name), p.startPosColorId,
                     p.scores.getScoreListAsArray()));
         MatchStatsClientboundPacket.broadcast(rtsGameTicks, rows);
     }

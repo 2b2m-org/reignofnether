@@ -12,6 +12,7 @@ import com.solegendary.reignofnether.building.buildings.monsters.SculkCatalyst;
 import com.solegendary.reignofnether.building.buildings.placements.SculkCatalystPlacement;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuilding;
 import com.solegendary.reignofnether.healthbars.HealthBarClientEvents;
+import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.util.LanguageUtil;
@@ -64,7 +65,7 @@ public class PortraitRendererBuilding {
             name += " (" + (int) (building.getBlocksPlacedPercent() * 100) + "%)";
 
         if (rs != Relationship.OWNED && !building.ownerName.isBlank())
-            name += " (" + building.ownerName + ")";
+            name += " (" + PlayerClientEvents.getPlayerDisplayName(building.ownerName) + ")";
 
         if (building instanceof SculkCatalystPlacement sc && building.getBuilding().hasActiveAddon(NightSourceAddon.class) && building.isBuilt)
             name += " (" + I18n.get("hud.buildings.reignofnether.sculk_catalyst.range", building.getBuilding().getActiveAddon(NightSourceAddon.class).getNightRange(building), SculkCatalyst.MAX_NIGHT_RANGE) + ")";

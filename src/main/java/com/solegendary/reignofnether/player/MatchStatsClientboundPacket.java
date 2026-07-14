@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.player;
 
 import static com.solegendary.reignofnether.ReignOfNether.payloadType;
 
+import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -31,14 +32,17 @@ public class MatchStatsClientboundPacket implements CustomPacketPayload {
 
     // one results-table row per player that took part in the match
     public static class MatchStatRow {
-        public final String name;
+        public final String ownerName;
+        public final String displayName;
         public final Faction faction;
         public final boolean winner;
         public final int teamId; // startPosColorId - players sharing it are on the same team
         public final int[] scores; // ordered as RTSPlayerScoresEnum.values()
 
-        public MatchStatRow(String name, Faction faction, boolean winner, int teamId, int[] scores) {
-            this.name = name;
+        public MatchStatRow(String ownerName, String displayName, Faction faction,
+                            boolean winner, int teamId, int[] scores) {
+            this.ownerName = ownerName;
+            this.displayName = displayName;
             this.faction = faction;
             this.winner = winner;
             this.teamId = teamId;
@@ -61,14 +65,18 @@ public class MatchStatsClientboundPacket implements CustomPacketPayload {
     public MatchStatsClientboundPacket(FriendlyByteBuf buffer) {
         this.gameDurationTicks = buffer.readLong();
         int n = buffer.readInt();
-        this.rows = new ArrayList<>(n);
+        if (n < 0)
+            throw new DecoderException("Negative match stat row count: " + n);
+        this.rows = new ArrayList<>();
         for (int i = 0; i < n; i++) {
-            String name = buffer.readUtf();
+            String ownerName = buffer.readUtf();
+            String displayName = buffer.readUtf();
             Faction faction = buffer.readEnum(Faction.class);
             boolean winner = buffer.readBoolean();
             int teamId = buffer.readVarInt();
             int[] scores = buffer.readVarIntArray();
-            this.rows.add(new MatchStatRow(name, faction, winner, teamId, scores));
+            this.rows.add(new MatchStatRow(
+                    ownerName, displayName, faction, winner, teamId, scores));
         }
     }
 
@@ -76,7 +84,8 @@ public class MatchStatsClientboundPacket implements CustomPacketPayload {
         buffer.writeLong(gameDurationTicks);
         buffer.writeInt(rows.size());
         for (MatchStatRow row : rows) {
-            buffer.writeUtf(row.name);
+            buffer.writeUtf(row.ownerName);
+            buffer.writeUtf(row.displayName);
             buffer.writeEnum(row.faction);
             buffer.writeBoolean(row.winner);
             buffer.writeVarInt(row.teamId);

@@ -177,7 +177,8 @@ public final class BotServerEvents {
         survivalAlliancesReady = false;
     }
 
-    private static int addBot(CommandSourceStack source, String name, String factionName, BotDifficulty difficulty,
+    private static int addBot(CommandSourceStack source, String displayName, String factionName,
+                              BotDifficulty difficulty,
                               BlockPos requestedHome) {
         ServerLevel level = source.getLevel();
         if (!level.dimension().equals(Level.OVERWORLD)) {
@@ -189,48 +190,54 @@ public final class BotServerEvents {
             source.sendFailure(Component.literal("Unknown faction '" + factionName + "'. Use villagers, monsters, or piglins."));
             return 0;
         }
-        if (name.length() > 32) {
+        if (displayName.length() > 32) {
             source.sendFailure(Component.literal("Bot names must be 32 characters or fewer."));
             return 0;
         }
-        if (SurvivalServerEvents.ENEMY_OWNER_NAME.equalsIgnoreCase(name)) {
-            source.sendFailure(Component.literal("'" + name + "' is reserved by Wave Survival."));
+        if (SurvivalServerEvents.ENEMY_OWNER_NAME.equalsIgnoreCase(displayName)) {
+            source.sendFailure(Component.literal("'" + displayName + "' is reserved by Wave Survival."));
             return 0;
         }
-        boolean nameInUse = PlayerServerEvents.hasRTSPlayerName(name)
+        boolean nameInUse = PlayerServerEvents.rtsPlayers.stream()
+                .anyMatch(player -> player.displayName.equalsIgnoreCase(displayName))
                 || source.getServer().getPlayerList().getPlayers().stream()
-                .anyMatch(player -> player.getGameProfile().getName().equalsIgnoreCase(name));
+                .anyMatch(player -> player.getGameProfile().getName().equalsIgnoreCase(displayName));
         if (nameInUse) {
-            source.sendFailure(Component.literal("An RTS player named '" + name + "' already exists."));
+            source.sendFailure(Component.literal("An RTS player named '" + displayName + "' already exists."));
             return 0;
         }
 
+        RTSPlayer bot = RTSPlayer.getNewAiBot(
+                displayName, faction, requestedHome, difficulty, BotPersonality.STEADY);
         BotStrategy strategy = BotStrategy.forFaction(faction);
-        var origin = BotBuildingPlanner.findPlacement(level, strategy.capitol(), requestedHome, name, true);
+        var origin = BotBuildingPlanner.findPlacement(
+                level, strategy.capitol(), requestedHome, bot.name, true);
         if (origin.isEmpty()) {
-            source.sendFailure(Component.literal("No flat, clear area was found for " + name + "'s capitol."));
+            source.sendFailure(Component.literal(
+                    "No flat, clear area was found for " + displayName + "'s capitol."));
             return 0;
         }
-        BuildingPlacement preview = strategy.capitol().createBuildingPlacement(level, origin.get(), Rotation.NONE, name);
+        BuildingPlacement preview = strategy.capitol().createBuildingPlacement(
+                level, origin.get(), Rotation.NONE, bot.name);
         BlockPos home = BotBuildingPlanner.groundAt(level, preview.centrePos.getX(), preview.centrePos.getZ());
+        bot.aiHomePos = home;
 
-        RTSPlayer bot = RTSPlayer.getNewAiBot(name, faction, home, difficulty, BotPersonality.STEADY);
         PlayerServerEvents.rtsPlayers.add(bot);
-        ResourcesServerEvents.assignResources(name);
-        ResourcesServerEvents.resetResources(name);
-        ResearchServerEvents.removeAllCheatsFor(name);
-        PlayerClientboundPacket.addRTSPlayer(name, faction, (long) bot.id, 0);
+        ResourcesServerEvents.assignResources(bot.name);
+        ResourcesServerEvents.resetResources(bot.name);
+        ResearchServerEvents.removeAllCheatsFor(bot.name);
+        PlayerClientboundPacket.addRTSPlayer(bot);
 
         List<Entity> workers = spawnWorkers(level, bot, home);
         int[] workerIds = workers.stream().mapToInt(Entity::getId).toArray();
         BuildingPlacement capitol = BuildingServerEvents.placeBuilding(
-                strategy.capitol(), origin.get(), Rotation.NONE, name, workerIds, false, false);
+                strategy.capitol(), origin.get(), Rotation.NONE, bot.name, workerIds, false, false);
         if (capitol == null || !BuildingServerEvents.getBuildings().contains(capitol)) {
             workers.forEach(Entity::discard);
             PlayerServerEvents.rtsPlayers.remove(bot);
-            ResourcesServerEvents.resourcesList.removeIf(resources -> resources.ownerName.equals(name));
-            PlayerClientboundPacket.removeRTSPlayer(name);
-            source.sendFailure(Component.literal("Failed to place " + name + "'s capitol."));
+            ResourcesServerEvents.resourcesList.removeIf(resources -> resources.ownerName.equals(bot.name));
+            PlayerClientboundPacket.removeRTSPlayer(bot.name);
+            source.sendFailure(Component.literal("Failed to place " + displayName + "'s capitol."));
             return 0;
         }
 
@@ -238,17 +245,20 @@ public final class BotServerEvents {
             AlliancesServerEvents.applyCoopAlliances();
             survivalAlliancesReady = true;
         }
-        CONTROLLERS.put(name, new BotController(name));
-        PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.bot_added", true, name);
+        CONTROLLERS.put(bot.name, new BotController(bot.name));
+        PlayerServerEvents.sendMessageToAllPlayers(
+                "server.reignofnether.bot_added", true, displayName);
         PlayerServerEvents.sendMessageToAllPlayers(
                 "server.reignofnether.total_players", false, PlayerServerEvents.rtsPlayers.size());
         PlayerClientboundPacket.syncRtsGameTime(PlayerServerEvents.rtsGameTicks);
         PlayerServerEvents.saveRTSPlayers();
 
-        ReignOfNether.LOGGER.info("[Bot] added {} faction={} difficulty={} personality={} home={} capitol={}",
-                name, faction, difficulty, bot.aiPersonality, home, capitol.originPos);
-        source.sendSuccess(() -> Component.literal("Added RTS bot " + name + " (" + factionName.toLowerCase(Locale.ROOT)
-                + ", " + difficulty.name().toLowerCase(Locale.ROOT) + ", steady) at " + home.toShortString()), true);
+        ReignOfNether.LOGGER.info(
+                "[Bot] added {} owner={} faction={} difficulty={} personality={} home={} capitol={}",
+                displayName, bot.name, faction, difficulty, bot.aiPersonality, home, capitol.originPos);
+        source.sendSuccess(() -> Component.literal("Added RTS bot " + displayName + " ("
+                + factionName.toLowerCase(Locale.ROOT) + ", "
+                + difficulty.name().toLowerCase(Locale.ROOT) + ", steady) at " + home.toShortString()), true);
         return 1;
     }
 
@@ -274,21 +284,22 @@ public final class BotServerEvents {
         return workers;
     }
 
-    private static int removeBot(CommandSourceStack source, String name) {
-        RTSPlayer player = PlayerServerEvents.getRTSPlayer(name);
-        if (player == null || !player.aiControlled) {
-            source.sendFailure(Component.literal("No AI-controlled RTS bot named '" + name + "' exists."));
+    private static int removeBot(CommandSourceStack source, String displayName) {
+        RTSPlayer player = findAiBotByDisplayName(displayName);
+        if (player == null) {
+            source.sendFailure(Component.literal(
+                    "No AI-controlled RTS bot named '" + displayName + "' exists."));
             return 0;
         }
-        CONTROLLERS.remove(name);
-        PlayerServerEvents.defeat(name, "removed by an operator");
-        source.sendSuccess(() -> Component.literal("Removed RTS bot " + name), true);
+        CONTROLLERS.remove(player.name);
+        PlayerServerEvents.defeat(player.name, "removed by an operator");
+        source.sendSuccess(() -> Component.literal("Removed RTS bot " + displayName), true);
         return 1;
     }
 
     private static int listBots(CommandSourceStack source) {
         List<BotController> controllers = CONTROLLERS.values().stream()
-                .sorted((first, second) -> first.getOwnerName().compareToIgnoreCase(second.getOwnerName()))
+                .sorted((first, second) -> first.getDisplayName().compareToIgnoreCase(second.getDisplayName()))
                 .toList();
         if (controllers.isEmpty()) {
             source.sendSuccess(() -> Component.literal("No AI-controlled RTS bots are active."), false);
@@ -299,10 +310,11 @@ public final class BotServerEvents {
         return controllers.size();
     }
 
-    private static int setDifficulty(CommandSourceStack source, String name, String level) {
-        RTSPlayer player = PlayerServerEvents.getRTSPlayer(name);
-        if (player == null || !player.aiControlled) {
-            source.sendFailure(Component.literal("No AI-controlled RTS bot named '" + name + "' exists."));
+    private static int setDifficulty(CommandSourceStack source, String displayName, String level) {
+        RTSPlayer player = findAiBotByDisplayName(displayName);
+        if (player == null) {
+            source.sendFailure(Component.literal(
+                    "No AI-controlled RTS bot named '" + displayName + "' exists."));
             return 0;
         }
         BotDifficulty difficulty = BotDifficulty.fromName(level).orElse(null);
@@ -312,15 +324,16 @@ public final class BotServerEvents {
         }
         player.aiDifficulty = difficulty;
         PlayerServerEvents.saveRTSPlayers();
-        source.sendSuccess(() -> Component.literal("Set " + name + " difficulty to "
+        source.sendSuccess(() -> Component.literal("Set " + displayName + " difficulty to "
                 + difficulty.name().toLowerCase(Locale.ROOT)), true);
         return 1;
     }
 
-    private static int setPersonality(CommandSourceStack source, String name, String style) {
-        RTSPlayer player = PlayerServerEvents.getRTSPlayer(name);
-        if (player == null || !player.aiControlled) {
-            source.sendFailure(Component.literal("No AI-controlled RTS bot named '" + name + "' exists."));
+    private static int setPersonality(CommandSourceStack source, String displayName, String style) {
+        RTSPlayer player = findAiBotByDisplayName(displayName);
+        if (player == null) {
+            source.sendFailure(Component.literal(
+                    "No AI-controlled RTS bot named '" + displayName + "' exists."));
             return 0;
         }
         BotPersonality personality = BotPersonality.fromName(style).orElse(null);
@@ -331,29 +344,30 @@ public final class BotServerEvents {
         }
         player.aiPersonality = personality;
         PlayerServerEvents.saveRTSPlayers();
-        source.sendSuccess(() -> Component.literal("Set " + name + " personality to "
+        source.sendSuccess(() -> Component.literal("Set " + displayName + " personality to "
                 + personality.name().toLowerCase(Locale.ROOT)), true);
         return 1;
     }
 
-    private static int setSpeed(CommandSourceStack source, String name, boolean enabled) {
-        RTSPlayer player = PlayerServerEvents.getRTSPlayer(name);
-        if (player == null || !player.aiControlled) {
-            source.sendFailure(Component.literal("No AI-controlled RTS bot named '" + name + "' exists."));
+    private static int setSpeed(CommandSourceStack source, String displayName, boolean enabled) {
+        RTSPlayer player = findAiBotByDisplayName(displayName);
+        if (player == null) {
+            source.sendFailure(Component.literal(
+                    "No AI-controlled RTS bot named '" + displayName + "' exists."));
             return 0;
         }
 
         for (String cheat : List.of("warpten", "operationcwal")) {
-            if (enabled && !ResearchServerEvents.playerHasCheat(name, cheat)) {
-                ResearchServerEvents.addCheat(name, cheat);
-                ResearchClientboundPacket.addCheat(name, cheat);
-            } else if (!enabled && ResearchServerEvents.playerHasCheat(name, cheat)) {
-                ResearchServerEvents.removeCheat(name, cheat);
-                ResearchClientboundPacket.removeCheat(name, cheat);
+            if (enabled && !ResearchServerEvents.playerHasCheat(player.name, cheat)) {
+                ResearchServerEvents.addCheat(player.name, cheat);
+                ResearchClientboundPacket.addCheat(player.name, cheat);
+            } else if (!enabled && ResearchServerEvents.playerHasCheat(player.name, cheat)) {
+                ResearchServerEvents.removeCheat(player.name, cheat);
+                ResearchClientboundPacket.removeCheat(player.name, cheat);
             }
         }
         source.sendSuccess(() -> Component.literal("Test-only speed cheats " + (enabled ? "enabled" : "disabled")
-                + " for " + name), true);
+                + " for " + displayName), true);
         return 1;
     }
 
@@ -361,9 +375,19 @@ public final class BotServerEvents {
                                                                   SuggestionsBuilder builder) {
         List<String> names = PlayerServerEvents.rtsPlayers.stream()
                 .filter(player -> player.aiControlled)
-                .map(player -> player.name)
+                .map(player -> player.displayName)
                 .toList();
         return SharedSuggestionProvider.suggest(names, builder);
+    }
+
+    static RTSPlayer findAiBotByDisplayName(String displayName) {
+        synchronized (PlayerServerEvents.rtsPlayers) {
+            return PlayerServerEvents.rtsPlayers.stream()
+                    .filter(player -> player.aiControlled)
+                    .filter(player -> player.displayName.equalsIgnoreCase(displayName))
+                    .findFirst()
+                    .orElse(null);
+        }
     }
 
     private static Faction parseFaction(String value) {

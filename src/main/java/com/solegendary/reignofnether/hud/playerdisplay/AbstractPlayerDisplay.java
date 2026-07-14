@@ -20,6 +20,7 @@ public abstract class AbstractPlayerDisplay {
     private static final Minecraft MC = Minecraft.getInstance();
 
     public final String playerName;
+    public final String displayName;
     public final Faction faction;
     public final @Nullable AbstractClientPlayer player;
 
@@ -44,12 +45,14 @@ public abstract class AbstractPlayerDisplay {
         }
         this.faction = rtsPlayer.faction;
         this.playerName = rtsPlayer.name;
+        this.displayName = rtsPlayer.displayName;
     }
 
     // survival/adventure player
     public AbstractPlayerDisplay(AbstractClientPlayer clientPlayer) {
         this.player = clientPlayer;
         this.playerName = clientPlayer.getName().getString();
+        this.displayName = this.playerName;
         this.faction = Faction.NONE;
     }
 
@@ -114,7 +117,7 @@ public abstract class AbstractPlayerDisplay {
         // render player name
         guiGraphics.drawString(
                 MC.font,
-                this.playerName,
+                this.displayName,
                 x + (Button.DEFAULT_ICON_FRAME_SIZE * 2),
                 y + (Button.DEFAULT_ICON_SIZE / 2) + 1,
                 0xFFFFFF

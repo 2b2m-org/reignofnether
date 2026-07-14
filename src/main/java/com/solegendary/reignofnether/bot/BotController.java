@@ -31,6 +31,7 @@ public final class BotController {
     private static final int REPAIR_THREAT_DISTANCE_SQR = 64 * 64;
 
     private final String ownerName;
+    private final String displayName;
     private final BotSelf self;
     private final BotWorldView worldView;
     private final BotArmy army;
@@ -42,13 +43,19 @@ public final class BotController {
 
     public BotController(String ownerName) {
         this.ownerName = ownerName;
+        RTSPlayer player = PlayerServerEvents.getRTSPlayer(ownerName);
+        displayName = player == null ? ownerName : player.displayName;
         self = new BotSelf(ownerName);
         worldView = new BotWorldView();
-        army = new BotArmy(ownerName, self, worldView);
+        army = new BotArmy(ownerName, displayName, self, worldView);
     }
 
     public String getOwnerName() {
         return ownerName;
+    }
+
+    public String getDisplayName() {
+        return displayName;
     }
 
     public BotGoal getCurrentGoal() {
@@ -94,7 +101,7 @@ public final class BotController {
 
         if (nextGoal != currentGoal) {
             currentGoal = nextGoal;
-            ReignOfNether.LOGGER.info("[Bot] {} goal={}", ownerName, currentGoal);
+            ReignOfNether.LOGGER.info("[Bot] {} goal={}", displayName, currentGoal);
         }
         executeGoal(level, player, strategy, difficulty, personality, currentGoal);
         army.tick(level, player, strategy, difficulty, personality);
@@ -103,7 +110,7 @@ public final class BotController {
     public String describe() {
         RTSPlayer player = PlayerServerEvents.getRTSPlayer(ownerName);
         if (player == null)
-            return ownerName + " (inactive)";
+            return displayName + " (inactive)";
 
         int workers = self.workers().size();
         int army = self.army().size();
@@ -113,7 +120,7 @@ public final class BotController {
         String resourceText = resources == null
                 ? "resources unavailable"
                 : "food=" + resources.food + " wood=" + resources.wood + " ore=" + resources.ore;
-        return ownerName + " faction=" + player.faction.name().toLowerCase()
+        return displayName + " faction=" + player.faction.name().toLowerCase()
                 + " difficulty=" + player.aiDifficulty.name().toLowerCase()
                 + " personality=" + player.aiPersonality.name().toLowerCase()
                 + " goal=" + currentGoal.name().toLowerCase()
@@ -214,7 +221,8 @@ public final class BotController {
             startProduction(portal, transform, militaryRole ? "military portal" : "civilian portal", difficulty);
         }
 
-        ReignOfNether.LOGGER.info("[Bot] {} placed {} at {}", ownerName, building.name, placement.originPos);
+        ReignOfNether.LOGGER.info(
+                "[Bot] {} placed {} at {}", displayName, building.name, placement.originPos);
         return true;
     }
 
@@ -275,7 +283,7 @@ public final class BotController {
             return false;
 
         BuildingClientboundPacket.startProduction(building.originPos, item);
-        ReignOfNether.LOGGER.info("[Bot] {} queued {} for {}", ownerName, item.getItemName(), purpose);
+        ReignOfNether.LOGGER.info("[Bot] {} queued {} for {}", displayName, item.getItemName(), purpose);
         return true;
     }
 
@@ -415,7 +423,7 @@ public final class BotController {
         ((WorkerUnit) repairer).getBuildRepairGoal().setBuildingTarget(target);
         repairAssigned = true;
         ReignOfNether.LOGGER.info("[Bot] {} assigned one worker to repair {} at {}",
-                ownerName, target.getBuilding().name, target.originPos);
+                displayName, target.getBuilding().name, target.originPos);
         return stoppedRepair;
     }
 
@@ -523,7 +531,7 @@ public final class BotController {
             Unit.fullResetBehaviours((Unit) replacement);
             ((WorkerUnit) replacement).getBuildRepairGoal().setBuildingTarget(building);
             ReignOfNether.LOGGER.info("[Bot] {} reassigned builder to {} at {}",
-                    ownerName, building.getBuilding().name, building.originPos);
+                    displayName, building.getBuilding().name, building.originPos);
         }
     }
 

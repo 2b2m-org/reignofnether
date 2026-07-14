@@ -51,6 +51,7 @@ public class RTSPlayerSaveData extends SavedData {
                 CompoundTag ptag = (CompoundTag) ctag;
 
                 String name = ptag.getString("name");
+                String displayName = ptag.contains("displayName") ? ptag.getString("displayName") : name;
                 int id = ptag.getInt("id");
                 int ticksWithoutCapitol = ptag.getInt("ticksWithoutCapitol");
                 int beaconOwnerTicks = ptag.getInt("beaconOwnerTicks");
@@ -80,9 +81,9 @@ public class RTSPlayerSaveData extends SavedData {
                 BlockPos aiSupplyPortalOrigin = ptag.contains("aiSupplyPortalOrigin")
                         ? BlockPos.of(ptag.getLong("aiSupplyPortalOrigin")) : null;
 
-                data.rtsPlayers.add(RTSPlayer.getFromSave(name, id, ticksWithoutCapitol, faction, beaconOwnerTicks,
-                        startPosColorId, scores, scenarioRoleIndex, tradeRates, aiControlled, aiHomePos, aiDifficulty,
-                        aiPersonality, aiMilitaryPortalOrigin, aiSupplyPortalOrigin));
+                data.rtsPlayers.add(RTSPlayer.getFromSave(name, displayName, id, ticksWithoutCapitol, faction,
+                        beaconOwnerTicks, startPosColorId, scores, scenarioRoleIndex, tradeRates, aiControlled,
+                        aiHomePos, aiDifficulty, aiPersonality, aiMilitaryPortalOrigin, aiSupplyPortalOrigin));
 
                 ReignOfNether.LOGGER.info("RTSPlayerSaveData.load: " + name + "|" + id + "|" + faction);
             }
@@ -98,6 +99,7 @@ public class RTSPlayerSaveData extends SavedData {
         this.rtsPlayers.forEach(p -> {
             CompoundTag cTag = new CompoundTag();
             cTag.putString("name", p.name);
+            cTag.putString("displayName", p.displayName);
             cTag.putInt("id", p.id);
             cTag.putInt("ticksWithoutCapitol", p.ticksWithoutCapitol);
             cTag.putInt("beaconOwnerTicks", p.beaconOwnerTicks);

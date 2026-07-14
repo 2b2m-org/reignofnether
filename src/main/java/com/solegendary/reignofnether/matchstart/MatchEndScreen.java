@@ -136,11 +136,11 @@ public class MatchEndScreen extends Screen {
             y += TEAM_HEADER_H;
 
             for (MatchStatRow row : t.members) {
-                if (row.name.equals(localName))
+                if (row.ownerName.equals(localName))
                     g.fill(cl - 2, y - 1, cr + 2, y + HEAD + 1, BG_ROW_SELF);
 
                 // player head
-                ResourceLocation skin = MyRenderer.getPlayerSkinRl(row.name);
+                ResourceLocation skin = MyRenderer.getPlayerSkinRl(row.ownerName);
                 g.blit(skin, cl, y, HEAD, HEAD, 8.0f, 8.0f, 8, 8, 64, 64);
                 g.blit(skin, cl, y, HEAD, HEAD, 40.0f, 8.0f, 8, 8, 64, 64);
 
@@ -150,7 +150,8 @@ public class MatchEndScreen extends Screen {
                     MyRenderer.renderIcon(g, fIcon, cl + HEAD + 4, y, HEAD);
 
                 int textY = y + (HEAD - font.lineHeight) / 2;
-                g.drawString(font, row.name, cl + HEAD + 4 + HEAD + 4, textY, TEXT_NORMAL, true);
+                g.drawString(font, row.displayName,
+                        cl + HEAD + 4 + HEAD + 4, textY, TEXT_NORMAL, true);
                 drawNum(g, row.scores[SCORE_UNITS], cl + COL_UNITS, textY, TEXT_NORMAL);
                 drawNum(g, row.scores[SCORE_MILITARY], cl + COL_MIL, textY, TEXT_NORMAL);
                 drawNum(g, row.scores[SCORE_BUILDINGS], cl + COL_BLDG, textY, TEXT_NORMAL);

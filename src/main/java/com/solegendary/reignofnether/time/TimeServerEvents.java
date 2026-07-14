@@ -53,7 +53,8 @@ public class TimeServerEvents {
         bloodMoonTicksLeft = tickDuration;
         bloodMoonOwner = (LivingEntity) owner;
         bloodMoonTarget = targetPos;
-        sendMessageToAllPlayers("abilities.reignofnether.blood_moon.start", 0xFF0000, true, owner.getOwnerName());
+        sendMessageToAllPlayers("abilities.reignofnether.blood_moon.start", 0xFF0000, true,
+                PlayerServerEvents.getPlayerDisplayName(owner.getOwnerName()));
         SoundClientboundPacket.playSoundForAllPlayers(SoundAction.RANDOM_CAVE_AMBIENCE);
     }
 
@@ -112,7 +113,6 @@ public class TimeServerEvents {
         }
     }
 }
-
 
 
 

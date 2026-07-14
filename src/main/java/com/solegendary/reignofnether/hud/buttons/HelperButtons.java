@@ -189,7 +189,8 @@ public class HelperButtons {
                 beacon.getUpgradeLevel(), Beacon.MAX_UPGRADE_LEVEL)));
 
         if (beacon.getUpgradeLevel() < Beacon.MAX_UPGRADE_LEVEL) {
-            fcsList.add(fcs(I18n.get("hud.helperbuttons.reignofnether.beacon.player_controls", ownerName), true));
+            fcsList.add(fcs(I18n.get("hud.helperbuttons.reignofnether.beacon.player_controls",
+                    PlayerClientEvents.getPlayerDisplayName(ownerName)), true));
         } else {
             boolean noController = true;
             for (RTSPlayer rtsPlayer : PlayerClientEvents.rtsPlayers) {
@@ -205,7 +206,7 @@ public class HelperButtons {
                     long ticksToWin = Math.max(0, Beacon.getTicksToWin(beacon.getLevel()) - rtsPlayer.beaconOwnerTicks);
                     String timeToWin = TimeUtils.getTimeStrFromTicks(ticksToWin);
                     fcsList.add(fcs(I18n.get("hud.helperbuttons.reignofnether.beacon.player_wins_in",
-                            rtsPlayer.name, timeToWin), ownerName.equals(rtsPlayer.name)));
+                            rtsPlayer.displayName, timeToWin), ownerName.equals(rtsPlayer.name)));
                 }
             }
         }

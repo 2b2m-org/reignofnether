@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
@@ -36,6 +37,7 @@ final class BotArmy {
     };
 
     private final String ownerName;
+    private final String displayName;
     private final BotSelf self;
     private final BotWorldView worldView;
     private final Map<BlockPos, Integer> targetCooldowns = new HashMap<>();
@@ -53,8 +55,9 @@ final class BotArmy {
     private int scoutWaypointIndex;
     private int nextCommandTick;
 
-    BotArmy(String ownerName, BotSelf self, BotWorldView worldView) {
+    BotArmy(String ownerName, String displayName, BotSelf self, BotWorldView worldView) {
         this.ownerName = ownerName;
+        this.displayName = displayName;
         this.self = self;
         this.worldView = worldView;
     }
@@ -133,7 +136,7 @@ final class BotArmy {
             abandonObjective(tick);
             regroupUntilTick = tick + REGROUP_TICKS;
             attackMoveArmy(main, player.aiHomePos.above());
-            ReignOfNether.LOGGER.info("[Bot] {} regrouping with {} units", ownerName, main.size());
+            ReignOfNether.LOGGER.info("[Bot] {} regrouping with {} units", displayName, main.size());
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -177,7 +180,8 @@ final class BotArmy {
 
         updateObjectiveProgress(target, main, tick);
         if (tick - objectiveLastProgressTick >= OBJECTIVE_STALL_TICKS) {
-            ReignOfNether.LOGGER.info("[Bot] {} abandoning stalled target at {}", ownerName, objective.origin());
+            ReignOfNether.LOGGER.info(
+                    "[Bot] {} abandoning stalled target at {}", displayName, objective.origin());
             abandonObjective(tick);
             attackMoveArmy(main, player.aiHomePos.above());
             nextCommandTick = tick + difficulty.attackRefreshTicks();
@@ -247,7 +251,7 @@ final class BotArmy {
         scoutTarget = nextScoutTarget(level, player.aiHomePos);
         resetScoutProgress(scout, tick);
         attackMoveArmy(scoutGroup, scoutTarget);
-        ReignOfNether.LOGGER.info("[Bot] {} scouting at {}", ownerName, scoutTarget);
+        ReignOfNether.LOGGER.info("[Bot] {} scouting at {}", displayName, scoutTarget);
     }
 
     private void observeHomeDamage(List<LivingEntity> visibleEnemies, int tick) {
@@ -271,7 +275,7 @@ final class BotArmy {
             Integer previousExpiry = homeThreats.put(building.originPos, tick + DEFENSE_MEMORY_TICKS);
             if (previousExpiry == null || previousExpiry < tick) {
                 ReignOfNether.LOGGER.info("[Bot] {} defending damaged {} at {}",
-                        ownerName, building.getBuilding().name, building.originPos);
+                        displayName, building.getBuilding().name, building.originPos);
             }
         }
     }
@@ -314,7 +318,8 @@ final class BotArmy {
         objectiveFewestBlocks = target.blocksPlaced();
         objectiveLastProgressTick = tick;
         ReignOfNether.LOGGER.info("[Bot] {} attacking {} at {} with {} units",
-                ownerName, target.ownerName(), target.origin(), armySize);
+                displayName, PlayerServerEvents.getPlayerDisplayName(target.ownerName()),
+                target.origin(), armySize);
     }
 
     private BotWorldView.KnownEnemyBuilding resolveObjective(RTSPlayer player) {

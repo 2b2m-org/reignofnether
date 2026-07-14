@@ -101,6 +101,11 @@ public class PlayerClientEvents {
         return null;
     }
 
+    public static String getPlayerDisplayName(String playerName) {
+        RTSPlayer player = getPlayer(playerName);
+        return player == null ? playerName : player.displayName;
+    }
+
     public static Integer getPlayerId(String playerName) {
         var player = getPlayer(playerName);
         if (player == null) {
@@ -248,9 +253,13 @@ public class PlayerClientEvents {
         MC.player.playSound(SoundRegistrar.VICTORY.get(), 0.5f, 1.0f);
     }
 
-    public static void addRTSPlayer(String playerName, Faction faction, Long id, int startPosColorId) {
+    public static void addRTSPlayer(String playerName, String displayName, boolean aiControlled,
+                                    Faction faction, Long id, int startPosColorId) {
         if (!isRTSPlayer(playerName)) {
-            rtsPlayers.add(RTSPlayer.getNewPlayer(playerName, faction, id.intValue(), startPosColorId));
+            RTSPlayer rtsPlayer = RTSPlayer.getNewPlayer(playerName, faction, id.intValue(), startPosColorId);
+            rtsPlayer.displayName = displayName;
+            rtsPlayer.aiControlled = aiControlled;
+            rtsPlayers.add(rtsPlayer);
             if (MC.player != null && MC.player.getName().getString().equals(playerName)) {
                 GameruleClient.gamerulesMenuOpen = false;
                 if (faction != Faction.NONE) {
@@ -262,9 +271,11 @@ public class PlayerClientEvents {
         }
     }
 
-    public static void addScenarioNPCRTSPlayer(String playerName, Faction faction, Long id, int scenarioRoleIndex) {
+    public static void addScenarioNPCRTSPlayer(String playerName, String displayName, Faction faction,
+                                               Long id, int scenarioRoleIndex) {
         if (!isRTSPlayer(playerName)) {
             RTSPlayer rtsPlayer = RTSPlayer.getNewPlayer(playerName, faction, id.intValue(), 0);
+            rtsPlayer.displayName = displayName;
             rtsPlayer.scenarioRoleIndex = scenarioRoleIndex;
             rtsPlayers.add(rtsPlayer);
             if (MC.player != null && MC.player.getName().getString().equals(playerName)) {

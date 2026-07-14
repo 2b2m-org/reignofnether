@@ -262,7 +262,8 @@ public class BuildingPlacement {
         if (this.isCapitol && !this.level.isClientSide()) {
             if (BuildingUtils.getTotalCompletedBuildingsOwned(false, this.ownerName) == 1 &&
                 !TutorialServerEvents.isEnabled() && FogOfWarServerEvents.isEnabled()) {
-                sendMessageToAllPlayers("hud.reignofnether.placed_capitol", false, this.ownerName);
+                sendMessageToAllPlayers("hud.reignofnether.placed_capitol", false,
+                        PlayerServerEvents.getPlayerDisplayName(this.ownerName));
             }
             FogOfWarClientboundPacket.revealOrHidePlayer(false, this.ownerName);
         }
@@ -682,7 +683,7 @@ public class BuildingPlacement {
                 if (!flag && FogOfWarServerEvents.isEnabled()) {
                     sendMessageToAllPlayers("server.reignofnether.lost_capitol",
                         false,
-                        this.ownerName,
+                        PlayerServerEvents.getPlayerDisplayName(this.ownerName),
                         PlayerServerEvents.TICKS_TO_REVEAL / ResourceCost.TICKS_PER_SECOND
                     );
                 }
