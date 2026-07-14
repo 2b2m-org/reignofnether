@@ -56,7 +56,7 @@ On maps with configured start positions, bots can join the normal match lobby:
 
 Lobby bots ready automatically and use the seat's configured team.
 
-To run Wave Survival without a human RTS player, add one or more active bots and then use `rts-bot wave-survival`. The bots become allies, the selected Wave Survival difficulty is synchronized to clients, and new RTS players are locked out while the run is active. After the run, use `/rts-reset` or `/rts-hard-reset` before starting another match.
+Add one or more active bots and then use `rts-bot wave-survival` to start a bot-only or mixed human-and-bot run. All participants become allies and the selected Wave Survival difficulty is synchronized to clients. Bot-only runs lock out new RTS players; mixed runs do not automatically lock out late human allies. After the run, use `/rts-reset` or `/rts-hard-reset` before starting another match.
 
 The difficulty defaults to `medium` and the personality defaults to `steady`. Either the difficulty, the position, or both may be omitted; without a position, the bot starts near the command source. Difficulty, personality, and home position are saved across server restarts.
 

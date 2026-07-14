@@ -479,9 +479,14 @@ public final class BotServerEvents {
             source.sendFailure(Component.literal("Add at least one RTS bot before starting Wave Survival."));
             return 0;
         }
-        if (players.stream().anyMatch(player -> !player.aiControlled)) {
+        long botCount = players.stream().filter(player -> player.aiControlled).count();
+        if (botCount == 0) {
+            source.sendFailure(Component.literal("Add at least one RTS bot before starting Wave Survival."));
+            return 0;
+        }
+        if (players.stream().anyMatch(player -> player.faction == Faction.NONE)) {
             source.sendFailure(Component.literal(
-                    "This command starts bot-only Wave Survival. Human players start it from the RTS game-mode menu."));
+                    "Remove Sandbox RTS players before starting Wave Survival."));
             return 0;
         }
 
@@ -489,11 +494,16 @@ public final class BotServerEvents {
         GameModeClientboundPacket.setAndLockAllClientGameModes(GameMode.SURVIVAL);
         AlliancesServerEvents.applyCoopAlliances();
         PlayerServerEvents.initializeMatchTime(source.getLevel());
-        PlayerServerEvents.setRTSLock(true, true);
+        long humanCount = players.size() - botCount;
+        if (humanCount == 0)
+            PlayerServerEvents.setRTSLock(true, true);
         survivalAlliancesReady = true;
-        source.sendSuccess(() -> Component.literal("Started bot Wave Survival on "
+        String participants = botCount + (botCount == 1 ? " bot" : " bots")
+                + (humanCount == 0 ? "" : " and " + humanCount
+                        + (humanCount == 1 ? " human player" : " human players"));
+        source.sendSuccess(() -> Component.literal("Started Wave Survival on "
                 + difficulty.name().toLowerCase(Locale.ROOT) + " difficulty with "
-                + players.size() + (players.size() == 1 ? " bot." : " bots.")), true);
+                + participants + "."), true);
         return 1;
     }
 
