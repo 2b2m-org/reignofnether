@@ -70,7 +70,7 @@ Army budgets use the mod's population costs rather than unit head counts, giving
 | Medium | 5 workers, balanced split | 2 units ahead | attacks at 24 population; may regroup below 12 when pressured; balanced 36-population army |
 | Hard | 9 workers, construction-aware split | 3 units ahead | queues at least an 8/12/16-population opening for Rusher/Steady/Turtle before resuming worker production, with unit population able to round it upward; attacks at 45 population or sooner with a clear observed advantage; 48-population army; may regroup below 24 |
 
-Personalities change strategy without resource grants, stat modifiers, extra vision, or faster construction or production. Matchup balance is still being validated:
+Personalities change strategy without resource grants, stat modifiers, extra vision, or faster construction or production. Final matchup tuning and full difficulty-hierarchy validation are deferred until AI feature freeze:
 
 | Personality | Economy and timing | Army style | Target and defense style |
 | --- | --- | --- | --- |

@@ -6,7 +6,7 @@ This document describes the AI opponent implementation on the `feature/basic-ai-
 
 - Bots obey the same resource costs, gathering rates, population limits, construction and production times, unit stats, combat command paths, and victory rules as human players. Fog uses a separate server-side visibility model described below; it is not yet identical to every client reveal rule.
 - Difficulty changes decision quality and cadence, not game rules. Bot creation explicitly removes research cheats.
-- Personalities change strategic timing and composition decisions without resource grants, stat modifiers, extra vision, or faster construction or production. Matchup balance is validated separately.
+- Personalities change strategic timing and composition decisions without resource grants, stat modifiers, extra vision, or faster construction or production. Final matchup tuning is deferred until AI feature freeze, when the policy surface is stable.
 - Combat targeting and scouting are deterministic from the bot's visible or remembered state under fog. Building placement still checks authoritative collision state before issuing a legal placement.
 - The implementation uses the mod's existing building, production, resource, unit-order, alliance, minimap-marker, and saved-data paths.
 
@@ -26,7 +26,7 @@ Production targets count the full military population. Normal attack launches co
 | Medium | decisions every 20 ticks; orders every 200 ticks | 5 workers; balanced split; plans supply 2 units ahead; queues up to 2 items | 36-population target; attacks at 24; may regroup below 12 when outmatched |
 | Hard | decisions every 10 ticks; orders every 100 ticks | 9 workers; construction-aware split; plans supply 3 units ahead; queues up to 2 items | queues at least an 8/12/16-population opening by personality before resuming worker production; unit population can round the queued force upward; targets 48 population; attacks at 45 or earlier with a clear observed advantage; may regroup below 24 |
 
-All three levels reserve enough resources to replace one worker before buying another military unit. Hard is intended to be the strongest deterministic heuristic profile, not a search-based or perfect-play AI. Establishing a reliable Hard > Medium > Easy match hierarchy remains an active validation item.
+All three levels reserve enough resources to replace one worker before buying another military unit. Hard is intended to be the strongest deterministic heuristic profile, not a search-based or perfect-play AI. Targeted matches continue to catch functional regressions during implementation, but balance tuning and the complete multi-seed Hard > Medium > Easy hierarchy validation are deferred until AI feature freeze.
 
 ## Personalities
 
@@ -126,6 +126,8 @@ Lobby bots receive teams from their configured start seats, and Wave Survival cr
 | King of the Beacon | Bots know the broadcast beacon location, capture neutral or favorable beacons, contest when combat-ready, remember recently observed defenders, back off stalled assaults, reserve personality-sized guards, reinforce threatened guards, and select personality-specific auras. | source-level decisions are covered, but current-head FFA/team capture handoffs, aura application, timers, victory, and client presentation still require end-to-end validation |
 | Sandbox | No dedicated AI behavior. | intentionally outside the bot scope |
 
+Gameplay acceptance must use the mod's shipped official maps wherever a map is compatible with the required player count, team layout, and mode. Synthetic or adjacent-base worlds remain useful diagnostics, but they do not replace official-map acceptance.
+
 ## Commands and UI
 
 Operators can manage active bots with:
@@ -170,22 +172,22 @@ Implementation reviewed through commit `fff6b0cd`; runtime evidence below is pin
 - Commit `545dd103` lets Hard press a clearly observed 5:4 army advantage when at least 12 enemy population is visible and its main army is at or above its personality-adjusted retreat threshold. In the exact Monster Hard-versus-Medium seed/side/order that had timed out after 96,018 simulated ticks, Medium attacked first with 24 units, Hard counterattacked below its normal 45-population timing, destroyed every opposing building, and won after 71,818 simulated ticks. The run sustained 186.7 effective TPS with no grants, refills, watchdog, or crash. The reciprocal side and creation order also passed, with Hard winning after 95,495 simulated ticks at 182.3 effective TPS.
 - Commit `70015c02` prevents a fog scout or beacon guard from leaving an otherwise ready army permanently below its launch threshold. Commit `fff6b0cd` confines the general reserve signal to launch selection so ordinary defense and local-engagement policy remain unchanged. In reciprocal fresh-world Villager Medium-versus-Easy runs at `fff6b0cd`, Medium won from both sides and creation orders after 29,653 and 29,325 simulated ticks at 172.3 and 177.0 effective TPS, with no resource grants or refills. The second run also directly inspected `fog enabled=true` from live server state.
 - A current-head graceful-restart fixture passed for commit `2aa8cee7`: two owners retained identity and role origins, requeued different transform costs to exactly zero remaining resources, reassigned their own workers to unfinished farms, advanced both farms, and completed Military and Civilian Portal transforms.
-- These targeted reruns validate the fixes, but the complete multi-seed, side/order-controlled difficulty hierarchy is still **not proven**.
+- These targeted reruns validate the named fixes only. Balance tuning and the complete multi-seed, side/order-controlled difficulty hierarchy are deferred until AI feature freeze; the current results do **not** prove that hierarchy.
 - An earlier Wave persistence fixture preserved an active wave portal across restart and preserved the wave-30 cap. It predates the current head and does not replace current-head mixed-team or natural-wave validation.
 - An earlier Monster daylight fixture passed natural dawn recall, weather-clear recall, survival under cover/night sources, and night resumption. It predates the latest scouting changes.
 - King of the Beacon has deterministic policy tests, but no current-head client-visible FFA/team victory run has passed yet.
-- Official maps, 3/4/6-player layouts, FFA and team variants, a real client LAN match, and the user's manual jar audit remain pending.
+- Gameplay acceptance on compatible shipped official maps, including 3/4/6-player layouts and FFA/team variants, remains pending, as do a real client LAN match and the user's manual jar audit.
 
 ## Prioritized TODO
 
 ### P0: correctness and release evidence
 
 - [x] Rerun the exact fog-enabled Monster Medium-versus-Easy timeout after the deterministic scout fix. Require enemy discovery, an attack order, and a win before accepting the fix as runtime-proven.
-- [ ] Complete the repeatable side/order-controlled Easy < Medium < Hard matrix across all three factions and multiple seeds. Record timeouts and draws as failures, not wins.
+- [ ] At AI feature freeze, tune balance and complete the repeatable side/order-controlled Easy < Medium < Hard matrix across all three factions and multiple seeds. Record timeouts and draws as failures, not wins.
 - [ ] Exercise every personality at every difficulty, including adversarial matchups, without weakening the difficulty bands or introducing resource/stat cheats.
 - [x] Pass a current-head graceful-restart fixture for multiple owners with queued production, unfinished construction, Piglin portal transforms, resource accounting, and replacement builders.
 - [ ] Run current-head Classic, bot-only and mixed Wave Survival, and King of the Beacon end to end with real victory conditions.
-- [ ] Validate official 2/3/4/6-player maps, FFA, 2v2, 3v3, and 2v2v2 seats/teams. Check 1.21.1 world upgrade, fog, terrain, start footprints, and path reachability.
+- [ ] Use shipped official maps for gameplay acceptance wherever they support the required 2/3/4/6-player, FFA, 2v2, 3v3, or 2v2v2 layout. Check 1.21.1 world upgrade, fog, terrain, start footprints, and path reachability.
 - [ ] Build the audit jar, run the minimal-mod dedicated/LAN environment, perform a real client visual/play test, and leave the final manual audit to the user before opening a PR.
 
 ### P1: highest-value gameplay additions
@@ -209,5 +211,3 @@ Implementation reviewed through commit `fff6b0cd`; runtime evidence below is pin
 - [ ] Add more personalities only when each one changes observable strategy across factions and remains fair—for example, an expansion-focused macro player or a harassment-focused skirmisher.
 - [ ] Make build, unit, research, harvest, and attack priorities data-driven if multiple independently authored AI scripts create a real need. Keep native types and the current tick scheduling while they remain sufficient.
 - [ ] Profile 4- and 6-bot matches at normal and accelerated tick rates, then optimize measured server-thread hotspots without weakening decisions or replacing end-to-end tests with synthetic benchmarks.
-
-The strongest ideas to carry forward from the abandoned project are army staging/cohesion, role-based attack and defense, prerequisite-aware tech and heroes, resource-aware expansion, faction-specific micro, map routing, and conservative surrender. Its full compatibility abstraction and script registry should wait until there are multiple real AI implementations that need them.
