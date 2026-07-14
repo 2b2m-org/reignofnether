@@ -153,6 +153,7 @@ final class BotArmy {
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
+        int fullArmyPopulation = BotSelf.population(fullArmy);
 
         LivingEntity scout = reconcileScout(fullArmy);
         if (scout != null) {
@@ -239,8 +240,13 @@ final class BotArmy {
                 && mainPopulation >= BotDecisionMaker.attackPopulation(difficulty, personality))
             target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
 
+        boolean garrisonAttackReady = beaconControl == BotDecisionMaker.BeaconControl.OWNED
+                && BotDecisionMaker.shouldLaunchWithReservedUnits(
+                        difficulty, personality, mainPopulation,
+                        fullArmyPopulation - mainPopulation);
         boolean attackReady = objective != null || target != null
-                || beaconOrder != BotDecisionMaker.BeaconOrder.NONE;
+                || beaconOrder != BotDecisionMaker.BeaconOrder.NONE
+                || garrisonAttackReady;
         BuildingPlacement defenseTarget = selectDefenseTarget(
                 strategy, personality, player.aiHomePos, teamAdviceTarget,
                 attackReady, survivalEnabled, tick);

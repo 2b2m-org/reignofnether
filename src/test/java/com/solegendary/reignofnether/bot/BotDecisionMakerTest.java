@@ -290,6 +290,24 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void reservedScoutsAndBeaconGuardsCountTowardLaunchReadiness() {
+        assertAll(
+                () -> assertFalse(BotDecisionMaker.shouldLaunchWithReservedUnits(
+                        BotDifficulty.HARD, BotPersonality.RUSHER, 34, 6)),
+                () -> assertTrue(BotDecisionMaker.shouldLaunchWithReservedUnits(
+                        BotDifficulty.HARD, BotPersonality.RUSHER, 35, 6)),
+                () -> assertFalse(BotDecisionMaker.shouldLaunchWithReservedUnits(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 35, 9)),
+                () -> assertTrue(BotDecisionMaker.shouldLaunchWithReservedUnits(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 36, 9)),
+                () -> assertFalse(BotDecisionMaker.shouldLaunchWithReservedUnits(
+                        BotDifficulty.HARD, BotPersonality.TURTLE, 36, 12)),
+                () -> assertTrue(BotDecisionMaker.shouldLaunchWithReservedUnits(
+                        BotDifficulty.HARD, BotPersonality.TURTLE, 37, 12))
+        );
+    }
+
+    @Test
     void beaconOrdersCaptureOpenGroundAndWaitForACombatReadyContest() {
         for (BotDifficulty difficulty : BotDifficulty.values())
             for (BotPersonality personality : BotPersonality.values()) {

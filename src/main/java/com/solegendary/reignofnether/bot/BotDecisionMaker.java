@@ -167,6 +167,11 @@ public final class BotDecisionMaker {
                 && armyPopulation * 4 >= visibleEnemyPopulation * 5;
     }
 
+    static boolean shouldLaunchWithReservedUnits(BotDifficulty difficulty, BotPersonality personality,
+                                                  int activePopulation, int reservedPopulation) {
+        return activePopulation + reservedPopulation >= attackPopulation(difficulty, personality);
+    }
+
     public static BeaconOrder chooseBeaconOrder(BotDifficulty difficulty, BotPersonality personality,
                                                  int armyPopulation, int knownEnemyPopulationInRing,
                                                  BeaconControl control) {
