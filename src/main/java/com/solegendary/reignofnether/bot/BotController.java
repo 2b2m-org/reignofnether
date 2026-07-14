@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 
 public final class BotController {
+    private static final int BUILDING_PLACEMENT_RETRY_TICKS = 100;
     private static final int REPAIR_THREAT_DISTANCE_SQR = 64 * 64;
     private static final int WORKER_SAFETY_INTERVAL_TICKS = 10;
     private static final int WORKER_FLEE_MEMORY_TICKS = 100;
@@ -47,6 +48,7 @@ public final class BotController {
     private final Map<Integer, Integer> fleeingWorkerUntilTicks = new HashMap<>();
     private BotGoal currentGoal = BotGoal.WAIT_FOR_CAPITOL;
     private int nextDecisionTick;
+    private int nextBuildingPlacementTick;
     private int nextWorkerSafetyTick;
     private int nextWorkerReconcileTick;
     private int repairWoodReserve;
@@ -181,11 +183,13 @@ public final class BotController {
                              BotPersonality personality, BotGoal goal) {
         switch (goal) {
             case BUILD_CAPITOL -> buildStructure(
-                    level, player, strategy.capitol(), null, false, difficulty);
+                    level, player, strategy.capitol(), null,
+                    BotBuildingPlanner.PlacementRole.CAPITOL, difficulty);
             case WAIT_FOR_CAPITOL, WAIT_FOR_MILITARY -> {
             }
             case BUILD_SUPPLY -> {
-                if (!buildStructure(level, player, strategy.supply(), strategy.supplyTransform(), false, difficulty))
+                if (!buildStructure(level, player, strategy.supply(), strategy.supplyTransform(),
+                        BotBuildingPlanner.PlacementRole.SUPPLY, difficulty))
                     continueProduction(strategy, difficulty, personality, true);
             }
             case TRAIN_WORKER -> {
@@ -193,12 +197,13 @@ public final class BotController {
                     trainArmy(strategy, difficulty, personality, false);
             }
             case BUILD_FARM -> {
-                if (!buildStructure(level, player, strategy.farm(), null, false, difficulty))
+                if (!buildStructure(level, player, strategy.farm(), null,
+                        BotBuildingPlanner.PlacementRole.FARM, difficulty))
                     continueProduction(strategy, difficulty, personality, true);
             }
             case BUILD_MILITARY -> {
-                if (!buildStructure(level, player, strategy.military(), strategy.militaryTransform(), true,
-                        difficulty))
+                if (!buildStructure(level, player, strategy.military(), strategy.militaryTransform(),
+                        BotBuildingPlanner.PlacementRole.MILITARY, difficulty))
                     continueProduction(strategy, difficulty, personality, true);
             }
             case TRAIN_ARMY -> trainArmy(strategy, difficulty, personality, false);
@@ -222,7 +227,7 @@ public final class BotController {
     }
 
     private boolean buildStructure(ServerLevel level, RTSPlayer player, Building building, ProductionItem transform,
-                                   boolean militaryRole, BotDifficulty difficulty) {
+                                   BotBuildingPlanner.PlacementRole role, BotDifficulty difficulty) {
         if (!self.canAfford(building))
             return false;
 
@@ -233,10 +238,17 @@ public final class BotController {
         if (builder == null)
             return false;
 
-        var origin = BotBuildingPlanner.findPlacement(
-                level, building, player.aiHomePos, false, worldView);
-        if (origin.isEmpty())
+        int tick = level.getServer().getTickCount();
+        if (tick < nextBuildingPlacementTick)
             return false;
+
+        var origin = BotBuildingPlanner.findPlacement(
+                level, building, player.aiHomePos, false, worldView, role);
+        if (origin.isEmpty()) {
+            nextBuildingPlacementTick = tick + BUILDING_PLACEMENT_RETRY_TICKS;
+            return false;
+        }
+        nextBuildingPlacementTick = 0;
 
         BuildingPlacement placement = BuildingServerEvents.placeBuilding(
                 building,
@@ -247,12 +259,16 @@ public final class BotController {
                 false,
                 false
         );
-        if (placement == null || !BuildingServerEvents.getBuildings().contains(placement))
+        if (placement == null || !BuildingServerEvents.getBuildings().contains(placement)) {
+            nextBuildingPlacementTick = tick + BUILDING_PLACEMENT_RETRY_TICKS;
             return false;
+        }
 
         if (placement instanceof PortalPlacement portal && transform != null) {
+            boolean militaryRole = role == BotBuildingPlanner.PlacementRole.MILITARY;
             self.recordPortal(portal, militaryRole);
-            startProduction(portal, transform, militaryRole ? "military portal" : "civilian portal", difficulty);
+            startProduction(portal, transform,
+                    militaryRole ? "military portal" : "civilian portal", difficulty);
         }
 
         ReignOfNether.LOGGER.info(

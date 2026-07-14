@@ -14,16 +14,52 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 final class BotBuildingPlanner {
     private static final int BUILDING_GAP = 3;
+    private static final int CANDIDATE_DIRECTIONS = 32;
+    private static final int MIN_RADIUS = 12;
     private static final int MAX_RADIUS = 48;
+    private static final int RADIUS_STEP = 2;
+    private static final double EXIT_LANE_HALF_WIDTH = 4;
 
     private BotBuildingPlanner() {
+    }
+
+    enum PlacementRole {
+        CAPITOL(0, 0),
+        SUPPLY(-16, 16),
+        FARM(-8, 14),
+        MILITARY(18, 16);
+
+        private final double preferredForward;
+        private final double preferredLateral;
+
+        PlacementRole(double preferredForward, double preferredLateral) {
+            this.preferredForward = preferredForward;
+            this.preferredLateral = preferredLateral;
+        }
+
+        double score(double forward, double lateral) {
+            double forwardDelta = forward - preferredForward;
+            double lateralDelta = Math.abs(lateral) - preferredLateral;
+            return forwardDelta * forwardDelta + lateralDelta * lateralDelta;
+        }
+    }
+
+    private record Axis(double x, double z) {
+    }
+
+    private record Candidate(int xOffset, int zOffset, boolean blocksExitLane,
+                             double roleScore, int distanceSqr) {
+    }
+
+    private record FootprintSize(double halfWidth, double halfDepth) {
     }
 
     record Footprint(BlockPos origin, BlockPos min, BlockPos max, BlockPos centre) {
@@ -45,28 +81,52 @@ final class BotBuildingPlanner {
 
     static Optional<BlockPos> findPlacement(ServerLevel level, Building building, BlockPos home,
                                             boolean includeHome) {
-        return findPlacement(level, building, home, includeHome, null);
+        return findPlacement(level, building, home, includeHome, null, PlacementRole.CAPITOL);
     }
 
     static Optional<BlockPos> findPlacement(ServerLevel level, Building building, BlockPos home,
-                                            boolean includeHome, BotWorldView worldView) {
-        for (BlockPos centre : candidateCentres(level, home, includeHome)) {
-            Footprint footprint = footprintAtCentre(level, building, centre);
-            if (canPlace(level, building, footprint, worldView))
+                                            boolean includeHome, BotWorldView worldView,
+                                            PlacementRole role) {
+        ArrayList<BuildingBlock> relativeBlocks = building.getRelativeBlockData(level);
+        FootprintSize size = footprintSize(relativeBlocks);
+        for (Candidate candidate : candidates(level, home, includeHome, role, size)) {
+            BlockPos column = home.offset(candidate.xOffset(), 0, candidate.zOffset());
+            if (!isChunkLoaded(level, column)) {
+                if (worldView != null)
+                    continue;
+                level.getChunk(SectionPos.blockToSectionCoord(column.getX()),
+                        SectionPos.blockToSectionCoord(column.getZ()));
+            }
+            if (worldView != null && !worldView.isVisible(column))
+                continue;
+            BlockPos centre = groundAt(level, column.getX(), column.getZ());
+            Footprint footprint = footprintAtCentre(level, relativeBlocks, centre);
+            if (canPlace(level, building, relativeBlocks, footprint, worldView))
                 return Optional.of(footprint.origin());
         }
         return Optional.empty();
     }
 
     static Footprint footprintAtCentre(ServerLevel level, Building building, BlockPos centre) {
-        ArrayList<BuildingBlock> relativeBlocks = building.getRelativeBlockData(level);
+        return footprintAtCentre(level, building.getRelativeBlockData(level), centre);
+    }
+
+    private static Footprint footprintAtCentre(ServerLevel level,
+                                               ArrayList<BuildingBlock> relativeBlocks,
+                                               BlockPos centre) {
         BlockPos origin = PlayerServerEvents.getBuildingOriginPos(centre, relativeBlocks);
-        return footprintAtOrigin(level, building, origin);
+        return footprintAtOrigin(level, relativeBlocks, origin);
     }
 
     static Footprint footprintAtOrigin(ServerLevel level, Building building, BlockPos origin) {
+        return footprintAtOrigin(level, building.getRelativeBlockData(level), origin);
+    }
+
+    private static Footprint footprintAtOrigin(ServerLevel level,
+                                               ArrayList<BuildingBlock> relativeBlocks,
+                                               BlockPos origin) {
         ArrayList<BuildingBlock> blocks = BuildingUtils.getAbsoluteBlockData(
-                building.getRelativeBlockData(level), level, origin, Rotation.NONE);
+                relativeBlocks, level, origin, Rotation.NONE);
         return new Footprint(
                 origin,
                 BuildingUtils.getMinCorner(blocks),
@@ -95,30 +155,88 @@ final class BotBuildingPlanner {
                 SectionPos.blockToSectionCoord(pos.getZ()));
     }
 
-    private static List<BlockPos> candidateCentres(ServerLevel level, BlockPos home, boolean includeHome) {
-        List<BlockPos> centres = new ArrayList<>();
+    private static List<Candidate> candidates(ServerLevel level, BlockPos home, boolean includeHome,
+                                              PlacementRole role, FootprintSize size) {
+        Axis front = frontAxis(level, home);
+        List<Candidate> candidates = new ArrayList<>();
+        double forwardExtent = Math.abs(front.x()) * size.halfWidth()
+                + Math.abs(front.z()) * size.halfDepth() + BUILDING_GAP;
+        double lateralExtent = Math.abs(front.z()) * size.halfWidth()
+                + Math.abs(front.x()) * size.halfDepth() + BUILDING_GAP;
+        Set<Long> seenOffsets = new HashSet<>();
         if (includeHome)
-            centres.add(groundAt(level, home.getX(), home.getZ()));
-
-        int startRadius = includeHome ? 12 : 18;
-        double outwardX = home.getX() - level.getWorldBorder().getCenterX();
-        double outwardZ = home.getZ() - level.getWorldBorder().getCenterZ();
-        for (int radius = startRadius; radius <= MAX_RADIUS; radius += 6) {
-            int diagonal = Math.max(1, Math.round(radius * 0.7f));
-            int[][] offsets = {
-                    {radius, 0}, {0, radius}, {-radius, 0}, {0, -radius},
-                    {diagonal, diagonal}, {-diagonal, diagonal}, {-diagonal, -diagonal}, {diagonal, -diagonal}
-            };
-            Arrays.sort(offsets, Comparator.<int[]>comparingDouble(
-                    offset -> offset[0] * outwardX + offset[1] * outwardZ).reversed());
-            for (int[] offset : offsets)
-                centres.add(groundAt(level, home.getX() + offset[0], home.getZ() + offset[1]));
+            addCandidate(candidates, seenOffsets, role, front, forwardExtent, lateralExtent, 0, 0);
+        for (int radius = MIN_RADIUS; radius <= MAX_RADIUS; radius += RADIUS_STEP) {
+            for (int direction = 0; direction < CANDIDATE_DIRECTIONS; direction++) {
+                double angle = direction * Math.PI * 2 / CANDIDATE_DIRECTIONS;
+                int x = (int) Math.round(Math.cos(angle) * radius);
+                int z = (int) Math.round(Math.sin(angle) * radius);
+                addCandidate(candidates, seenOffsets, role, front,
+                        forwardExtent, lateralExtent, x, z);
+            }
         }
-        return centres;
+        candidates.sort(Comparator
+                .comparing(Candidate::blocksExitLane)
+                .thenComparingDouble(Candidate::roleScore)
+                .thenComparingInt(Candidate::distanceSqr)
+                .thenComparingInt(Candidate::xOffset)
+                .thenComparingInt(Candidate::zOffset));
+        return candidates;
+    }
+
+    private static void addCandidate(List<Candidate> candidates, Set<Long> seenOffsets,
+                                     PlacementRole role, Axis front,
+                                     double forwardExtent, double lateralExtent,
+                                     int x, int z) {
+        long key = ((long) x << 32) ^ (z & 0xffffffffL);
+        if (seenOffsets.add(key)) {
+            int distanceSqr = x * x + z * z;
+            double forwardDistance = x * front.x() + z * front.z();
+            double lateralDistance = -x * front.z() + z * front.x();
+            candidates.add(new Candidate(
+                    x,
+                    z,
+                    role != PlacementRole.CAPITOL
+                            && blocksExitLane(forwardDistance, forwardExtent,
+                            lateralDistance, lateralExtent),
+                    role.score(forwardDistance, lateralDistance),
+                    distanceSqr
+            ));
+        }
+    }
+
+    private static Axis frontAxis(ServerLevel level, BlockPos home) {
+        double x = level.getWorldBorder().getCenterX() - home.getX();
+        double z = level.getWorldBorder().getCenterZ() - home.getZ();
+        double length = Math.hypot(x, z);
+        if (length < 0.001)
+            return new Axis(1, 0);
+        return new Axis(x / length, z / length);
+    }
+
+    private static FootprintSize footprintSize(ArrayList<BuildingBlock> relativeBlocks) {
+        BlockPos min = BuildingUtils.getMinCorner(relativeBlocks);
+        BlockPos max = BuildingUtils.getMaxCorner(relativeBlocks);
+        return new FootprintSize(
+                (max.getX() - min.getX() + 1) / 2.0,
+                (max.getZ() - min.getZ() + 1) / 2.0
+        );
+    }
+
+    static boolean blocksExitLane(double forwardDistance, double forwardExtent,
+                                  double lateralDistance, double lateralExtent) {
+        return forwardDistance + forwardExtent > 0
+                && Math.abs(lateralDistance) - lateralExtent < EXIT_LANE_HALF_WIDTH;
     }
 
     static boolean canPlace(ServerLevel level, Building building, Footprint footprint,
                             BotWorldView worldView) {
+        return canPlace(level, building, building.getRelativeBlockData(level), footprint, worldView);
+    }
+
+    private static boolean canPlace(ServerLevel level, Building building,
+                                    ArrayList<BuildingBlock> relativeBlocks,
+                                    Footprint footprint, BotWorldView worldView) {
         BlockPos min = footprint.min();
         BlockPos max = footprint.max();
         BlockPos origin = footprint.origin();
@@ -138,7 +256,7 @@ final class BotBuildingPlanner {
 
         if (BuildingUtils.requiresNetherTerrain(building)) {
             ArrayList<BuildingBlock> blocks = BuildingUtils.getAbsoluteBlockData(
-                    building.getRelativeBlockData(level), level, origin, Rotation.NONE);
+                    relativeBlocks, level, origin, Rotation.NONE);
             if (!BuildingServerEvents.isOnNetherBlocks(blocks, origin, level))
                 return false;
         }
