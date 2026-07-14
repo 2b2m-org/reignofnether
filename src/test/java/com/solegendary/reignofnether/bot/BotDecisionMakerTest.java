@@ -350,6 +350,29 @@ class BotDecisionMakerTest {
                 () -> assertTrue(BotDecisionMaker.shouldLaunchWithReservedUnits(
                         BotDifficulty.HARD, BotPersonality.TURTLE, 37, 12))
         );
+
+        for (int unitPopulation : new int[]{3, 1, 2}) {
+            for (BotDifficulty difficulty : BotDifficulty.values()) {
+                for (BotPersonality personality : BotPersonality.values()) {
+                    int target = BotDecisionMaker.targetArmyPopulation(difficulty, personality);
+                    int fullArmy = target / unitPopulation * unitPopulation;
+                    int scout = unitPopulation;
+                    int guards = BotDecisionMaker.beaconGuardPopulation(personality)
+                            / unitPopulation * unitPopulation;
+                    int activeArmy = fullArmy - scout - guards;
+                    int reservedArmy = scout + guards;
+                    boolean ready = BotDecisionMaker.shouldLaunchWithReservedUnits(
+                            difficulty, personality, activeArmy, reservedArmy);
+
+                    assertTrue(ready,
+                            () -> difficulty + "/" + personality + " must launch with "
+                                    + unitPopulation + "-population units reserved");
+                    assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
+                            BotDecisionMaker.chooseArmyOrder(
+                                    difficulty, personality, activeArmy, 0, ready, false));
+                }
+            }
+        }
     }
 
     @Test
