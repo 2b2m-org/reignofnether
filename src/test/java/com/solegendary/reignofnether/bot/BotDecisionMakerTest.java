@@ -327,6 +327,20 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void monsterArmyShelterWindowSpansMidnightThroughDaylight() {
+        assertAll(
+                () -> assertFalse(BotDecisionMaker.shouldShelterMonsterArmy(21999, false)),
+                () -> assertTrue(BotDecisionMaker.shouldShelterMonsterArmy(22000, false)),
+                () -> assertTrue(BotDecisionMaker.shouldShelterMonsterArmy(0, false)),
+                () -> assertTrue(BotDecisionMaker.shouldShelterMonsterArmy(500, false)),
+                () -> assertTrue(BotDecisionMaker.shouldShelterMonsterArmy(501, false)),
+                () -> assertTrue(BotDecisionMaker.shouldShelterMonsterArmy(12500, false)),
+                () -> assertFalse(BotDecisionMaker.shouldShelterMonsterArmy(12501, false)),
+                () -> assertFalse(BotDecisionMaker.shouldShelterMonsterArmy(6000, true))
+        );
+    }
+
+    @Test
     void armyCompositionWaitsForMissingMeleeInsteadOfOverproducingRanged() {
         for (BotPersonality personality : BotPersonality.values()) {
             assertEquals(BotDecisionMaker.ArmyUnitChoice.MELEE,

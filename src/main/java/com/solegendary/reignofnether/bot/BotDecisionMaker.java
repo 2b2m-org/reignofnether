@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.bot;
 
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.Resources;
+import com.solegendary.reignofnether.time.TimeUtils;
 import com.solegendary.reignofnether.unit.UnitAction;
 
 public final class BotDecisionMaker {
@@ -9,6 +10,7 @@ public final class BotDecisionMaker {
     private static final int SCOUT_STALL_TICKS = 600;
     private static final int WORKER_DANGER_DISTANCE_SQR = 24 * 24;
     private static final int WORKER_FLEE_DISTANCE_SQR = 32 * 32;
+    private static final long MONSTER_RECALL_TIME = 22000;
 
     public enum ArmyUnitChoice {
         NONE,
@@ -106,6 +108,11 @@ public final class BotDecisionMaker {
     static boolean shouldFleeWorker(boolean alreadyFleeing, double threatDistanceSqr) {
         int threshold = alreadyFleeing ? WORKER_FLEE_DISTANCE_SQR : WORKER_DANGER_DISTANCE_SQR;
         return threatDistanceSqr <= threshold;
+    }
+
+    static boolean shouldShelterMonsterArmy(long dayTime, boolean bloodMoonActive) {
+        long time = TimeUtils.normaliseTime(dayTime);
+        return !bloodMoonActive && (time >= MONSTER_RECALL_TIME || time <= TimeUtils.DUSK);
     }
 
     public static ArmyUnitChoice chooseArmyUnit(BotPersonality personality, int meleePopulation,

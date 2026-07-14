@@ -4,11 +4,15 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
+import com.solegendary.reignofnether.building.addon.NightSourceAddon;
 import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.survival.SurvivalServerEvents;
+import com.solegendary.reignofnether.time.NightUtils;
+import com.solegendary.reignofnether.time.TimeServerEvents;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
@@ -84,6 +88,7 @@ final class BotArmy {
     private BlockPos scoutAdviceTarget;
     private BlockPos activeDefenseIntent;
     private boolean beaconIntentActive;
+    private boolean shelteringFromSun;
 
     BotArmy(String ownerName, String displayName, BotSelf self, BotWorldView worldView) {
         this.ownerName = ownerName;
@@ -103,8 +108,20 @@ final class BotArmy {
     void tick(ServerLevel level, RTSPlayer player, BotStrategy strategy,
               BotDifficulty difficulty, BotPersonality personality) {
         int tick = level.getServer().getTickCount();
+        boolean shouldShelter = player.faction == Faction.MONSTERS
+                && BotDecisionMaker.shouldShelterMonsterArmy(
+                level.getDayTime(), TimeServerEvents.isBloodMoonActive());
+        if (shouldShelter != shelteringFromSun)
+            nextCommandTick = 0;
+        shelteringFromSun = shouldShelter;
         List<LivingEntity> visibleEnemyCombatants = worldView.visibleEnemyCombatants(player);
         observeFriendlyBuildingThreats(visibleEnemyCombatants, tick);
+        if (shelteringFromSun) {
+            shelterMonsterArmy(level, player, self.army());
+            objectiveLastProgressTick = tick;
+            beaconAssaultLastProgressTick = tick;
+            return;
+        }
         if (tick < nextCommandTick)
             return;
         command(level, player, strategy, difficulty, personality, visibleEnemyCombatants, tick);
@@ -996,6 +1013,64 @@ final class BotArmy {
                 -1,
                 ids,
                 BlockPos.ZERO,
+                BlockPos.ZERO
+        );
+    }
+
+    private void shelterMonsterArmy(ServerLevel level, RTSPlayer player, List<LivingEntity> army) {
+        List<LivingEntity> sheltered = new ArrayList<>();
+        for (LivingEntity entity : army) {
+            if (isShelteredFromSun(level, entity)) {
+                sheltered.add(entity);
+                continue;
+            }
+            BuildingPlacement nightSource = closestFriendlyNightSource(entity);
+            BlockPos target = nightSource == null
+                    ? player.aiHomePos.above()
+                    : nightSource.getClosestGroundPos(entity.blockPosition(), 3);
+            moveUnit(entity, target);
+        }
+        holdArmy(sheltered);
+    }
+
+    private static boolean isShelteredFromSun(ServerLevel level, LivingEntity entity) {
+        BlockPos eyePos = BlockPos.containing(entity.getX(), entity.getEyeY(), entity.getZ());
+        return NightUtils.isInRangeOfNightSource(entity.getEyePosition(), false)
+                || !level.canSeeSky(eyePos)
+                || entity.isInWaterRainOrBubble()
+                || entity.isInPowderSnow
+                || entity.wasInPowderSnow;
+    }
+
+    private BuildingPlacement closestFriendlyNightSource(LivingEntity entity) {
+        return BuildingServerEvents.getBuildings().stream()
+                .filter(building -> AlliancesServerEvents.isAlliedOrOwned(ownerName, building.ownerName))
+                .filter(building -> !building.isDestroyedServerside)
+                .filter(building -> {
+                    NightSourceAddon source = building.getBuilding().getActiveAddon(NightSourceAddon.class);
+                    return source != null && source.getNightRange(building) > 0;
+                })
+                .min(Comparator
+                        .comparingDouble((BuildingPlacement building) ->
+                                building.centrePos.distToCenterSqr(entity.position()))
+                        .thenComparingInt(building -> building.originPos.getX())
+                        .thenComparingInt(building -> building.originPos.getY())
+                        .thenComparingInt(building -> building.originPos.getZ()))
+                .orElse(null);
+    }
+
+    private void moveUnit(LivingEntity entity, BlockPos target) {
+        Unit unit = (Unit) entity;
+        boolean hasAttackMove = entity instanceof AttackerUnit attacker
+                && attacker.getAttackMoveTarget() != null;
+        if (target.equals(unit.getMoveGoal().getMoveTarget()) && !hasAttackMove)
+            return;
+        UnitServerEvents.addActionItem(
+                ownerName,
+                UnitAction.MOVE,
+                -1,
+                new int[]{entity.getId()},
+                target,
                 BlockPos.ZERO
         );
     }
