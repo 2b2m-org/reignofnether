@@ -277,6 +277,29 @@ final class BotArmy {
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
+        List<LivingEntity> enemyArmyToEngage = armyOrder == BotDecisionMaker.ArmyOrder.HOLD
+                ? tacticalEnemyArmy.stream()
+                .filter(enemy -> enemy.blockPosition().distSqr(player.aiHomePos)
+                        <= DEFENSE_DISTANCE_SQR)
+                .toList()
+                : tacticalEnemyArmy;
+        if (shouldEngageEnemyArmy(enemyArmyToEngage, mainPopulation, player.aiHomePos,
+                attackReady)) {
+            if (objective != null)
+                objectiveLastProgressTick = tick;
+            LivingEntity groundTarget = selectGroundTarget(
+                    enemyArmyToEngage, armyPos, player.aiHomePos);
+            BlockPos attackMoveTarget = groundTarget != null
+                    ? groundTarget.blockPosition()
+                    : objective != null ? objective.anchor() : player.aiHomePos.above();
+            LivingEntity rangedTarget = hasRangedResponder
+                    ? selectRangedTarget(enemyArmyToEngage, armyPos, player.aiHomePos)
+                    : null;
+            engageEnemyArmy(main, attackMoveTarget, rangedTarget);
+            nextCommandTick = tick + difficulty.attackRefreshTicks();
+            return;
+        }
+
         if (armyOrder == BotDecisionMaker.ArmyOrder.HOLD) {
             if (beaconOrder == BotDecisionMaker.BeaconOrder.NONE)
                 attackMoveArmy(main, player.aiHomePos.above());
@@ -284,23 +307,6 @@ final class BotArmy {
                 announceBeaconIntent(level, beacon, teamAdviceTarget, tick);
                 captureBeacon(main, beacon, armyPos);
             }
-            nextCommandTick = tick + difficulty.attackRefreshTicks();
-            return;
-        }
-
-        if (shouldEngageEnemyArmy(tacticalEnemyArmy, mainPopulation, player.aiHomePos,
-                attackReady)) {
-            if (objective != null)
-                objectiveLastProgressTick = tick;
-            LivingEntity groundTarget = selectGroundTarget(
-                    tacticalEnemyArmy, armyPos, player.aiHomePos);
-            BlockPos attackMoveTarget = groundTarget != null
-                    ? groundTarget.blockPosition()
-                    : objective != null ? objective.anchor() : player.aiHomePos.above();
-            LivingEntity rangedTarget = hasRangedResponder
-                    ? selectRangedTarget(tacticalEnemyArmy, armyPos, player.aiHomePos)
-                    : null;
-            engageEnemyArmy(main, attackMoveTarget, rangedTarget);
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
