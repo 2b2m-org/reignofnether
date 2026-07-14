@@ -7,6 +7,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import com.solegendary.reignofnether.ability.TradeAction;
+import com.solegendary.reignofnether.bot.BotDifficulty;
+import com.solegendary.reignofnether.bot.BotPersonality;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.faction.Faction;
 import net.minecraft.core.BlockPos;
@@ -30,6 +32,8 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
     String playerName;
     String displayName;
     boolean aiControlled;
+    BotDifficulty aiDifficulty;
+    BotPersonality aiPersonality;
     Long value1;
     int value2;
     Faction faction;
@@ -39,6 +43,7 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
     public static void addRTSPlayer(RTSPlayer player) {
         PacketDistributor.sendToAllPlayers(new PlayerClientboundPacket(
                 PlayerAction.ADD_RTS_PLAYER, player.name, player.displayName, player.aiControlled,
+                player.aiDifficulty, player.aiPersonality,
                 (long) player.id, player.startPosColorId, player.faction));
     }
 
@@ -113,6 +118,8 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
         this.playerName = playerName;
         this.displayName = playerName;
         this.aiControlled = false;
+        this.aiDifficulty = BotDifficulty.MEDIUM;
+        this.aiPersonality = BotPersonality.STEADY;
         this.value1 = 0L;
         this.value2 = 0;
         this.faction = Faction.NONE;
@@ -126,10 +133,20 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
 
     private PlayerClientboundPacket(PlayerAction playerAction, String playerName, String displayName,
                                     boolean aiControlled, Long value1, int value2, Faction faction) {
+        this(playerAction, playerName, displayName, aiControlled,
+                BotDifficulty.MEDIUM, BotPersonality.STEADY, value1, value2, faction);
+    }
+
+    private PlayerClientboundPacket(PlayerAction playerAction, String playerName, String displayName,
+                                    boolean aiControlled, BotDifficulty aiDifficulty,
+                                    BotPersonality aiPersonality,
+                                    Long value1, int value2, Faction faction) {
         this.playerAction = playerAction;
         this.playerName = playerName;
         this.displayName = displayName;
         this.aiControlled = aiControlled;
+        this.aiDifficulty = aiDifficulty;
+        this.aiPersonality = aiPersonality;
         this.value1 = value1;
         this.value2 = value2;
         this.faction = faction;
@@ -142,6 +159,8 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
         this.playerName = playerName;
         this.displayName = playerName;
         this.aiControlled = false;
+        this.aiDifficulty = BotDifficulty.MEDIUM;
+        this.aiPersonality = BotPersonality.STEADY;
         this.value1 = value1;
         this.value2 = 0;
         this.faction = Faction.NONE;
@@ -154,6 +173,8 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
         this.playerName = buffer.readUtf();
         this.displayName = buffer.readUtf();
         this.aiControlled = buffer.readBoolean();
+        this.aiDifficulty = buffer.readEnum(BotDifficulty.class);
+        this.aiPersonality = buffer.readEnum(BotPersonality.class);
         this.value1 = buffer.readLong();
         this.value2 = buffer.readInt();
         this.faction = buffer.readEnum(Faction.class);
@@ -166,6 +187,8 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
         buffer.writeUtf(this.playerName);
         buffer.writeUtf(this.displayName);
         buffer.writeBoolean(this.aiControlled);
+        buffer.writeEnum(this.aiDifficulty);
+        buffer.writeEnum(this.aiPersonality);
         buffer.writeLong(this.value1);
         buffer.writeInt(this.value2);
         buffer.writeEnum(this.faction);
@@ -183,7 +206,8 @@ public class PlayerClientboundPacket implements CustomPacketPayload {
                             case DEFEAT -> PlayerClientEvents.defeat(playerName);
                             case VICTORY -> PlayerClientEvents.victory(playerName);
                             case ADD_RTS_PLAYER -> PlayerClientEvents.addRTSPlayer(
-                                    playerName, displayName, aiControlled, faction, value1, value2);
+                                    playerName, displayName, aiControlled, aiDifficulty, aiPersonality,
+                                    faction, value1, value2);
                             case ADD_SCENARIO_NPC_RTS_PLAYER -> PlayerClientEvents.addScenarioNPCRTSPlayer(
                                     playerName, displayName, faction, value1, value2);
                             case REMOVE_RTS_PLAYER -> PlayerClientEvents.removeRTSPlayer(playerName);

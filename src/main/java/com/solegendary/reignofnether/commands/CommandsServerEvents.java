@@ -1150,24 +1150,15 @@ public class CommandsServerEvents {
 			CommandContext<CommandSourceStack> ctx,
 			String mode
 	) {
-		if (StartPosServerEvents.isStartingGame()) {
+		var failure = RTSMapInfoServerEvents.trySetStartingMode(mode);
+		if (failure.isPresent()) {
+			ctx.getSource().sendFailure(failure.get());
 			return 0;
 		}
-		if (RTSMapInfoServerEvents.rtsMapInfo == null) {
-			ctx.getSource().sendFailure(Component.literal("No rtsMapInfo loaded"));
-			return 0;
-		}
-		if (!RTSMapInfoServerEvents.rtsMapInfo.supportsMode(mode)) {
-			ctx.getSource().sendFailure(Component.literal("Unknown mode '" + mode + "' - not present in this map's modes"));
-			return 0;
-		}
-		RTSMapInfoServerEvents.rtsMapInfo.setDefaultMode(mode);
-		RTSMapInfoClientboundPacket.sendValue(RTSMapInfoAction.SET_MODE, RTSMapInfoServerEvents.rtsMapInfo.getDefaultMode());
 		ctx.getSource().sendSuccess(
 				() -> Component.literal("Set starting teams mode to '" + mode + "'"),
 				true
 		);
-		StartPosServerEvents.loadPositionsFromMapInfo();
 		return 1;
 	}
 

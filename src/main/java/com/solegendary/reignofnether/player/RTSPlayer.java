@@ -137,9 +137,9 @@ public class RTSPlayer {
         return new RTSPlayer(name, faction);
     }
 
-    public static RTSPlayer getNewAiBot(String displayName, Faction faction, BlockPos homePos,
+    public static RTSPlayer getNewAiBot(String ownerName, String displayName, Faction faction, BlockPos homePos,
                                         BotDifficulty difficulty, BotPersonality personality) {
-        RTSPlayer bot = new RTSPlayer(createAiOwnerName(), faction);
+        RTSPlayer bot = new RTSPlayer(ownerName, faction);
         bot.displayName = displayName;
         bot.aiControlled = true;
         bot.aiHomePos = homePos;
@@ -148,7 +148,7 @@ public class RTSPlayer {
         return bot;
     }
 
-    static String createAiOwnerName() {
+    public static String createAiOwnerName() {
         return "ron-ai-" + UUID.randomUUID();
     }
 

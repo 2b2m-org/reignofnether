@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.rtsmap;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
+import com.solegendary.reignofnether.startpos.StartPosServerEvents;
 import com.solegendary.reignofnether.worldborder.WorldBorderServerEvents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -13,12 +14,32 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 
+import java.util.Optional;
+
 public class RTSMapInfoServerEvents {
 
     public static RTSMapInfo rtsMapInfo = null;
 
     public static boolean usingMapInfoStartPositions() {
         return rtsMapInfo != null && rtsMapInfo.supportsMode(rtsMapInfo.getDefaultMode());
+    }
+
+    public static Optional<Component> trySetStartingMode(String mode) {
+        if (StartPosServerEvents.hasAiReservations())
+            return Optional.of(Component.translatable(
+                    "message.reignofnether.remove_lobby_bots_before_mode_change"));
+        if (StartPosServerEvents.isStartingGame())
+            return Optional.of(Component.literal("The game countdown is already running."));
+        if (rtsMapInfo == null)
+            return Optional.of(Component.literal("No rtsMapInfo loaded"));
+        if (!rtsMapInfo.supportsMode(mode))
+            return Optional.of(Component.literal(
+                    "Unknown mode '" + mode + "' - not present in this map's modes"));
+
+        rtsMapInfo.setDefaultMode(mode);
+        RTSMapInfoClientboundPacket.sendValue(RTSMapInfoAction.SET_MODE, mode);
+        StartPosServerEvents.loadPositionsFromMapInfo();
+        return Optional.empty();
     }
 
     @SubscribeEvent

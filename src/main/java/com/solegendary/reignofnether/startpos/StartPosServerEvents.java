@@ -3,20 +3,29 @@ package com.solegendary.reignofnether.startpos;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.blocks.RTSStartBlock;
+import com.solegendary.reignofnether.bot.BotLobby;
+import com.solegendary.reignofnether.building.Building;
+import com.solegendary.reignofnether.building.BuildingBlock;
+import com.solegendary.reignofnether.building.BuildingServerEvents;
+import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
-import com.solegendary.reignofnether.rtsmap.RTSMapInfo;
+import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.rtsmap.RTSMapInfoServerEvents;
 import com.solegendary.reignofnether.sounds.SoundAction;
 import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
 import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.tutorial.TutorialServerEvents;
+import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -42,12 +51,34 @@ public class StartPosServerEvents {
     private static int cullTicksMax = 100;
     private static int cullTicks = 0;
 
+    private record PlannedStart(StartPos startPos, Faction faction, ServerPlayer serverPlayer) {
+    }
+
+    private record MatchStartPlan(List<PlannedStart> starts, String failedDisplayName) {
+    }
+
     public static boolean isStartingGame() {
         return startingGame;
     }
 
     static int getCountdownTicks() {
         return startingGame ? ticksToStart : -1;
+    }
+
+    public static StartPos getStartPos(BlockPos pos) {
+        for (StartPos startPos : startPoses) {
+            if (startPos.pos.equals(pos))
+                return startPos;
+        }
+        return null;
+    }
+
+    public static boolean hasReservations() {
+        return startPoses.stream().anyMatch(StartPos::isOccupied);
+    }
+
+    public static boolean hasAiReservations() {
+        return startPoses.stream().anyMatch(startPos -> startPos.aiControlled);
     }
 
     public static void reset(ServerLevel serverLevel) {
@@ -57,10 +88,10 @@ public class StartPosServerEvents {
         savePositions(serverLevel);
     }
 
-    public static void setPlayerReady(String playerName, boolean ready) {
+    public static void setPlayerReady(String ownerName, boolean ready) {
         StartPos playerPos = null;
         for (StartPos startPos : startPoses) {
-            if (startPos.enabled && startPos.playerName.equals(playerName)) {
+            if (startPos.enabled && startPos.isOwnedBy(ownerName)) {
                 playerPos = startPos;
                 break;
             }
@@ -69,12 +100,16 @@ public class StartPosServerEvents {
             return;
 
         playerPos.ready = ready;
+        updateCountdown(true);
+    }
+
+    public static void updateCountdown(boolean announceReadyChanges) {
         if (canStartGame()) {
             startGameCountdown();
         } else if (startingGame) {
             cancelStartGameCountdown(false);
         } else {
-            StartPosClientboundPacket.syncAll(true);
+            StartPosClientboundPacket.syncAll(announceReadyChanges);
         }
     }
 
@@ -93,10 +128,85 @@ public class StartPosServerEvents {
             if (!startPos.enabled)
                 continue;
             hasEnabledPos = true;
-            if (startPos.playerName.isBlank() || !startPos.ready || !isPlayableFaction(startPos.faction))
+            if (!startPos.isOccupied() || !startPos.ready || !isPlayableFaction(startPos.faction))
                 return false;
         }
         return hasEnabledPos;
+    }
+
+    private static boolean canAffordStartingBuilding(Building building) {
+        boolean tutorial = TutorialServerEvents.isEnabled();
+        int food = tutorial
+                ? ResourcesServerEvents.STARTING_FOOD_TUTORIAL
+                : ResourcesServerEvents.STARTING_FOOD;
+        int wood = tutorial
+                ? ResourcesServerEvents.STARTING_WOOD_TUTORIAL
+                : ResourcesServerEvents.STARTING_WOOD;
+        int ore = tutorial
+                ? ResourcesServerEvents.STARTING_ORE_TUTORIAL
+                : ResourcesServerEvents.STARTING_ORE;
+        return food >= building.cost.food
+                && wood >= building.cost.wood
+                && ore >= building.cost.ore;
+    }
+
+    private static MatchStartPlan planMatchStart(ServerLevel level) {
+        List<PlannedStart> starts = new ArrayList<>();
+        List<AABB> plannedFootprints = new ArrayList<>();
+
+        for (StartPos startPos : startPoses) {
+            if (!startPos.enabled)
+                continue;
+
+            Faction faction = startPos.faction == Faction.RANDOM
+                    ? MiscUtil.getRandomItem(List.of(
+                            Faction.VILLAGERS, Faction.MONSTERS, Faction.PIGLINS))
+                    : startPos.faction;
+            Building building = PlayerServerEvents.getStartingBuilding(faction);
+            if (building == null || PlayerServerEvents.rtsLocked
+                    || PlayerServerEvents.hasRTSPlayerName(startPos.ownerName)
+                    || !canAffordStartingBuilding(building))
+                return new MatchStartPlan(List.of(), startPos.displayName);
+
+            ServerPlayer serverPlayer = null;
+            if (!startPos.aiControlled) {
+                for (ServerPlayer player : PlayerServerEvents.players) {
+                    if (startPos.isOwnedBy(player.getName().getString())) {
+                        serverPlayer = player;
+                        break;
+                    }
+                }
+                if (serverPlayer == null || PlayerServerEvents.isRTSPlayer(serverPlayer.getId()))
+                    return new MatchStartPlan(List.of(), startPos.displayName);
+            }
+            if (level.getWorldBorder().getDistanceToBorder(
+                    startPos.pos.getX(), startPos.pos.getZ()) < 1)
+                return new MatchStartPlan(List.of(), startPos.displayName);
+
+            ArrayList<BuildingBlock> relativeBlocks = building.getRelativeBlockData(level);
+            BlockPos origin = PlayerServerEvents.getBuildingOriginPos(startPos.pos, relativeBlocks);
+            ArrayList<BuildingBlock> absoluteBlocks = BuildingUtils.getAbsoluteBlockData(
+                    relativeBlocks, level, origin, Rotation.NONE);
+            BlockPos min = BuildingUtils.getMinCorner(absoluteBlocks);
+            BlockPos max = BuildingUtils.getMaxCorner(absoluteBlocks);
+            for (int chunkX = SectionPos.blockToSectionCoord(min.getX());
+                 chunkX <= SectionPos.blockToSectionCoord(max.getX()); chunkX++)
+                for (int chunkZ = SectionPos.blockToSectionCoord(min.getZ());
+                     chunkZ <= SectionPos.blockToSectionCoord(max.getZ()); chunkZ++)
+                    level.getChunk(chunkX, chunkZ);
+
+            AABB footprint = AABB.encapsulatingFullBlocks(min, max);
+            boolean overlapsExisting = BuildingServerEvents.getBuildings().stream()
+                    .map(buildingPlacement -> AABB.encapsulatingFullBlocks(
+                            buildingPlacement.minCorner, buildingPlacement.maxCorner))
+                    .anyMatch(footprint::intersects);
+            if (overlapsExisting || plannedFootprints.stream().anyMatch(footprint::intersects))
+                return new MatchStartPlan(List.of(), startPos.displayName);
+
+            plannedFootprints.add(footprint);
+            starts.add(new PlannedStart(startPos, faction, serverPlayer));
+        }
+        return new MatchStartPlan(List.copyOf(starts), null);
     }
 
     public static void setPosEnabled(BlockPos pos, boolean enable) {
@@ -104,10 +214,12 @@ public class StartPosServerEvents {
             return;
         for (StartPos startPos : startPoses) {
             if (startPos.pos.equals(pos)) {
+                if (!enable && startPos.isOccupied())
+                    return;
                 startPos.enabled = enable;
                 if (!startPos.enabled)
                     startPos.reset();
-                StartPosClientboundPacket.syncAll();
+                updateCountdown(false);
                 return;
             }
         }
@@ -194,26 +306,45 @@ public class StartPosServerEvents {
                     PlayerServerEvents.sendMessageToAllPlayersNoNewlines("startpos.reignofnether.starting_game", false, secondsLeft);
                     SoundClientboundPacket.playSoundForAllPlayers(SoundAction.CHAT);
                 } else {
+                    ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
+                    if (level == null) {
+                        cancelStartGameCountdown(true);
+                        return;
+                    }
+                    MatchStartPlan startPlan = planMatchStart(level);
+                    if (startPlan.failedDisplayName() != null) {
+                        PlayerServerEvents.sendMessageToAllPlayers(
+                                "server.reignofnether.match_start_failed", true,
+                                startPlan.failedDisplayName());
+                        cancelStartGameCountdown(true);
+                        return;
+                    }
+                    var failedBot = BotLobby.startBots(level, startPoses);
+                    if (failedBot.isPresent()) {
+                        PlayerServerEvents.sendMessageToAllPlayers(
+                                "server.reignofnether.match_start_failed", true, failedBot.get());
+                        cancelStartGameCountdown(true);
+                        return;
+                    }
+                    PlayerServerEvents.initializeMatchTime(level);
                     PlayerServerEvents.sendMessageToAllPlayers("startpos.reignofnether.started_game", true);
                     SoundClientboundPacket.playSoundForAllPlayers(SoundAction.ALLY);
-                    for (ServerPlayer serverPlayer : PlayerServerEvents.players) {
-                        for (StartPos startPos : startPoses) {
-                            if (startPos.playerName.equals(serverPlayer.getName().getString()) && startPos.faction != Faction.NONE) {
-                                PlayerServerEvents.startRTS(
-                                        serverPlayer.getId(),
-                                        new Vec3(startPos.pos.getX(), startPos.pos.getY(), startPos.pos.getZ()),
-                                        startPos.faction,
-                                        startPos.colorId
-                                );
-                                break;
-                            }
-                        }
+                    for (PlannedStart plannedStart : startPlan.starts()) {
+                        if (plannedStart.startPos().aiControlled)
+                            continue;
+                        StartPos startPos = plannedStart.startPos();
+                        PlayerServerEvents.startRTS(
+                                plannedStart.serverPlayer().getId(),
+                                new Vec3(startPos.pos.getX(), startPos.pos.getY(), startPos.pos.getZ()),
+                                plannedStart.faction(),
+                                startPos.colorId
+                        );
                     }
                     AlliancesServerEvents.applyConfiguredAlliances(evt.getServer());
                     PlayerServerEvents.setRTSLock(true, true);
                     ticksToStart = TICKS_TO_START_MAX;
                     startingGame = false;
-                    StartPosServerEvents.reset(evt.getServer().getLevel(Level.OVERWORLD));
+                    StartPosServerEvents.reset(level);
                     StartPosClientboundPacket.syncAll();
                 }
             }
@@ -241,6 +372,9 @@ public class StartPosServerEvents {
 
     @SubscribeEvent
     public static void loadPositions(ServerStartedEvent evt) {
+        ticksToStart = TICKS_TO_START_MAX;
+        startingGame = false;
+        cullTicks = 0;
         ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
 
         // rtsMapInfo is read in RTSMapInfoServerEvents.loadInfo
@@ -280,7 +414,7 @@ public class StartPosServerEvents {
         boolean removedReservation = false;
         for (StartPos startPos : startPoses) {
             if (evt.getEntity() instanceof ServerPlayer player &&
-                    startPos.playerName.equals(player.getName().getString())) {
+                    !startPos.aiControlled && startPos.isOwnedBy(player.getName().getString())) {
                 startPos.reset();
                 removedReservation = true;
             }

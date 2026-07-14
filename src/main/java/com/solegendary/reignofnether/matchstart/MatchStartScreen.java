@@ -35,6 +35,7 @@ public class MatchStartScreen extends Screen {
     private static final ResourceLocation TICK_ICON       = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/tick.png");
     private static final ResourceLocation CROSS_ICON      = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/cross.png");
     private static final ResourceLocation CLOSE_ICON      = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/cross_square.png");
+    private static final ResourceLocation BOT_ICON        = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/command_block_front.png");
 
     private static final int BG_PANEL     = 0xDC000000;
     private static final int BG_ICON      = 0x64000000;
@@ -313,7 +314,7 @@ public class MatchStartScreen extends Screen {
         for (StartPos sp : StartPosClientEvents.startPoses) {
             if (!sp.enabled) continue;
             byColor.computeIfAbsent(sp.colorId, k -> new ArrayList<>()).add(sp);
-            if (!sp.playerName.isBlank()) seatedPlayers.add(sp.playerName);
+            if (sp.isOccupied()) seatedPlayers.add(sp.ownerName);
         }
 
         List<String> spectators = new ArrayList<>();
@@ -407,8 +408,8 @@ public class MatchStartScreen extends Screen {
 
     private void renderSlotRow(GuiGraphics g, StartPos sp, String localName,
                                int x, int y, int width, int mx, int my, boolean overlayActive) {
-        boolean mine = !sp.playerName.isBlank() && sp.playerName.equals(localName);
-        boolean empty = sp.playerName.isBlank();
+        boolean mine = sp.isOwnedBy(localName);
+        boolean empty = !sp.isOccupied();
         int tint = (0x60000000) | (sp.getHexColor() & 0xFFFFFF);
         int rowBottom = y + ROW_H - 2;
         g.fill(x, y, x + width, rowBottom, tint);
@@ -426,7 +427,9 @@ public class MatchStartScreen extends Screen {
         int tileY = y + ((ROW_H - FRAME_SIZE) / 2) - 1;
         int readyX = x + width - FRAME_SIZE - 2;
         int factionTotalW = FRAME_SIZE * 3 + 2 * 2;
-        int factionStartX = readyX - 20 - factionTotalW;
+        int factionStartX = sp.aiControlled
+                ? readyX - FRAME_SIZE - 2
+                : readyX - 20 - factionTotalW;
 
         int headX = x + 6;
         int innerOffset = (FRAME_SIZE - ICON_SIZE) / 2;
@@ -443,23 +446,39 @@ public class MatchStartScreen extends Screen {
             g.pose().popPose();
         } else {
             MyRenderer.renderIconFrameWithBg(g, ICON_FRAME, headX, tileY, FRAME_SIZE, BG_ICON);
-            MyRenderer.renderPlayerHead(g, sp.playerName, headX + innerOffset, tileY + innerOffset, ICON_SIZE, ICON_FRAME);
+            MyRenderer.renderPlayerHead(g, sp.aiControlled ? "" : sp.displayName,
+                    headX + innerOffset, tileY + innerOffset, ICON_SIZE,
+                    sp.aiControlled ? BOT_ICON : ICON_FRAME);
         }
 
         String name = empty
                 ? Component.translatable("matchstart.reignofnether.empty_slot").getString()
-                : sp.playerName;
+                : sp.displayName;
         int nameCol = empty ? TEXT_DIM : TEXT_NORMAL;
         int nameX = headX + FRAME_SIZE + 6;
         int nameMaxW = factionStartX - nameX - 6;
         String drawnName = this.font.plainSubstrByWidth(name, nameMaxW);
-        g.drawString(this.font, drawnName, nameX, tileY + (FRAME_SIZE - this.font.lineHeight) / 2 + 1, nameCol, false);
+        int nameY = sp.aiControlled ? tileY + 2 : tileY + (FRAME_SIZE - this.font.lineHeight) / 2 + 1;
+        g.drawString(this.font, drawnName, nameX, nameY, nameCol, false);
+        if (sp.aiControlled) {
+            String details = Component.translatable(
+                    "matchstart.reignofnether.bot",
+                    I18n.get("bot.reignofnether.difficulty." + sp.aiDifficulty.name().toLowerCase(Locale.ROOT)),
+                    I18n.get("bot.reignofnether.personality." + sp.aiPersonality.name().toLowerCase(Locale.ROOT))
+            ).getString();
+            g.drawString(this.font, this.font.plainSubstrByWidth(details, nameMaxW),
+                    nameX, tileY + 12, TEXT_DIM, false);
+        }
 
-        Faction[] order = { Faction.VILLAGERS, Faction.MONSTERS, Faction.PIGLINS, Faction.RANDOM };
-        int currentX = factionStartX - 6;
-        for (Faction f : order) {
-            renderFactionTile(g, sp, f, currentX, tileY, localName, mx, my);
-            currentX += FRAME_SIZE;
+        if (sp.aiControlled) {
+            renderFactionTile(g, sp, sp.faction, factionStartX, tileY, localName, mx, my);
+        } else {
+            Faction[] order = { Faction.VILLAGERS, Faction.MONSTERS, Faction.PIGLINS, Faction.RANDOM };
+            int currentX = factionStartX - 6;
+            for (Faction f : order) {
+                renderFactionTile(g, sp, f, currentX, tileY, localName, mx, my);
+                currentX += FRAME_SIZE;
+            }
         }
         renderReadyTile(g, sp, readyX, tileY, localName, mx, my);
 
@@ -483,14 +502,14 @@ public class MatchStartScreen extends Screen {
 
     private void renderFactionTile(GuiGraphics g, StartPos sp, Faction f,
                                    int x, int y, String localName, int mx, int my) {
-        boolean mine = !sp.playerName.isBlank() && sp.playerName.equals(localName);
+        boolean mine = sp.isOwnedBy(localName);
         ResourceLocation icon = MiscUtil.getFactionIcon(f);
         if (f == Faction.RANDOM)
             icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/question_mark.png");
 
         Button button = new ButtonBuilder("Faction " + f.name())
                 .iconResource(icon)
-                .isSelected(() -> sp.faction == f && !sp.playerName.isBlank())
+                .isSelected(() -> sp.faction == f && sp.isOccupied())
                 .isEnabled(() -> mine)
                 .onLeftClick(() -> pickFaction(sp, f))
                 .tooltipLines(List.of(fcs(MiscUtil.getFactionName(f))))
@@ -503,7 +522,7 @@ public class MatchStartScreen extends Screen {
 
     private void renderReadyTile(GuiGraphics g, StartPos sp, int x, int y,
                                  String localName, int mx, int my) {
-        boolean mine = !sp.playerName.isBlank() && sp.playerName.equals(localName);
+        boolean mine = sp.isOwnedBy(localName);
         MyRenderer.renderIconFrameWithBg(g, ICON_FRAME, x, y, FRAME_SIZE, BG_ICON);
         ResourceLocation icon = sp.ready ? TICK_ICON : CROSS_ICON;
 
@@ -637,7 +656,7 @@ public class MatchStartScreen extends Screen {
         for (StartPos sp : StartPosClientEvents.startPoses) {
             if (!sp.enabled) continue;
             total++;
-            if (sp.ready && !sp.playerName.isBlank()) ready++;
+            if (sp.ready && sp.isOccupied()) ready++;
         }
         return Component.translatable("matchstart.reignofnether.ready_count", ready, total).getString();
     }
@@ -715,10 +734,10 @@ public class MatchStartScreen extends Screen {
     private void pickFaction(StartPos pos, Faction faction) {
         if (Minecraft.getInstance().player == null) return;
         String name = Minecraft.getInstance().player.getName().getString();
-        if (pos.playerName.isBlank()) {
+        if (!pos.isOccupied()) {
             StartPosClientEvents.selectedFaction = faction;
             StartPosServerboundPacket.reservePos(pos.pos, faction);
-        } else if (pos.playerName.equals(name)) {
+        } else if (pos.isOwnedBy(name)) {
             if (pos.faction == faction) {
                 StartPosClientEvents.selectedFaction = Faction.NONE;
                 StartPosServerboundPacket.reservePos(pos.pos, Faction.NONE);
@@ -735,9 +754,9 @@ public class MatchStartScreen extends Screen {
     private void claimDot(StartPos pos) {
         if (Minecraft.getInstance().player == null || !pos.enabled) return;
         String name = Minecraft.getInstance().player.getName().getString();
-        if (pos.playerName.equals(name)) {
+        if (pos.isOwnedBy(name)) {
             StartPosServerboundPacket.unreservePos(pos.pos);
-        } else if (pos.playerName.isBlank()) {
+        } else if (!pos.isOccupied()) {
             StartPosServerboundPacket.reservePos(pos.pos, StartPosClientEvents.selectedFaction);
         }
     }

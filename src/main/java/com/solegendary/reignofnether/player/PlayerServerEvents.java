@@ -404,6 +404,24 @@ public class PlayerServerEvents {
         startRTS(playerId, pos, faction, 0);
     }
 
+    public static void initializeMatchTime(ServerLevel level) {
+        if (SurvivalServerEvents.isEnabled()) {
+            level.setDayTime(TimeUtils.DAWN
+                    + getWaveSurvivalTimeModifier(SurvivalServerEvents.getDifficulty()));
+        } else {
+            level.setDayTime(MONSTER_START_TIME_OF_DAY);
+        }
+    }
+
+    public static Building getStartingBuilding(Faction faction) {
+        return switch (faction) {
+            case VILLAGERS -> Buildings.TOWN_CENTRE;
+            case MONSTERS -> Buildings.MAUSOLEUM;
+            case PIGLINS -> Buildings.CENTRAL_PORTAL;
+            default -> null;
+        };
+    }
+
     // readied start is a simultaneous start from players using RTS start pos blocks, difference being:
     // - places the capitol foundations automatically
     // - spawns workers outside the foundations
@@ -483,13 +501,12 @@ public class PlayerServerEvents {
             }
 
             if (faction != Faction.NONE) {
+                if (!readiedStart)
+                    initializeMatchTime(level);
                 if (SurvivalServerEvents.isEnabled()) {
-                    level.setDayTime(TimeUtils.DAWN + getWaveSurvivalTimeModifier(SurvivalServerEvents.getDifficulty()));
                     for (RTSPlayer rtsPlayer : rtsPlayers)
                         if (!rtsPlayer.name.equals(playerName))
                             AlliancesServerEvents.addAlliance(rtsPlayer.name, playerName);
-                } else {
-                    level.setDayTime(MONSTER_START_TIME_OF_DAY);
                 }
                 ResearchServerEvents.removeAllCheatsFor(playerName);
             } else {
@@ -498,23 +515,10 @@ public class PlayerServerEvents {
             ResourcesServerEvents.resetResources(playerName);
 
             if (readiedStart) {
-                Building building = null;
-                ArrayList<BuildingBlock> blocks = null;
-
-                switch (faction) {
-                    case VILLAGERS -> {
-                        building = Buildings.TOWN_CENTRE;
-                        blocks = Buildings.TOWN_CENTRE.getRelativeBlockData(level);
-                    }
-                    case MONSTERS -> {
-                        building = Buildings.MAUSOLEUM;
-                        blocks = Buildings.MAUSOLEUM.getRelativeBlockData(level);
-                    }
-                    case PIGLINS -> {
-                        building = Buildings.CENTRAL_PORTAL;
-                        blocks = Buildings.CENTRAL_PORTAL.getRelativeBlockData(level);
-                    }
-                };
+                Building building = getStartingBuilding(faction);
+                ArrayList<BuildingBlock> blocks = building == null
+                        ? null
+                        : building.getRelativeBlockData(level);
                 if (building != null) {
                     BlockPos bp = getBuildingOriginPos(new BlockPos((int) pos.x, (int) pos.y, (int) pos.z), blocks);
                     for (int i = 0; i < workers.size(); i++) {

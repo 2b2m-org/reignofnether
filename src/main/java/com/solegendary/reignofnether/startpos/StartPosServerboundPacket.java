@@ -10,6 +10,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.player.PlayerServerEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -101,7 +102,8 @@ public class StartPosServerboundPacket implements CustomPacketPayload {
     }
 
     private void reserve(String playerName) {
-        if (StartPosServerEvents.isStartingGame() || !StartPosServerEvents.isReservableFaction(faction))
+        if (StartPosServerEvents.isStartingGame() || PlayerServerEvents.isGameActive()
+                || !StartPosServerEvents.isReservableFaction(faction))
             return;
 
         StartPos requestedPos = null;
@@ -112,16 +114,14 @@ public class StartPosServerboundPacket implements CustomPacketPayload {
             }
         }
         if (requestedPos == null || !requestedPos.enabled ||
-                (!requestedPos.playerName.isBlank() && !requestedPos.playerName.equals(playerName)))
+                (requestedPos.isOccupied() && !requestedPos.isOwnedBy(playerName)))
             return;
 
         for (StartPos startPos : StartPosServerEvents.startPoses) {
-            if (startPos != requestedPos && startPos.playerName.equals(playerName))
+            if (startPos != requestedPos && startPos.isOwnedBy(playerName))
                 startPos.reset();
         }
-        requestedPos.reset();
-        requestedPos.faction = faction;
-        requestedPos.playerName = playerName;
+        requestedPos.reserveHuman(playerName, faction);
         StartPosClientboundPacket.syncAll();
     }
 
@@ -130,7 +130,7 @@ public class StartPosServerboundPacket implements CustomPacketPayload {
             return;
 
         for (StartPos startPos : StartPosServerEvents.startPoses) {
-            if (startPos.pos.equals(blockPos) && startPos.playerName.equals(playerName)) {
+            if (startPos.pos.equals(blockPos) && startPos.isOwnedBy(playerName)) {
                 startPos.reset();
                 StartPosClientboundPacket.syncAll();
                 return;

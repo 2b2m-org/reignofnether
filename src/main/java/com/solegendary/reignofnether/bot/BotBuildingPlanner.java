@@ -1,8 +1,10 @@
 package com.solegendary.reignofnether.bot;
 
 import com.solegendary.reignofnether.building.Building;
+import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
+import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
@@ -24,21 +26,63 @@ final class BotBuildingPlanner {
     private BotBuildingPlanner() {
     }
 
-    static Optional<BlockPos> findPlacement(ServerLevel level, Building building, BlockPos home, String ownerName,
-                                            boolean includeHome) {
-        return findPlacement(level, building, home, ownerName, includeHome, null);
+    record Footprint(BlockPos origin, BlockPos min, BlockPos max, BlockPos centre) {
+        AABB bounds(int gap) {
+            return new AABB(
+                    min.getX() - gap,
+                    min.getY(),
+                    min.getZ() - gap,
+                    max.getX() + gap + 1,
+                    max.getY() + 1,
+                    max.getZ() + gap + 1
+            );
+        }
+
+        boolean overlaps(Footprint other, int gap) {
+            return bounds(gap).intersects(other.bounds(0));
+        }
     }
 
-    static Optional<BlockPos> findPlacement(ServerLevel level, Building building, BlockPos home, String ownerName,
+    static Optional<BlockPos> findPlacement(ServerLevel level, Building building, BlockPos home,
+                                            boolean includeHome) {
+        return findPlacement(level, building, home, includeHome, null);
+    }
+
+    static Optional<BlockPos> findPlacement(ServerLevel level, Building building, BlockPos home,
                                             boolean includeHome, BotWorldView worldView) {
         for (BlockPos centre : candidateCentres(level, home, includeHome)) {
-            var relativeBlocks = building.getRelativeBlockData(level);
-            BlockPos origin = PlayerServerEvents.getBuildingOriginPos(centre, relativeBlocks);
-            BuildingPlacement placement = building.createBuildingPlacement(level, origin, Rotation.NONE, ownerName);
-            if (canPlace(level, placement, worldView))
-                return Optional.of(origin);
+            Footprint footprint = footprintAtCentre(level, building, centre);
+            if (canPlace(level, footprint, worldView))
+                return Optional.of(footprint.origin());
         }
         return Optional.empty();
+    }
+
+    static Footprint footprintAtCentre(ServerLevel level, Building building, BlockPos centre) {
+        ArrayList<BuildingBlock> relativeBlocks = building.getRelativeBlockData(level);
+        BlockPos origin = PlayerServerEvents.getBuildingOriginPos(centre, relativeBlocks);
+        return footprintAtOrigin(level, building, origin);
+    }
+
+    static Footprint footprintAtOrigin(ServerLevel level, Building building, BlockPos origin) {
+        ArrayList<BuildingBlock> blocks = BuildingUtils.getAbsoluteBlockData(
+                building.getRelativeBlockData(level), level, origin, Rotation.NONE);
+        return new Footprint(
+                origin,
+                BuildingUtils.getMinCorner(blocks),
+                BuildingUtils.getMaxCorner(blocks),
+                BuildingUtils.getCentrePos(blocks)
+        );
+    }
+
+    static void loadChunks(ServerLevel level, Footprint footprint) {
+        int minChunkX = SectionPos.blockToSectionCoord(footprint.min().getX());
+        int maxChunkX = SectionPos.blockToSectionCoord(footprint.max().getX());
+        int minChunkZ = SectionPos.blockToSectionCoord(footprint.min().getZ());
+        int maxChunkZ = SectionPos.blockToSectionCoord(footprint.max().getZ());
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++)
+                level.getChunk(chunkX, chunkZ);
     }
 
     static BlockPos groundAt(ServerLevel level, int x, int z) {
@@ -73,12 +117,18 @@ final class BotBuildingPlanner {
         return centres;
     }
 
-    private static boolean canPlace(ServerLevel level, BuildingPlacement placement, BotWorldView worldView) {
-        BlockPos min = placement.minCorner;
-        BlockPos max = placement.maxCorner;
-        BlockPos origin = placement.originPos;
+    static boolean canPlace(ServerLevel level, Footprint footprint, BotWorldView worldView) {
+        BlockPos min = footprint.min();
+        BlockPos max = footprint.max();
+        BlockPos origin = footprint.origin();
 
-        if (!isChunkLoaded(level, min) || !isChunkLoaded(level, max))
+        for (int chunkX = SectionPos.blockToSectionCoord(min.getX());
+             chunkX <= SectionPos.blockToSectionCoord(max.getX()); chunkX++)
+            for (int chunkZ = SectionPos.blockToSectionCoord(min.getZ());
+                 chunkZ <= SectionPos.blockToSectionCoord(max.getZ()); chunkZ++)
+                if (!level.hasChunk(chunkX, chunkZ))
+                    return false;
+        if (!level.getWorldBorder().isWithinBounds(min) || !level.getWorldBorder().isWithinBounds(max))
             return false;
         BlockPos visibilityMin = min.offset(-BUILDING_GAP, 0, -BUILDING_GAP);
         BlockPos visibilityMax = max.offset(BUILDING_GAP, 0, BUILDING_GAP);
@@ -86,7 +136,7 @@ final class BotBuildingPlanner {
             return false;
 
         double requiredBorderDistance = Math.max(max.getX() - min.getX(), max.getZ() - min.getZ()) / 2.0 + BUILDING_GAP;
-        if (level.getWorldBorder().getDistanceToBorder(placement.centrePos.getX(), placement.centrePos.getZ())
+        if (level.getWorldBorder().getDistanceToBorder(footprint.centre().getX(), footprint.centre().getZ())
                 < requiredBorderDistance)
             return false;
 
@@ -102,7 +152,7 @@ final class BotBuildingPlanner {
             }
         }
 
-        AABB candidateBounds = new AABB(
+        AABB bounds = new AABB(
                 min.getX() - BUILDING_GAP,
                 level.getMinBuildHeight(),
                 min.getZ() - BUILDING_GAP,
@@ -110,11 +160,19 @@ final class BotBuildingPlanner {
                 level.getMaxBuildHeight(),
                 max.getZ() + BUILDING_GAP + 1
         );
+        return !overlapsExistingBuilding(bounds);
+    }
+
+    static boolean overlapsExistingBuilding(Footprint footprint, int gap) {
+        return overlapsExistingBuilding(footprint.bounds(gap));
+    }
+
+    private static boolean overlapsExistingBuilding(AABB bounds) {
         for (BuildingPlacement existing : BuildingServerEvents.getBuildings()) {
-            AABB existingBounds = AABB.encapsulatingFullBlocks(existing.minCorner, existing.maxCorner);
-            if (candidateBounds.intersects(existingBounds))
-                return false;
+            if (bounds.intersects(AABB.encapsulatingFullBlocks(
+                    existing.minCorner, existing.maxCorner)))
+                return true;
         }
-        return true;
+        return false;
     }
 }

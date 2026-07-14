@@ -2,6 +2,8 @@ package com.solegendary.reignofnether.startpos;
 
 import static com.solegendary.reignofnether.ReignOfNether.payloadType;
 
+import com.solegendary.reignofnether.bot.BotDifficulty;
+import com.solegendary.reignofnether.bot.BotPersonality;
 import com.solegendary.reignofnether.faction.Faction;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.core.BlockPos;
@@ -65,7 +67,11 @@ public class StartPosClientboundPacket implements CustomPacketPayload {
             decoded.add(new PositionState(
                     buffer.readBlockPos(),
                     buffer.readEnum(Faction.class),
+                    buffer.readUtf(64),
                     buffer.readUtf(32),
+                    buffer.readBoolean(),
+                    buffer.readEnum(BotDifficulty.class),
+                    buffer.readEnum(BotPersonality.class),
                     buffer.readInt(),
                     buffer.readBoolean(),
                     buffer.readBoolean()
@@ -81,7 +87,11 @@ public class StartPosClientboundPacket implements CustomPacketPayload {
         for (PositionState position : positions) {
             buffer.writeBlockPos(position.pos());
             buffer.writeEnum(position.faction());
-            buffer.writeUtf(position.playerName(), 32);
+            buffer.writeUtf(position.ownerName(), 64);
+            buffer.writeUtf(position.displayName(), 32);
+            buffer.writeBoolean(position.aiControlled());
+            buffer.writeEnum(position.aiDifficulty());
+            buffer.writeEnum(position.aiPersonality());
             buffer.writeInt(position.colorId());
             buffer.writeBoolean(position.enabled());
             buffer.writeBoolean(position.ready());
@@ -103,13 +113,19 @@ public class StartPosClientboundPacket implements CustomPacketPayload {
         ));
     }
 
-    record PositionState(BlockPos pos, Faction faction, String playerName, int colorId,
+    record PositionState(BlockPos pos, Faction faction, String ownerName, String displayName,
+                         boolean aiControlled, BotDifficulty aiDifficulty,
+                         BotPersonality aiPersonality, int colorId,
                          boolean enabled, boolean ready) {
         private PositionState(StartPos startPos) {
             this(
                     startPos.pos,
                     startPos.faction,
-                    startPos.playerName,
+                    startPos.ownerName,
+                    startPos.displayName,
+                    startPos.aiControlled,
+                    startPos.aiDifficulty,
+                    startPos.aiPersonality,
                     startPos.colorId,
                     startPos.enabled,
                     startPos.ready

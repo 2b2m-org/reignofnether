@@ -52,17 +52,19 @@ public class StartPosClientEvents {
 
         ArrayList<StartPos> updated = new ArrayList<>(states.size());
         for (StartPosClientboundPacket.PositionState state : states) {
-            StartPos startPos = new StartPos(state.pos(), state.faction(), state.playerName(), state.colorId());
+            StartPos startPos = new StartPos(
+                    state.pos(), state.faction(), state.ownerName(), state.displayName(),
+                    state.aiControlled(), state.aiDifficulty(), state.aiPersonality(), state.colorId());
             startPos.enabled = state.enabled();
             startPos.ready = state.ready();
             updated.add(startPos);
 
             StartPos old = previous.get(state.pos());
             if (announceReadyChanges && old != null
-                    && old.playerName.equals(state.playerName())
-                    && !state.playerName().isBlank()
+                    && old.ownerName.equals(state.ownerName())
+                    && !state.ownerName().isBlank()
                     && old.ready != state.ready()) {
-                announceReadyChange(state.playerName(), state.ready(), states);
+                announceReadyChange(state.displayName(), state.ready(), states);
             }
         }
 
@@ -82,7 +84,7 @@ public class StartPosClientEvents {
             for (StartPosClientboundPacket.PositionState state : states) {
                 if (state.enabled())
                     enabledPositions++;
-                if (state.ready() && !state.playerName().isBlank() && state.faction() != Faction.NONE)
+                if (state.ready() && !state.ownerName().isBlank() && state.faction() != Faction.NONE)
                     readyPlayers++;
             }
             MC.player.sendSystemMessage(Component.translatable(
@@ -104,7 +106,7 @@ public class StartPosClientEvents {
 
     private static boolean isReady() {
         for (StartPos startPos : startPoses) {
-            if (MC.player != null && MC.player.getName().getString().equals(startPos.playerName) && startPos.ready) {
+            if (MC.player != null && startPos.isOwnedBy(MC.player.getName().getString()) && startPos.ready) {
                 return true;
             }
         }
@@ -162,7 +164,7 @@ public class StartPosClientEvents {
 
     public static StartPos getPos() {
         for (StartPos startPos : startPoses)
-            if (MC.player != null && MC.player.getName().getString().equals(startPos.playerName))
+            if (MC.player != null && startPos.isOwnedBy(MC.player.getName().getString()))
                 return startPos;
         return null;
     }
@@ -198,7 +200,7 @@ public class StartPosClientEvents {
                     case PIGLINS -> BuildingClientEvents.setBuildingToPlace(Buildings.CENTRAL_PORTAL);
                 }
                 int forceColour = 2;
-                if (startPos.playerName.equals(MC.player.getName().getString()))
+                if (startPos.isOwnedBy(MC.player.getName().getString()))
                     forceColour = 1;
                 BuildingClientEvents.drawBuildingToPlace(evt.getPoseStack(), BuildingClientEvents.getBuildingOriginPos(startPos.pos), forceColour);
                 BuildingClientEvents.setBuildingToPlace(null);

@@ -10,7 +10,6 @@ import com.solegendary.reignofnether.building.buildings.placements.ProductionPla
 import com.solegendary.reignofnether.building.production.ProductionItem;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
-import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.resources.ResourceSource;
 import com.solegendary.reignofnether.resources.ResourceSources;
@@ -50,16 +49,8 @@ public final class BotController {
         army = new BotArmy(ownerName, displayName, self, worldView);
     }
 
-    public String getOwnerName() {
-        return ownerName;
-    }
-
     public String getDisplayName() {
         return displayName;
-    }
-
-    public BotGoal getCurrentGoal() {
-        return currentGoal;
     }
 
     public void tick(ServerLevel level) {
@@ -125,8 +116,7 @@ public final class BotController {
                 + " personality=" + player.aiPersonality.name().toLowerCase()
                 + " goal=" + currentGoal.name().toLowerCase()
                 + " workers=" + workers + " army=" + army
-                + " population=" + population + "/" + supply + " " + resourceText
-                + (hasTestSpeedCheats() ? " [TEST SPEED CHEAT]" : "");
+                + " population=" + population + "/" + supply + " " + resourceText;
     }
 
     private BotDecisionContext createDecisionContext(BotStrategy strategy) {
@@ -200,7 +190,7 @@ public final class BotController {
             return false;
 
         var origin = BotBuildingPlanner.findPlacement(
-                level, building, player.aiHomePos, ownerName, false, worldView);
+                level, building, player.aiHomePos, false, worldView);
         if (origin.isEmpty())
             return false;
 
@@ -535,8 +525,4 @@ public final class BotController {
         }
     }
 
-    private boolean hasTestSpeedCheats() {
-        return ResearchServerEvents.playerHasCheat(ownerName, "warpten")
-                || ResearchServerEvents.playerHasCheat(ownerName, "operationcwal");
-    }
 }

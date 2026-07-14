@@ -1,6 +1,5 @@
 package com.solegendary.reignofnether.bot;
 
-import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -15,10 +14,11 @@ import com.solegendary.reignofnether.player.PlayerClientboundPacket;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
-import com.solegendary.reignofnether.research.ResearchClientboundPacket;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.survival.SurvivalServerEvents;
+import com.solegendary.reignofnether.startpos.StartPos;
+import com.solegendary.reignofnether.startpos.StartPosServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -42,6 +42,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -49,6 +50,15 @@ public final class BotServerEvents {
     private static final int TICK_GRANULARITY = 10;
     private static final Map<String, BotController> CONTROLLERS = new HashMap<>();
     private static boolean survivalAlliancesReady;
+
+    record BotStartPlan(String ownerName, String displayName, Faction faction,
+                        BotDifficulty difficulty, BotPersonality personality,
+                        BlockPos home, BotBuildingPlanner.Footprint footprint, int colorId) {
+    }
+
+    record MaterializedBot(RTSPlayer player, List<Entity> workers,
+                           BuildingPlacement capitol) {
+    }
 
     private BotServerEvents() {
     }
@@ -81,6 +91,7 @@ public final class BotServerEvents {
                                         .then(addDifficultyBranch(BotDifficulty.MEDIUM))
                                         .then(addDifficultyBranch(BotDifficulty.HARD)))))
                 .then(Commands.literal("list").executes(context -> listBots(context.getSource())))
+                .then(BotLobby.command())
                 .then(Commands.literal("remove")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .suggests(BotServerEvents::suggestBotNames)
@@ -107,15 +118,6 @@ public final class BotServerEvents {
                                                 context.getSource(),
                                                 StringArgumentType.getString(context, "name"),
                                                 StringArgumentType.getString(context, "style")
-                                        )))))
-                .then(Commands.literal("test-speed")
-                        .then(Commands.argument("name", StringArgumentType.word())
-                                .suggests(BotServerEvents::suggestBotNames)
-                                .then(Commands.argument("enabled", BoolArgumentType.bool())
-                                        .executes(context -> setSpeed(
-                                                context.getSource(),
-                                                StringArgumentType.getString(context, "name"),
-                                                BoolArgumentType.getBool(context, "enabled")
                                         )))))
         );
     }
@@ -185,81 +187,163 @@ public final class BotServerEvents {
             source.sendFailure(Component.literal("RTS bots can only be added from the Overworld."));
             return 0;
         }
+        if (StartPosServerEvents.isStartingGame() || StartPosServerEvents.hasReservations()) {
+            source.sendFailure(Component.literal(
+                    "An RTS lobby is configured. Use 'rts-bot lobby add' or clear its seats first."));
+            return 0;
+        }
         Faction faction = parseFaction(factionName);
         if (faction == null) {
             source.sendFailure(Component.literal("Unknown faction '" + factionName + "'. Use villagers, monsters, or piglins."));
             return 0;
         }
-        if (displayName.length() > 32) {
-            source.sendFailure(Component.literal("Bot names must be 32 characters or fewer."));
-            return 0;
-        }
-        if (SurvivalServerEvents.ENEMY_OWNER_NAME.equalsIgnoreCase(displayName)) {
-            source.sendFailure(Component.literal("'" + displayName + "' is reserved by Wave Survival."));
-            return 0;
-        }
-        boolean nameInUse = PlayerServerEvents.rtsPlayers.stream()
-                .anyMatch(player -> player.displayName.equalsIgnoreCase(displayName))
-                || source.getServer().getPlayerList().getPlayers().stream()
-                .anyMatch(player -> player.getGameProfile().getName().equalsIgnoreCase(displayName));
-        if (nameInUse) {
-            source.sendFailure(Component.literal("An RTS player named '" + displayName + "' already exists."));
+        Optional<String> nameError = validateBotDisplayName(displayName, usedAiDisplayNames());
+        if (nameError.isPresent()) {
+            source.sendFailure(Component.literal(nameError.get()));
             return 0;
         }
 
-        RTSPlayer bot = RTSPlayer.getNewAiBot(
-                displayName, faction, requestedHome, difficulty, BotPersonality.STEADY);
-        BotStrategy strategy = BotStrategy.forFaction(faction);
-        var origin = BotBuildingPlanner.findPlacement(
-                level, strategy.capitol(), requestedHome, bot.name, true);
-        if (origin.isEmpty()) {
+        String ownerName = RTSPlayer.createAiOwnerName();
+        Optional<BotStartPlan> plan = planBotStart(
+                level, ownerName, displayName, faction, difficulty, BotPersonality.STEADY,
+                requestedHome);
+        if (plan.isEmpty()) {
             source.sendFailure(Component.literal(
                     "No flat, clear area was found for " + displayName + "'s capitol."));
             return 0;
         }
-        BuildingPlacement preview = strategy.capitol().createBuildingPlacement(
-                level, origin.get(), Rotation.NONE, bot.name);
-        BlockPos home = BotBuildingPlanner.groundAt(level, preview.centrePos.getX(), preview.centrePos.getZ());
-        bot.aiHomePos = home;
-
-        PlayerServerEvents.rtsPlayers.add(bot);
-        ResourcesServerEvents.assignResources(bot.name);
-        ResourcesServerEvents.resetResources(bot.name);
-        ResearchServerEvents.removeAllCheatsFor(bot.name);
-        PlayerClientboundPacket.addRTSPlayer(bot);
-
-        List<Entity> workers = spawnWorkers(level, bot, home);
-        int[] workerIds = workers.stream().mapToInt(Entity::getId).toArray();
-        BuildingPlacement capitol = BuildingServerEvents.placeBuilding(
-                strategy.capitol(), origin.get(), Rotation.NONE, bot.name, workerIds, false, false);
-        if (capitol == null || !BuildingServerEvents.getBuildings().contains(capitol)) {
-            workers.forEach(Entity::discard);
-            PlayerServerEvents.rtsPlayers.remove(bot);
-            ResourcesServerEvents.resourcesList.removeIf(resources -> resources.ownerName.equals(bot.name));
-            PlayerClientboundPacket.removeRTSPlayer(bot.name);
+        MaterializedBot materialized = materializeBot(level, plan.get());
+        if (materialized == null) {
             source.sendFailure(Component.literal("Failed to place " + displayName + "'s capitol."));
             return 0;
         }
-
         if (SurvivalServerEvents.isEnabled()) {
             AlliancesServerEvents.applyCoopAlliances();
             survivalAlliancesReady = true;
         }
-        CONTROLLERS.put(bot.name, new BotController(bot.name));
         PlayerServerEvents.sendMessageToAllPlayers(
                 "server.reignofnether.bot_added", true, displayName);
         PlayerServerEvents.sendMessageToAllPlayers(
                 "server.reignofnether.total_players", false, PlayerServerEvents.rtsPlayers.size());
         PlayerClientboundPacket.syncRtsGameTime(PlayerServerEvents.rtsGameTicks);
         PlayerServerEvents.saveRTSPlayers();
+        source.sendSuccess(() -> Component.literal("Added RTS bot " + displayName + " ("
+                + factionName.toLowerCase(Locale.ROOT) + ", "
+                + difficulty.name().toLowerCase(Locale.ROOT) + ", steady) at "
+                + materialized.player().aiHomePos.toShortString()), true);
+        return 1;
+    }
+
+    static Optional<String> validateBotDisplayName(String displayName, List<String> usedNames) {
+        if (displayName == null || displayName.isBlank())
+            return Optional.of("Bot names cannot be blank.");
+        if (displayName.length() > 32)
+            return Optional.of("Bot names must be 32 characters or fewer.");
+        if (SurvivalServerEvents.ENEMY_OWNER_NAME.equalsIgnoreCase(displayName))
+            return Optional.of("'" + displayName + "' is reserved by Wave Survival.");
+        if (usedNames.stream().anyMatch(name -> name.equalsIgnoreCase(displayName)))
+            return Optional.of("An AI bot named '" + displayName + "' already exists.");
+        return Optional.empty();
+    }
+
+    static List<String> usedAiDisplayNames() {
+        List<String> names = new ArrayList<>();
+        synchronized (PlayerServerEvents.rtsPlayers) {
+            PlayerServerEvents.rtsPlayers.stream()
+                    .filter(player -> player.aiControlled)
+                    .map(player -> player.displayName)
+                    .forEach(names::add);
+        }
+        StartPosServerEvents.startPoses.stream()
+                .filter(startPos -> startPos.aiControlled)
+                .map(startPos -> startPos.displayName)
+                .forEach(names::add);
+        return names;
+    }
+
+    private static Optional<BotStartPlan> planBotStart(
+            ServerLevel level, String ownerName, String displayName, Faction faction,
+            BotDifficulty difficulty, BotPersonality personality, BlockPos requestedHome) {
+        BotStrategy strategy = BotStrategy.forFaction(faction);
+        Optional<BlockPos> plannedOrigin = BotBuildingPlanner.findPlacement(
+                level, strategy.capitol(), requestedHome, true);
+        if (plannedOrigin.isEmpty())
+            return Optional.empty();
+        BotBuildingPlanner.Footprint footprint = BotBuildingPlanner.footprintAtOrigin(
+                level, strategy.capitol(), plannedOrigin.get());
+        return Optional.of(createStartPlan(
+                level, ownerName, displayName, faction, difficulty, personality, footprint, 0));
+    }
+
+    static Optional<BotStartPlan> planLobbyBotStart(
+            ServerLevel level, String ownerName, String displayName, Faction faction,
+            BotDifficulty difficulty, BotPersonality personality, StartPos startPos) {
+        BotBuildingPlanner.Footprint footprint = BotBuildingPlanner.footprintAtCentre(
+                level, BotStrategy.forFaction(faction).capitol(), startPos.pos);
+        BotBuildingPlanner.loadChunks(level, footprint);
+        if (level.getWorldBorder().getDistanceToBorder(startPos.pos.getX(), startPos.pos.getZ()) < 1
+                || BotBuildingPlanner.overlapsExistingBuilding(footprint, 0))
+            return Optional.empty();
+        return Optional.of(createStartPlan(
+                level, ownerName, displayName, faction, difficulty, personality,
+                footprint, startPos.colorId));
+    }
+
+    private static BotStartPlan createStartPlan(
+            ServerLevel level, String ownerName, String displayName, Faction faction,
+            BotDifficulty difficulty, BotPersonality personality,
+            BotBuildingPlanner.Footprint footprint, int colorId) {
+        BlockPos home = BotBuildingPlanner.groundAt(
+                level, footprint.centre().getX(), footprint.centre().getZ());
+        return new BotStartPlan(
+                ownerName, displayName, faction, difficulty, personality,
+                home, footprint, colorId);
+    }
+
+    static MaterializedBot materializeBot(ServerLevel level, BotStartPlan plan) {
+        RTSPlayer bot = RTSPlayer.getNewAiBot(
+                plan.ownerName(), plan.displayName(), plan.faction(), plan.home(),
+                plan.difficulty(), plan.personality());
+        bot.startPosColorId = plan.colorId();
+        BotStrategy strategy = BotStrategy.forFaction(plan.faction());
+
+        PlayerServerEvents.rtsPlayers.add(bot);
+        ResourcesServerEvents.assignResources(bot.name);
+        ResearchServerEvents.removeAllCheatsFor(bot.name);
+        PlayerClientboundPacket.addRTSPlayer(bot);
+
+        List<Entity> workers = spawnWorkers(level, bot, plan.home());
+        int[] workerIds = workers.stream().mapToInt(Entity::getId).toArray();
+        BuildingPlacement capitol = BuildingServerEvents.placeBuilding(
+                strategy.capitol(), plan.footprint().origin(), Rotation.NONE,
+                bot.name, workerIds, false, false);
+        if (capitol == null || !BuildingServerEvents.getBuildings().contains(capitol)) {
+            PlayerServerEvents.rtsPlayers.remove(bot);
+            ResourcesServerEvents.resourcesList.removeIf(resources -> resources.ownerName.equals(bot.name));
+            workers.forEach(Entity::discard);
+            PlayerClientboundPacket.removeRTSPlayer(bot.name);
+            return null;
+        }
+
+        CONTROLLERS.put(bot.name, new BotController(bot.name));
 
         ReignOfNether.LOGGER.info(
                 "[Bot] added {} owner={} faction={} difficulty={} personality={} home={} capitol={}",
-                displayName, bot.name, faction, difficulty, bot.aiPersonality, home, capitol.originPos);
-        source.sendSuccess(() -> Component.literal("Added RTS bot " + displayName + " ("
-                + factionName.toLowerCase(Locale.ROOT) + ", "
-                + difficulty.name().toLowerCase(Locale.ROOT) + ", steady) at " + home.toShortString()), true);
-        return 1;
+                plan.displayName(), bot.name, plan.faction(), plan.difficulty(),
+                plan.personality(), plan.home(), capitol.originPos);
+        return new MaterializedBot(bot, workers, capitol);
+    }
+
+    static void rollbackMaterializedBot(MaterializedBot materialized) {
+        RTSPlayer bot = materialized.player();
+        CONTROLLERS.remove(bot.name);
+        PlayerServerEvents.rtsPlayers.remove(bot);
+        ResourcesServerEvents.resourcesList.removeIf(resources -> resources.ownerName.equals(bot.name));
+        materialized.workers().forEach(Entity::discard);
+        if (BuildingServerEvents.getBuildings().contains(materialized.capitol()))
+            BuildingServerEvents.discardUnstartedBuilding(materialized.capitol());
+        ResearchServerEvents.removeAllCheatsFor(bot.name);
+        PlayerClientboundPacket.removeRTSPlayer(bot.name);
     }
 
     private static List<Entity> spawnWorkers(ServerLevel level, RTSPlayer bot, BlockPos home) {
@@ -324,6 +408,7 @@ public final class BotServerEvents {
         }
         player.aiDifficulty = difficulty;
         PlayerServerEvents.saveRTSPlayers();
+        PlayerClientboundPacket.addRTSPlayer(player);
         source.sendSuccess(() -> Component.literal("Set " + displayName + " difficulty to "
                 + difficulty.name().toLowerCase(Locale.ROOT)), true);
         return 1;
@@ -344,30 +429,9 @@ public final class BotServerEvents {
         }
         player.aiPersonality = personality;
         PlayerServerEvents.saveRTSPlayers();
+        PlayerClientboundPacket.addRTSPlayer(player);
         source.sendSuccess(() -> Component.literal("Set " + displayName + " personality to "
                 + personality.name().toLowerCase(Locale.ROOT)), true);
-        return 1;
-    }
-
-    private static int setSpeed(CommandSourceStack source, String displayName, boolean enabled) {
-        RTSPlayer player = findAiBotByDisplayName(displayName);
-        if (player == null) {
-            source.sendFailure(Component.literal(
-                    "No AI-controlled RTS bot named '" + displayName + "' exists."));
-            return 0;
-        }
-
-        for (String cheat : List.of("warpten", "operationcwal")) {
-            if (enabled && !ResearchServerEvents.playerHasCheat(player.name, cheat)) {
-                ResearchServerEvents.addCheat(player.name, cheat);
-                ResearchClientboundPacket.addCheat(player.name, cheat);
-            } else if (!enabled && ResearchServerEvents.playerHasCheat(player.name, cheat)) {
-                ResearchServerEvents.removeCheat(player.name, cheat);
-                ResearchClientboundPacket.removeCheat(player.name, cheat);
-            }
-        }
-        source.sendSuccess(() -> Component.literal("Test-only speed cheats " + (enabled ? "enabled" : "disabled")
-                + " for " + displayName), true);
         return 1;
     }
 
@@ -390,7 +454,7 @@ public final class BotServerEvents {
         }
     }
 
-    private static Faction parseFaction(String value) {
+    static Faction parseFaction(String value) {
         return switch (value.toLowerCase(Locale.ROOT)) {
             case "villager", "villagers" -> Faction.VILLAGERS;
             case "monster", "monsters" -> Faction.MONSTERS;

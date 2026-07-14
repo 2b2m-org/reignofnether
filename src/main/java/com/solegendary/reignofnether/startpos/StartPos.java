@@ -1,6 +1,8 @@
 package com.solegendary.reignofnether.startpos;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.bot.BotDifficulty;
+import com.solegendary.reignofnether.bot.BotPersonality;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.hud.Button;
 import com.solegendary.reignofnether.hud.ButtonBuilder;
@@ -19,13 +21,18 @@ import net.minecraft.world.level.material.MapColor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
 public class StartPos {
     public BlockPos pos;
     public Faction faction = Faction.NONE; // if != NONE, is reserved by a player
-    public String playerName = ""; // name of player who has reserved this spot
+    public String ownerName = ""; // canonical owner of this spot
+    public String displayName = "";
+    public boolean aiControlled = false;
+    public BotDifficulty aiDifficulty = BotDifficulty.MEDIUM;
+    public BotPersonality aiPersonality = BotPersonality.STEADY;
     public int colorId; // is the actual hex color if it's created via MapInfo
     public boolean isFromStartBlock = true;
     public boolean enabled = true;
@@ -38,21 +45,58 @@ public class StartPos {
         this.colorId = colorId;
     }
 
-    public StartPos(BlockPos pos, Faction faction, String playerName, int colorId) {
+    public StartPos(BlockPos pos, Faction faction, String ownerName, String displayName,
+                    boolean aiControlled, BotDifficulty aiDifficulty,
+                    BotPersonality aiPersonality, int colorId) {
         this.pos = pos;
         this.faction = faction;
-        this.playerName = playerName;
+        this.ownerName = ownerName;
+        this.displayName = displayName;
+        this.aiControlled = aiControlled;
+        this.aiDifficulty = aiDifficulty;
+        this.aiPersonality = aiPersonality;
         this.colorId = colorId;
     }
 
     public void reset() {
         this.faction = Faction.NONE;
-        this.playerName = "";
+        this.ownerName = "";
+        this.displayName = "";
+        this.aiControlled = false;
+        this.aiDifficulty = BotDifficulty.MEDIUM;
+        this.aiPersonality = BotPersonality.STEADY;
         this.ready = false;
     }
 
+    public void reserveHuman(String playerName, Faction faction) {
+        reset();
+        this.ownerName = playerName;
+        this.displayName = playerName;
+        this.faction = faction;
+    }
+
+    public void reserveBot(String ownerName, String displayName, Faction faction,
+                           BotDifficulty difficulty, BotPersonality personality) {
+        reset();
+        this.ownerName = ownerName;
+        this.displayName = displayName;
+        this.faction = faction;
+        this.aiControlled = true;
+        this.aiDifficulty = difficulty;
+        this.aiPersonality = personality;
+        this.ready = true;
+    }
+
+    public boolean isOccupied() {
+        return !ownerName.isBlank();
+    }
+
+    public boolean isOwnedBy(String ownerName) {
+        return isOccupied() && this.ownerName.equals(ownerName);
+    }
+
     public ResourceLocation getIcon() {
-        if (!playerName.isBlank() && faction != Faction.NONE) {
+        if (isOccupied() && faction != Faction.NONE) {
             return MiscUtil.getFactionIcon(faction);
         }
         return getIcon(MiscUtil.getColorName(colorId, true));
@@ -89,16 +133,21 @@ public class StartPos {
         ArrayList<FormattedCharSequence> fcsList = new ArrayList<>();
 
         if (enabled) {
-            if (playerName.isBlank()) {
+            if (!isOccupied()) {
                 fcsList.add(fcs(I18n.get("startpos.reignofnether.not_reserved"), true));
                 fcsList.add(fcs(I18n.get("startpos.reignofnether.disable")));
             } else {
                 if (ready)
-                    fcsList.add(fcs(I18n.get("startpos.reignofnether.reserved_ready", playerName), true));
+                    fcsList.add(fcs(I18n.get("startpos.reignofnether.reserved_ready", displayName), true));
                 else
-                    fcsList.add(fcs(I18n.get("startpos.reignofnether.reserved", playerName), true));
+                    fcsList.add(fcs(I18n.get("startpos.reignofnether.reserved", displayName), true));
                 fcsList.add(fcs(I18n.get("startpos.reignofnether.faction", MiscUtil.getFactionName(faction)), false));
                 fcsList.add(fcs(I18n.get("startpos.reignofnether.team", MiscUtil.getColorName(colorId, false)), false));
+                if (aiControlled) {
+                    fcsList.add(fcs(I18n.get("startpos.reignofnether.bot",
+                            I18n.get("bot.reignofnether.difficulty." + aiDifficulty.name().toLowerCase(Locale.ROOT)),
+                            I18n.get("bot.reignofnether.personality." + aiPersonality.name().toLowerCase(Locale.ROOT))), false));
+                }
             }
         } else if (isOp) {
             fcsList.add(fcs(I18n.get("startpos.reignofnether.disabled"), true));
@@ -106,12 +155,12 @@ public class StartPos {
         }
 
         return new ButtonBuilder(BUTTON_NAME)
-                .iconResource(faction != null && !playerName.isBlank() && ready ? getCornerTickIcon() : null)
+                .iconResource(faction != null && isOccupied() && ready ? getCornerTickIcon() : null)
                 .bgIconResource(enabled ? getIcon() : null)
                 .isSelected(() -> StartPosClientEvents.getPos() == this)
-                .isEnabled(() -> playerName.isBlank() || localPlayerName.equals(playerName))
+                .isEnabled(() -> !isOccupied() || isOwnedBy(localPlayerName))
                 .onLeftClick(() -> {
-                    if (!enabled || (!playerName.isBlank() && !playerName.equals(localPlayerName)))
+                    if (!enabled || (isOccupied() && !isOwnedBy(localPlayerName)))
                         return;
                     if (StartPosClientEvents.getPos() == this)
                         StartPosServerboundPacket.unreservePos(pos);
@@ -120,7 +169,7 @@ public class StartPos {
                     }
                 })
                 .onRightClick(() -> {
-                    if (!playerName.isBlank())
+                    if (isOccupied())
                         return;
                     if (enabled)
                         StartPosServerboundPacket.disablePos(pos);
@@ -131,7 +180,7 @@ public class StartPos {
                 .iconSize(MinimapClientEvents.isLargeMap() ? 6 : 4)
                 .imageSize(MinimapClientEvents.isLargeMap() ? 12 : 10)
                 .greyWhenDisabled(false)
-                .playerNameForHeadIcon(playerName)
+                .playerNameForHeadIcon(aiControlled ? "" : displayName)
                 .build();
     }
 }

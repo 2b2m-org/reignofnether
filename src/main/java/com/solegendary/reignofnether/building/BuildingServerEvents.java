@@ -510,6 +510,13 @@ saveTicks += 1;
         building.destroy((ServerLevel) building.getLevel());
     }
 
+    public static void discardUnstartedBuilding(BuildingPlacement building) {
+        if (building == null || !buildings.remove(building))
+            return;
+        building.forceChunk(false);
+        BuildingClientboundPacket.removeBuilding(building.originPos);
+    }
+
     public static int getTotalPopulationSupply(String ownerName) {
         if (ResearchServerEvents.playerHasCheat(ownerName, "foodforthought")) {
             return UnitServerEvents.maxPopulation;

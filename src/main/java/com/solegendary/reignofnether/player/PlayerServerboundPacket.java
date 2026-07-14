@@ -15,6 +15,7 @@ import com.solegendary.reignofnether.gamemode.ClientGameModeHelper;
 import com.solegendary.reignofnether.gamemode.GameMode;
 import com.solegendary.reignofnether.gamemode.GameModeServerboundPacket;
 import com.solegendary.reignofnether.hud.HudClientEvents;
+import com.solegendary.reignofnether.startpos.StartPosClientEvents;
 import com.solegendary.reignofnether.startpos.StartPosServerEvents;
 import com.solegendary.reignofnether.survival.SurvivalClientEvents;
 import com.solegendary.reignofnether.survival.SurvivalServerboundPacket;
@@ -86,6 +87,11 @@ public class PlayerServerboundPacket implements CustomPacketPayload {
         Minecraft MC = Minecraft.getInstance();
 
         if (MC.player != null && MC.level != null) {
+            if (StartPosClientEvents.startPoses.stream().anyMatch(startPos -> startPos.aiControlled)) {
+                HudClientEvents.showTemporaryMessage(I18n.get(
+                        "message.reignofnether.remove_lobby_bots_before_start"));
+                return;
+            }
             BlockState bs = MC.level.getBlockState(new BlockPos(x.intValue(), y.intValue(), z.intValue()));
             if (!bs.getFluidState().isEmpty() && faction != Faction.NONE) {
                 HudClientEvents.showTemporaryMessage(I18n.get("hud.reignofnether.invalid_start_location"));
@@ -269,6 +275,12 @@ public class PlayerServerboundPacket implements CustomPacketPayload {
             PlayerAction.RESET_RTS,
             PlayerAction.RESET_RTS_HARD
     );
+    private static final List<PlayerAction> startActions = List.of(
+            PlayerAction.START_RTS_VILLAGERS,
+            PlayerAction.START_RTS_MONSTERS,
+            PlayerAction.START_RTS_PIGLINS,
+            PlayerAction.START_RTS_SANDBOX
+    );
 
     // server-side packet-consuming functions
     public void handle(IPayloadContext context) {
@@ -283,6 +295,10 @@ public class PlayerServerboundPacket implements CustomPacketPayload {
                 return;
             } else if (opOnlyActions.contains(action) && !player.hasPermissions(4)) {
                 ReignOfNether.LOGGER.warn("PlayerServerboundPacket: Non-op player " + player.getName() + " tried to run action: " + this.action.name());
+                return;
+            } else if (startActions.contains(action) && StartPosServerEvents.hasAiReservations()) {
+                player.sendSystemMessage(Component.translatable(
+                        "message.reignofnether.remove_lobby_bots_before_start"));
                 return;
             }
 

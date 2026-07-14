@@ -45,6 +45,16 @@ Operators can add AI-controlled RTS players from the server console or in-game c
 /rts-bot remove <name>
 ```
 
+On maps with configured start positions, bots can join the normal match lobby:
+
+```text
+/rts-bot lobby add <name> <villagers|monsters|piglins> <easy|medium|hard> <steady|rusher|turtle> <x y z>
+/rts-bot lobby list
+/rts-bot lobby remove <name>
+```
+
+Lobby bots ready automatically and use the seat's configured team.
+
 The difficulty defaults to `medium` and the personality defaults to `steady`. Either the difficulty, the position, or both may be omitted; without a position, the bot starts near the command source. Difficulty, personality, and home position are saved across server restarts.
 
 All difficulties use identical starting resources, costs, gathering rates, build and production times, unit stats, and fog-of-war visibility rules. They differ only in decisions:
@@ -66,8 +76,6 @@ Personalities are fair strategic tradeoffs layered on top of any difficulty:
 | Turtle | 1 extra worker; attacks 6 population later | 60% ranged; 6-population-larger army | prioritizes production and recalls committed armies to defend threatened buildings |
 
 Bots use normal resource costs and the same gathering, construction, production, and combat command paths as human players. They defend recently damaged buildings, replace fallen builders, and fall back to nearby food sources while their farm regrows. With fog of war disabled, the map is visible to every player and bot. With fog enabled, bots remember structures discovered by their own buildings or their team's units, plus structures revealed by normal game rules, and attack-move while scouting when they have no known target.
-
-For development tests only, `/rts-bot test-speed <name> true` enables the existing build, production, and gathering speed cheats. This is separate from difficulty and is visibly marked in `/rts-bot list`; set it back to `false` for normal match timing. Tutorial NPC bots remain separately scripted.
 
 ## License
 

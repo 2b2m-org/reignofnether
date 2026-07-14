@@ -3,6 +3,8 @@ package com.solegendary.reignofnether.player;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.TradeAction;
 import com.solegendary.reignofnether.alliance.AlliancesClient;
+import com.solegendary.reignofnether.bot.BotDifficulty;
+import com.solegendary.reignofnether.bot.BotPersonality;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractMarket;
@@ -231,7 +233,6 @@ public class PlayerClientEvents {
             PlayerDisplayClientEvents.resetDisplay();
 
         removeRTSPlayer(playerName);
-        ResourcesClientEvents.resourcesList.removeIf(r -> r.ownerName.equals(playerName));
 
         if (!MC.player.getName().getString().equals(playerName))
             return;
@@ -254,12 +255,22 @@ public class PlayerClientEvents {
     }
 
     public static void addRTSPlayer(String playerName, String displayName, boolean aiControlled,
+                                    BotDifficulty aiDifficulty, BotPersonality aiPersonality,
                                     Faction faction, Long id, int startPosColorId) {
-        if (!isRTSPlayer(playerName)) {
-            RTSPlayer rtsPlayer = RTSPlayer.getNewPlayer(playerName, faction, id.intValue(), startPosColorId);
-            rtsPlayer.displayName = displayName;
-            rtsPlayer.aiControlled = aiControlled;
+        RTSPlayer rtsPlayer = getRTSPlayer(playerName);
+        boolean added = rtsPlayer == null;
+        if (added) {
+            rtsPlayer = RTSPlayer.getNewPlayer(playerName, faction, id.intValue(), startPosColorId);
             rtsPlayers.add(rtsPlayer);
+        }
+        rtsPlayer.displayName = displayName;
+        rtsPlayer.id = id.intValue();
+        rtsPlayer.faction = faction;
+        rtsPlayer.startPosColorId = startPosColorId;
+        rtsPlayer.aiControlled = aiControlled;
+        rtsPlayer.aiDifficulty = aiDifficulty;
+        rtsPlayer.aiPersonality = aiPersonality;
+        if (added) {
             if (MC.player != null && MC.player.getName().getString().equals(playerName)) {
                 GameruleClient.gamerulesMenuOpen = false;
                 if (faction != Faction.NONE) {
@@ -290,6 +301,7 @@ public class PlayerClientEvents {
 
     public static void removeRTSPlayer(String playerName) {
         boolean removed = rtsPlayers.removeIf(p -> p.name.equals(playerName));
+        ResourcesClientEvents.resourcesList.removeIf(resources -> resources.ownerName.equals(playerName));
         if (removed && MC.player != null && MC.player.getName().getString().equals(playerName)) {
             SoundClientEvents.stopFadeableMusicInstance();
         }

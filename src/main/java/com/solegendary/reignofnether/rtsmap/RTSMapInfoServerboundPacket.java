@@ -7,19 +7,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
-import com.solegendary.reignofnether.sounds.SoundAction;
-import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
-import com.solegendary.reignofnether.startpos.StartPosServerEvents;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.PlayerList;
 import net.neoforged.neoforge.network.PacketDistributor;
-
-import java.util.HashSet;
-import java.util.Set;
 
 public class RTSMapInfoServerboundPacket implements CustomPacketPayload {
 
@@ -61,13 +51,7 @@ public class RTSMapInfoServerboundPacket implements CustomPacketPayload {
                 ReignOfNether.LOGGER.warn("RTSMapInfoServerboundPacket: Tried to process packet from " + player.getName() + " with insufficient permissions");
                 return;
             }
-            if (RTSMapInfoServerEvents.rtsMapInfo != null &&
-                RTSMapInfoServerEvents.rtsMapInfo.supportsMode(mode) &&
-                !StartPosServerEvents.isStartingGame()) {
-                RTSMapInfoServerEvents.rtsMapInfo.setDefaultMode(mode);
-                RTSMapInfoClientboundPacket.sendValue(RTSMapInfoAction.SET_MODE, mode);
-                StartPosServerEvents.loadPositionsFromMapInfo();
-            }
+            RTSMapInfoServerEvents.trySetStartingMode(mode).ifPresent(player::sendSystemMessage);
         });
     }
 }
