@@ -81,15 +81,15 @@ public final class BotDecisionMaker {
     }
 
     public static int foodWorkerCount(BotDifficulty difficulty, BotPersonality personality,
-                                      int totalWorkers, boolean productionReady) {
+                                      int totalWorkers, boolean productionPriority) {
         if (totalWorkers <= 1)
             return Math.max(totalWorkers, 0);
         return switch (difficulty) {
             case EASY -> totalWorkers - 1;
-            case MEDIUM -> productionReady
+            case MEDIUM -> productionPriority
                     ? totalWorkers - 1
                     : Math.max(1, (totalWorkers * 3 + 4) / 5);
-            case HARD -> productionReady
+            case HARD -> productionPriority
                     ? Math.max(1, totalWorkers - (personality == BotPersonality.TURTLE ? 2 : 1))
                     : Math.max(1, (totalWorkers * 4) / 9);
         };

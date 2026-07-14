@@ -115,9 +115,10 @@ public final class BotController {
                 isConstructionGoal(nextGoal) || orphanedConstruction))
             nextWorkerReconcileTick = 0;
         if (tick >= nextWorkerReconcileTick) {
-            boolean productionReady = context.militaryReady()
-                    || context.workersAndQueued() >= BotDecisionMaker.targetWorkers(difficulty, personality);
-            assignWorkerJobs(strategy, difficulty, personality, productionReady,
+            boolean productionPriority = !isConstructionGoal(nextGoal)
+                    && (context.militaryReady() || context.workersAndQueued()
+                    >= BotDecisionMaker.targetWorkers(difficulty, personality));
+            assignWorkerJobs(strategy, difficulty, personality, productionPriority,
                     availableWorkers, visibleMilitaryEnemies);
             nextWorkerReconcileTick = tick + difficulty.workerReconcileTicks();
         }
@@ -463,7 +464,7 @@ public final class BotController {
     }
 
     private void assignWorkerJobs(BotStrategy strategy, BotDifficulty difficulty,
-                                  BotPersonality personality, boolean productionReady,
+                                  BotPersonality personality, boolean productionPriority,
                                   List<LivingEntity> workers,
                                   List<LivingEntity> visibleEnemies) {
         BuildingPlacement farm = self.building(strategy.farm());
@@ -472,7 +473,7 @@ public final class BotController {
 
         reassignOrphanedBuilders(workers, visibleEnemies);
         int foodWorkers = BotDecisionMaker.foodWorkerCount(
-                difficulty, personality, workers.size(), productionReady);
+                difficulty, personality, workers.size(), productionPriority);
         int workerIndex = 0;
         for (LivingEntity entity : workers) {
             WorkerUnit worker = (WorkerUnit) entity;
