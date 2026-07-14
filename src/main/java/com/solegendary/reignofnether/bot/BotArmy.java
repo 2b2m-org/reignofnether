@@ -365,11 +365,14 @@ final class BotArmy {
         }
         if (trackedBeacon == beacon && trackedBeaconOwner.equals(beacon.ownerName))
             return;
+        boolean differentBeacon = trackedBeacon != beacon;
         trackedBeacon = beacon;
         trackedBeaconOwner = beacon.ownerName;
         beaconRetryAfterTick = 0;
-        lastSeenBeaconEnemyPopulation = 0;
-        lastSeenBeaconEnemyTick = -1;
+        if (differentBeacon) {
+            lastSeenBeaconEnemyPopulation = 0;
+            lastSeenBeaconEnemyTick = -1;
+        }
         clearBeaconAssault();
     }
 

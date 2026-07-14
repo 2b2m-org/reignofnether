@@ -147,7 +147,7 @@ public final class BotDecisionMaker {
     }
 
     public static BeaconOrder chooseBeaconOrder(BotDifficulty difficulty, BotPersonality personality,
-                                                 int armyPopulation, int visibleEnemyPopulationInRing,
+                                                 int armyPopulation, int knownEnemyPopulationInRing,
                                                  BeaconControl control) {
         if (armyPopulation <= 0)
             return BeaconOrder.NONE;
@@ -156,7 +156,7 @@ public final class BotDecisionMaker {
             case OWNED -> BeaconOrder.GARRISON;
             case ALLIED -> BeaconOrder.NONE;
             case NEUTRAL, HOSTILE -> {
-                if (armyPopulation > visibleEnemyPopulationInRing)
+                if (armyPopulation > knownEnemyPopulationInRing)
                     yield BeaconOrder.CAPTURE;
                 yield armyPopulation >= attackPopulation(difficulty, personality)
                         ? BeaconOrder.CONTEST
@@ -174,13 +174,13 @@ public final class BotDecisionMaker {
     }
 
     static boolean shouldReinforceBeacon(BotPersonality personality,
-                                         int visibleEnemyPopulationInRing,
+                                         int knownEnemyPopulationInRing,
                                          int guardPopulation) {
-        if (visibleEnemyPopulationInRing <= 0)
+        if (knownEnemyPopulationInRing <= 0)
             return false;
         return switch (personality) {
-            case RUSHER -> visibleEnemyPopulationInRing > guardPopulation;
-            case STEADY -> visibleEnemyPopulationInRing >= guardPopulation;
+            case RUSHER -> knownEnemyPopulationInRing > guardPopulation;
+            case STEADY -> knownEnemyPopulationInRing >= guardPopulation;
             case TURTLE -> true;
         };
     }
