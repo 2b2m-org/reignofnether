@@ -264,10 +264,18 @@ class BotDecisionMakerTest {
     @Test
     void beaconOwnersReinforceOnlyWhenTheirGuardsNeedHelp() {
         assertAll(
-                () -> assertFalse(BotDecisionMaker.shouldReinforceBeacon(0, 1)),
-                () -> assertFalse(BotDecisionMaker.shouldReinforceBeacon(1, 2)),
-                () -> assertTrue(BotDecisionMaker.shouldReinforceBeacon(2, 2)),
-                () -> assertTrue(BotDecisionMaker.shouldReinforceBeacon(3, 2))
+                () -> assertFalse(BotDecisionMaker.shouldReinforceBeacon(
+                        BotPersonality.RUSHER, 1, 1)),
+                () -> assertTrue(BotDecisionMaker.shouldReinforceBeacon(
+                        BotPersonality.RUSHER, 2, 1)),
+                () -> assertFalse(BotDecisionMaker.shouldReinforceBeacon(
+                        BotPersonality.STEADY, 1, 2)),
+                () -> assertTrue(BotDecisionMaker.shouldReinforceBeacon(
+                        BotPersonality.STEADY, 2, 2)),
+                () -> assertFalse(BotDecisionMaker.shouldReinforceBeacon(
+                        BotPersonality.TURTLE, 0, 3)),
+                () -> assertTrue(BotDecisionMaker.shouldReinforceBeacon(
+                        BotPersonality.TURTLE, 1, 3))
         );
     }
 

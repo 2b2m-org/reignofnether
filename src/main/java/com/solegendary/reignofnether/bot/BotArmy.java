@@ -42,6 +42,7 @@ final class BotArmy {
     private static final double SCOUT_REACHED_DISTANCE_SQR = 144;
     private static final int BEACON_GARRISON_MARGIN = 6;
     private static final int BEACON_RETRY_TICKS = 600;
+    private static final int BEACON_INTEL_MEMORY_TICKS = 1200;
     private static final int[][] SCOUT_DIRECTIONS = {
             {1, 0}, {0, 1}, {-1, 0}, {0, -1},
             {1, 1}, {-1, 1}, {-1, -1}, {1, -1}
@@ -60,6 +61,8 @@ final class BotArmy {
     private double beaconAssaultBestDistance;
     private int beaconAssaultLastProgressTick;
     private int beaconRetryAfterTick;
+    private int lastSeenBeaconEnemyPopulation;
+    private int lastSeenBeaconEnemyTick = -1;
     private AttackObjective objective;
     private double objectiveBestDistance;
     private int objectiveFewestBlocks;
@@ -118,14 +121,17 @@ final class BotArmy {
 
         boolean survivalEnabled = SurvivalServerEvents.isEnabled();
         BeaconPlacement beacon = survivalEnabled ? null : worldView.capturableBeacon();
+        syncBeaconState(beacon);
         int visibleEnemyPopulationInBeaconRing = visibleEnemyPopulationInBeaconRing(
                 visibleEnemyCombatants, beacon);
+        int knownEnemyPopulationInBeaconRing = knownEnemyPopulationInBeaconRing(
+                beacon, visibleEnemyPopulationInBeaconRing, tick);
         BotDecisionMaker.BeaconControl beaconControl = beaconControl(beacon);
         BotDecisionMaker.BeaconOrder beaconOrder = BotDecisionMaker.chooseBeaconOrder(
                 difficulty,
                 personality,
                 BotSelf.population(main),
-                visibleEnemyPopulationInBeaconRing,
+                knownEnemyPopulationInBeaconRing,
                 beaconControl
         );
         if (beaconOrder == BotDecisionMaker.BeaconOrder.GARRISON) {
@@ -137,7 +143,8 @@ final class BotArmy {
                     .filter(entity -> !beaconGuardIds.contains(entity.getId()))
                     .toList();
             beaconOrder = BotDecisionMaker.shouldReinforceBeacon(
-                    visibleEnemyPopulationInBeaconRing,
+                    personality,
+                    knownEnemyPopulationInBeaconRing,
                     BotSelf.population(guards))
                     ? BotDecisionMaker.BeaconOrder.CONTEST
                     : BotDecisionMaker.BeaconOrder.NONE;
@@ -304,14 +311,7 @@ final class BotArmy {
             List<LivingEntity> army,
             int tick) {
         if (beacon == null) {
-            clearBeaconState();
             return desiredOrder;
-        }
-        if (trackedBeacon != beacon || !trackedBeaconOwner.equals(beacon.ownerName)) {
-            trackedBeacon = beacon;
-            trackedBeaconOwner = beacon.ownerName;
-            beaconRetryAfterTick = 0;
-            clearBeaconAssault();
         }
         if (control == BotDecisionMaker.BeaconControl.OWNED
                 || control == BotDecisionMaker.BeaconControl.ALLIED) {
@@ -331,8 +331,7 @@ final class BotArmy {
         if (tick < beaconRetryAfterTick)
             return BotDecisionMaker.BeaconOrder.NONE;
 
-        BlockPos captureCentre = new BlockPos(
-                beacon.centrePos.getX(), beacon.minCorner.getY(), beacon.centrePos.getZ());
+        BlockPos captureCentre = beaconCaptureCentre(beacon);
         double distance = closestArmyDistance(army, captureCentre);
         if (beaconAssaultLastProgressTick == 0) {
             beaconAssaultBestDistance = distance;
@@ -354,12 +353,49 @@ final class BotArmy {
         trackedBeacon = null;
         trackedBeaconOwner = "";
         beaconRetryAfterTick = 0;
+        lastSeenBeaconEnemyPopulation = 0;
+        lastSeenBeaconEnemyTick = -1;
         clearBeaconAssault();
+    }
+
+    private void syncBeaconState(BeaconPlacement beacon) {
+        if (beacon == null) {
+            clearBeaconState();
+            return;
+        }
+        if (trackedBeacon == beacon && trackedBeaconOwner.equals(beacon.ownerName))
+            return;
+        trackedBeacon = beacon;
+        trackedBeaconOwner = beacon.ownerName;
+        beaconRetryAfterTick = 0;
+        lastSeenBeaconEnemyPopulation = 0;
+        lastSeenBeaconEnemyTick = -1;
+        clearBeaconAssault();
+    }
+
+    private int knownEnemyPopulationInBeaconRing(BeaconPlacement beacon,
+                                                   int visibleEnemyPopulation,
+                                                   int tick) {
+        if (beacon == null)
+            return 0;
+        if (worldView.isVisible(beaconCaptureCentre(beacon))) {
+            lastSeenBeaconEnemyPopulation = visibleEnemyPopulation;
+            lastSeenBeaconEnemyTick = tick;
+        }
+        return lastSeenBeaconEnemyTick >= 0
+                && tick - lastSeenBeaconEnemyTick < BEACON_INTEL_MEMORY_TICKS
+                ? lastSeenBeaconEnemyPopulation
+                : 0;
     }
 
     private void clearBeaconAssault() {
         beaconAssaultBestDistance = 0;
         beaconAssaultLastProgressTick = 0;
+    }
+
+    private static BlockPos beaconCaptureCentre(BeaconPlacement beacon) {
+        return new BlockPos(
+                beacon.centrePos.getX(), beacon.minCorner.getY(), beacon.centrePos.getZ());
     }
 
     private void activateBeaconAura(BeaconPlacement beacon, BotPersonality personality) {

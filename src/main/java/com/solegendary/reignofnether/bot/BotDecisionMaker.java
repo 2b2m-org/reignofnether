@@ -173,9 +173,16 @@ public final class BotDecisionMaker {
         };
     }
 
-    static boolean shouldReinforceBeacon(int visibleEnemyPopulationInRing, int guardPopulation) {
-        return visibleEnemyPopulationInRing > 0
-                && visibleEnemyPopulationInRing >= guardPopulation;
+    static boolean shouldReinforceBeacon(BotPersonality personality,
+                                         int visibleEnemyPopulationInRing,
+                                         int guardPopulation) {
+        if (visibleEnemyPopulationInRing <= 0)
+            return false;
+        return switch (personality) {
+            case RUSHER -> visibleEnemyPopulationInRing > guardPopulation;
+            case STEADY -> visibleEnemyPopulationInRing >= guardPopulation;
+            case TURTLE -> true;
+        };
     }
 
     public static UnitAction beaconAuraAction(BotPersonality personality) {
