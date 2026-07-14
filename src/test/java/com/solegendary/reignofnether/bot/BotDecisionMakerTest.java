@@ -267,6 +267,10 @@ class BotDecisionMakerTest {
                 () -> assertFalse(BotDecisionMaker.shouldPressVisibleAdvantage(
                         BotDifficulty.HARD, BotPersonality.STEADY, 36, 29)),
                 () -> assertTrue(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 36, 12)),
+                () -> assertFalse(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 48, 11)),
+                () -> assertTrue(BotDecisionMaker.shouldPressVisibleAdvantage(
                         BotDifficulty.HARD, BotPersonality.RUSHER, 32, 25)),
                 () -> assertFalse(BotDecisionMaker.shouldPressVisibleAdvantage(
                         BotDifficulty.HARD, BotPersonality.TURTLE, 39, 24)),

@@ -10,6 +10,7 @@ public final class BotDecisionMaker {
     private static final int SCOUT_STALL_TICKS = 600;
     private static final int WORKER_DANGER_DISTANCE_SQR = 24 * 24;
     private static final int WORKER_FLEE_DISTANCE_SQR = 32 * 32;
+    private static final int MIN_VISIBLE_ADVANTAGE_POPULATION = 12;
     private static final long MONSTER_RECALL_TIME = 22000;
 
     public enum ArmyUnitChoice {
@@ -161,7 +162,7 @@ public final class BotDecisionMaker {
     static boolean shouldPressVisibleAdvantage(BotDifficulty difficulty, BotPersonality personality,
                                                 int armyPopulation, int visibleEnemyPopulation) {
         return difficulty == BotDifficulty.HARD
-                && visibleEnemyPopulation > 0
+                && visibleEnemyPopulation >= MIN_VISIBLE_ADVANTAGE_POPULATION
                 && armyPopulation >= targetArmyPopulation(difficulty, personality) - 12
                 && armyPopulation * 4 >= visibleEnemyPopulation * 5;
     }

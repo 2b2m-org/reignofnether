@@ -124,6 +124,7 @@ final class BotArmy {
             shelterMonsterArmy(level, player, self.army());
             objectiveLastProgressTick = tick;
             beaconAssaultLastProgressTick = tick;
+            scoutLastProgressTick = tick;
             return;
         }
         if (tick < nextCommandTick)
@@ -254,6 +255,10 @@ final class BotArmy {
                 .filter(enemy -> !(enemy instanceof WorkerUnit) && !isFlying(enemy))
                 .toList();
         int visibleEnemyArmyPopulation = BotSelf.population(visibleEnemyArmy);
+        int tacticalGroundEnemyPopulation = BotSelf.population(tacticalGroundEnemyMilitary);
+        if (pursuitTarget != null && tacticalGroundEnemyMilitary.isEmpty()
+                && armyPos.distSqr(pursuitTarget) <= SCOUT_REACHED_DISTANCE_SQR)
+            clearPursuit();
         boolean pressVisibleAdvantage = BotDecisionMaker.shouldPressVisibleAdvantage(
                 difficulty, personality, mainPopulation, visibleEnemyArmyPopulation);
         if (pressVisibleAdvantage && beaconOrder == BotDecisionMaker.BeaconOrder.NONE
@@ -264,15 +269,23 @@ final class BotArmy {
                 startObjective(target, armyPos, tick, main.size());
                 if (teamAdvicePriority(teamAdviceTarget, target.centre()) != 0)
                     shareTeamIntent(level, objective.anchor(), tick);
-            } else if (!survivalEnabled && (defenseThreat || pursuitTarget != null)
-                    && !tacticalGroundEnemyMilitary.isEmpty()) {
-                boolean startingPursuit = pursuitTarget == null;
-                pursuitTarget = armyCentroidRepresentative(tacticalGroundEnemyMilitary);
-                pursuitUntilTick = tick + PURSUIT_TICKS;
-                if (startingPursuit)
-                    ReignOfNether.LOGGER.info(
-                            "[Bot] {} pursuing retreating army at {}", displayName, pursuitTarget);
             }
+        }
+        boolean enemyThreatensHome = tacticalGroundEnemyMilitary.stream().anyMatch(enemy ->
+                enemy.blockPosition().distSqr(player.aiHomePos) <= DEFENSE_DISTANCE_SQR);
+        if (pursuitTarget != null && tacticalGroundEnemyPopulation >= mainPopulation)
+            clearPursuit();
+        boolean continuePursuit = pursuitTarget != null
+                && tacticalGroundEnemyPopulation < mainPopulation;
+        if (!survivalEnabled && beaconOrder == BotDecisionMaker.BeaconOrder.NONE
+                && objective == null && target == null && !tacticalGroundEnemyMilitary.isEmpty()
+                && ((pressVisibleAdvantage && enemyThreatensHome) || continuePursuit)) {
+            boolean startingPursuit = pursuitTarget == null;
+            pursuitTarget = armyCentroidRepresentative(tacticalGroundEnemyMilitary);
+            pursuitUntilTick = tick + PURSUIT_TICKS;
+            if (startingPursuit)
+                ReignOfNether.LOGGER.info(
+                        "[Bot] {} pursuing retreating army at {}", displayName, pursuitTarget);
         }
         boolean hasRangedResponder = main.stream().anyMatch(RangedAttackerUnit.class::isInstance);
 
@@ -288,24 +301,28 @@ final class BotArmy {
         if (armyOrder != BotDecisionMaker.ArmyOrder.DEFEND)
             activeDefenseIntent = null;
         if (armyOrder == BotDecisionMaker.ArmyOrder.DEFEND) {
-            announceDefenseIntent(level, defenseTarget, teamAdviceTarget, tick);
-            if (objective != null)
-                objectiveLastProgressTick = tick;
             List<LivingEntity> defenseEnemies = defenseEnemies(
                     visibleEnemyCombatants, defenseTarget, survivalEnabled);
-            LivingEntity groundEnemy = closestDefenseEnemy(defenseEnemies, defenseTarget, false);
-            LivingEntity flyingEnemy = hasRangedResponder
-                    ? closestDefenseEnemy(tacticalEnemyArmy, defenseTarget, true)
-                    : null;
-            BlockPos defensePos = groundEnemy != null
-                    ? groundEnemy.blockPosition()
-                    : defenseTarget.getClosestGroundPos(armyPos, 1);
-            if (flyingEnemy != null)
-                engageEnemyArmy(main, defensePos, flyingEnemy);
-            else
-                attackMoveArmy(main, defensePos);
-            nextCommandTick = tick + difficulty.attackRefreshTicks();
-            return;
+            if (pursuitTarget != null && defenseEnemies.isEmpty()) {
+                activeDefenseIntent = null;
+            } else {
+                announceDefenseIntent(level, defenseTarget, teamAdviceTarget, tick);
+                if (objective != null)
+                    objectiveLastProgressTick = tick;
+                LivingEntity groundEnemy = closestDefenseEnemy(defenseEnemies, defenseTarget, false);
+                LivingEntity flyingEnemy = hasRangedResponder
+                        ? closestDefenseEnemy(tacticalEnemyArmy, defenseTarget, true)
+                        : null;
+                BlockPos defensePos = groundEnemy != null
+                        ? groundEnemy.blockPosition()
+                        : defenseTarget.getClosestGroundPos(armyPos, 1);
+                if (flyingEnemy != null)
+                    engageEnemyArmy(main, defensePos, flyingEnemy);
+                else
+                    attackMoveArmy(main, defensePos);
+                nextCommandTick = tick + difficulty.attackRefreshTicks();
+                return;
+            }
         }
         if (armyOrder == BotDecisionMaker.ArmyOrder.RETREAT) {
             abandonObjective(tick);
