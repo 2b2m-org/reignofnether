@@ -453,11 +453,15 @@ saveTicks += 1;
             allUnits.removeIf(e -> e.getId() == entity.getId());
             lastSyncedEffects.remove(entity.getId());
             UnitSyncClientboundPacket.sendLeavePacket(entity);
-
-            //ChunkAccess chunk = evt.getLevel().getChunk(entity.getOnPos());
-            //ForgeChunkManager.forceChunk((ServerLevel) evt.getLevel(), ReignOfNether.MOD_ID, entity, chunk.getPos()
-            // .x, chunk.getPos().z, false, true);
-            //forcedUnitChunks.removeIf(p -> p.getFirst() == entity.getId());
+            ChunkAccess chunk = forcedUnitChunks.remove(entity.getId());
+            if (chunk != null)
+                ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk((ServerLevel) evt.getLevel(),
+                    entity,
+                    chunk.getPos().x,
+                    chunk.getPos().z,
+                    false,
+                    true
+                );
         }
 
         // if a player has no more units, then they are defeated
