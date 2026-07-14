@@ -39,6 +39,7 @@ final class BotArmy {
     private static final int DEFENSE_MEMORY_TICKS = 200;
     private static final int ALLY_DEFENSE_MEMORY_TICKS = 1200;
     private static final int REGROUP_TICKS = 200;
+    private static final int PURSUIT_TICKS = 1200;
     private static final double DEFENSE_DISTANCE_SQR = 64 * 64;
     private static final double SURVIVAL_DEFENSE_DISTANCE_SQR = 128 * 128;
     private static final double ARMY_INTERCEPTION_DISTANCE_SQR = 48 * 48;
@@ -76,6 +77,8 @@ final class BotArmy {
     private int objectiveFewestBlocks;
     private int objectiveLastProgressTick;
     private int regroupUntilTick;
+    private BlockPos pursuitTarget;
+    private int pursuitUntilTick;
     private int scoutUnitId = -1;
     private BlockPos scoutTarget;
     private double scoutBestDistance;
@@ -132,11 +135,14 @@ final class BotArmy {
                          List<LivingEntity> visibleEnemyCombatants, int tick) {
         targetCooldowns.entrySet().removeIf(entry -> entry.getValue() <= tick);
         defenseThreats.entrySet().removeIf(entry -> entry.getValue() < tick);
+        if (pursuitTarget != null && tick >= pursuitUntilTick)
+            clearPursuit();
         BlockPos teamAdviceTarget = activeTeamAdviceTarget(player, tick);
 
         List<LivingEntity> fullArmy = self.army();
         if (fullArmy.isEmpty()) {
             clearObjective();
+            clearPursuit();
             clearScout();
             beaconGuardIds.clear();
             clearBeaconAssault();
@@ -157,6 +163,7 @@ final class BotArmy {
                 ? fullArmy
                 : fullArmy.stream().filter(entity -> entity != scout).toList();
         if (main.isEmpty()) {
+            clearPursuit();
             activeDefenseIntent = null;
             beaconIntentActive = false;
             nextCommandTick = tick + difficulty.attackRefreshTicks();
@@ -215,6 +222,8 @@ final class BotArmy {
 
         BlockPos armyPos = armyCentroidRepresentative(main);
         beaconOrder = applyBeaconBackoff(beaconOrder, beaconControl, beacon, main, tick);
+        if (survivalEnabled || beaconOrder != BotDecisionMaker.BeaconOrder.NONE)
+            clearPursuit();
         if (beaconOrder == BotDecisionMaker.BeaconOrder.NONE)
             beaconIntentActive = false;
         int mainPopulation = BotSelf.population(main);
@@ -236,9 +245,13 @@ final class BotArmy {
         List<LivingEntity> tacticalEnemyArmy = tacticalEnemyArmy(
                 visibleEnemyCombatants, armyPos, player.aiHomePos);
         int tacticalEnemyPopulation = BotSelf.population(tacticalEnemyArmy);
-        int visibleEnemyArmyPopulation = BotSelf.population(visibleEnemyCombatants.stream()
+        List<LivingEntity> visibleEnemyArmy = visibleEnemyCombatants.stream()
                 .filter(enemy -> !(enemy instanceof WorkerUnit))
-                .toList());
+                .toList();
+        List<LivingEntity> tacticalEnemyMilitary = tacticalEnemyArmy.stream()
+                .filter(enemy -> !(enemy instanceof WorkerUnit))
+                .toList();
+        int visibleEnemyArmyPopulation = BotSelf.population(visibleEnemyArmy);
         boolean pressVisibleAdvantage = BotDecisionMaker.shouldPressVisibleAdvantage(
                 difficulty, personality, mainPopulation, visibleEnemyArmyPopulation);
         if (pressVisibleAdvantage && beaconOrder == BotDecisionMaker.BeaconOrder.NONE
@@ -249,6 +262,14 @@ final class BotArmy {
                 startObjective(target, armyPos, tick, main.size());
                 if (teamAdvicePriority(teamAdviceTarget, target.centre()) != 0)
                     shareTeamIntent(level, objective.anchor(), tick);
+            } else if (!survivalEnabled && (defenseThreat || pursuitTarget != null)
+                    && !tacticalEnemyMilitary.isEmpty()) {
+                boolean startingPursuit = pursuitTarget == null;
+                pursuitTarget = armyCentroidRepresentative(tacticalEnemyMilitary);
+                pursuitUntilTick = tick + PURSUIT_TICKS;
+                if (startingPursuit)
+                    ReignOfNether.LOGGER.info(
+                            "[Bot] {} pursuing retreating army at {}", displayName, pursuitTarget);
             }
         }
         boolean hasRangedResponder = main.stream().anyMatch(RangedAttackerUnit.class::isInstance);
@@ -261,7 +282,7 @@ final class BotArmy {
 
         BotDecisionMaker.ArmyOrder armyOrder = BotDecisionMaker.chooseArmyOrder(
                 difficulty, personality, mainPopulation, tacticalEnemyPopulation,
-                attackReady || pressVisibleAdvantage, defenseThreat);
+                attackReady || pressVisibleAdvantage || pursuitTarget != null, defenseThreat);
         if (armyOrder != BotDecisionMaker.ArmyOrder.DEFEND)
             activeDefenseIntent = null;
         if (armyOrder == BotDecisionMaker.ArmyOrder.DEFEND) {
@@ -286,6 +307,7 @@ final class BotArmy {
         }
         if (armyOrder == BotDecisionMaker.ArmyOrder.RETREAT) {
             abandonObjective(tick);
+            clearPursuit();
             regroupUntilTick = tick + REGROUP_TICKS;
             attackMoveArmy(main, player.aiHomePos.above());
             ReignOfNether.LOGGER.info("[Bot] {} regrouping with {} units", displayName, main.size());
@@ -344,7 +366,9 @@ final class BotArmy {
         }
 
         if (target == null) {
-            attackMoveArmy(main, player.aiHomePos.above());
+            attackMoveArmy(main, pursuitTarget != null
+                    ? pursuitTarget
+                    : player.aiHomePos.above());
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -354,7 +378,15 @@ final class BotArmy {
             ReignOfNether.LOGGER.info(
                     "[Bot] {} abandoning stalled target at {}", displayName, objective.origin());
             abandonObjective(tick);
-            attackMoveArmy(main, player.aiHomePos.above());
+            target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
+            if (target != null) {
+                startObjective(target, armyPos, tick, main.size());
+                if (teamAdvicePriority(teamAdviceTarget, target.centre()) != 0)
+                    shareTeamIntent(level, objective.anchor(), tick);
+                attackMoveArmy(main, objective.anchor());
+            } else {
+                attackMoveArmy(main, player.aiHomePos.above());
+            }
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -445,6 +477,7 @@ final class BotArmy {
 
     private void captureBeacon(List<LivingEntity> army, BeaconPlacement beacon, BlockPos armyPos) {
         clearObjective();
+        clearPursuit();
         attackMoveArmy(army, beacon.getClosestGroundPos(armyPos, 1));
     }
 
@@ -867,6 +900,7 @@ final class BotArmy {
     }
 
     private void startObjective(BotWorldView.KnownEnemyBuilding target, BlockPos armyPos, int tick, int armySize) {
+        clearPursuit();
         BlockPos anchor = target.closestGroundPos(armyPos, 1);
         objective = new AttackObjective(target.origin(), anchor, target.ownerName());
         objectiveBestDistance = Math.sqrt(armyPos.distSqr(anchor));
@@ -906,6 +940,11 @@ final class BotArmy {
         objectiveBestDistance = 0;
         objectiveFewestBlocks = 0;
         objectiveLastProgressTick = 0;
+    }
+
+    private void clearPursuit() {
+        pursuitTarget = null;
+        pursuitUntilTick = 0;
     }
 
     private boolean shouldEngageEnemyArmy(List<LivingEntity> enemies, int armyPopulation, BlockPos homePos,
