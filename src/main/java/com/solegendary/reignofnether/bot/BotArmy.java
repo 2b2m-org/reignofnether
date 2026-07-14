@@ -741,12 +741,10 @@ final class BotArmy {
 
     private void commandScout(ServerLevel level, RTSPlayer player, LivingEntity scout,
                               BlockPos adviceTarget, int tick) {
-        List<LivingEntity> scoutGroup = List.of(scout);
         if (adviceTarget != null && !adviceTarget.equals(scoutAdviceTarget)) {
             scoutAdviceTarget = adviceTarget;
             scoutTarget = adviceTarget;
             resetScoutProgress(scout, tick);
-            attackMoveArmy(scoutGroup, scoutTarget);
             ReignOfNether.LOGGER.info("[Bot] {} scouting team marker at {}", displayName, scoutTarget);
         } else if (adviceTarget == null && scoutAdviceTarget != null) {
             scoutAdviceTarget = null;
@@ -762,12 +760,12 @@ final class BotArmy {
                 if (!adjustedTarget.equals(scoutTarget)) {
                     scoutTarget = adjustedTarget;
                     resetScoutProgress(scout, tick);
-                    attackMoveArmy(scoutGroup, scoutTarget);
                 }
             }
         }
 
         if (scoutTarget != null) {
+            moveUnit(scout, scoutTarget);
             double currentDistance = Math.sqrt(scout.blockPosition().distSqr(scoutTarget));
             BotDecisionMaker.ScoutWaypointDecision decision = BotDecisionMaker.evaluateScoutWaypoint(
                     currentDistance * currentDistance <= SCOUT_REACHED_DISTANCE_SQR,
@@ -786,7 +784,7 @@ final class BotArmy {
 
         scoutTarget = nextScoutTarget(level, player.aiHomePos);
         resetScoutProgress(scout, tick);
-        attackMoveArmy(scoutGroup, scoutTarget);
+        moveUnit(scout, scoutTarget);
         ReignOfNether.LOGGER.info("[Bot] {} scouting at {}", displayName, scoutTarget);
     }
 
@@ -1156,7 +1154,10 @@ final class BotArmy {
         Unit unit = (Unit) entity;
         boolean hasAttackMove = entity instanceof AttackerUnit attacker
                 && attacker.getAttackMoveTarget() != null;
-        if (target.equals(unit.getMoveGoal().getMoveTarget()) && !hasAttackMove)
+        boolean hasCombatTarget = unit.hasLivingTarget()
+                || unit.getTargetGoal().getTarget() != null;
+        if (target.equals(unit.getMoveGoal().getMoveTarget())
+                && !hasAttackMove && !hasCombatTarget)
             return;
         UnitServerEvents.addActionItem(
                 ownerName,
