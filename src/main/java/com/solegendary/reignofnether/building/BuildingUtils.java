@@ -5,11 +5,15 @@ package com.solegendary.reignofnether.building;
 import com.solegendary.reignofnether.building.addon.NetherConvertingAddon;
 import com.solegendary.reignofnether.building.buildings.monsters.SculkCatalyst;
 import com.solegendary.reignofnether.building.buildings.monsters.Stronghold;
+import com.solegendary.reignofnether.building.buildings.piglins.CentralPortal;
 import com.solegendary.reignofnether.building.buildings.piglins.Fortress;
+import com.solegendary.reignofnether.building.buildings.piglins.PortalBasic;
 import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.SculkCatalystPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.building.buildings.villagers.Castle;
+import com.solegendary.reignofnether.building.custombuilding.CustomBuilding;
+import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -30,6 +34,14 @@ import java.util.function.Predicate;
 public class BuildingUtils {
 
     public static List<Keybinding> keybindings = Arrays.asList();
+
+    public static boolean requiresNetherTerrain(Building building) {
+        if (building instanceof AbstractBridge || building instanceof CentralPortal
+                || building instanceof PortalBasic)
+            return false;
+        return building.getFaction() == Faction.PIGLINS
+                || (building instanceof CustomBuilding customBuilding && customBuilding.netherTerrainOnly);
+    }
 
     public static int getTotalCompletedBuildingsOwned(boolean isClientSide, String ownerName) {
         List<BuildingPlacement> buildings;

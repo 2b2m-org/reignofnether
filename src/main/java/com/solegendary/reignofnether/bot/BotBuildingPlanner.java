@@ -52,7 +52,7 @@ final class BotBuildingPlanner {
                                             boolean includeHome, BotWorldView worldView) {
         for (BlockPos centre : candidateCentres(level, home, includeHome)) {
             Footprint footprint = footprintAtCentre(level, building, centre);
-            if (canPlace(level, footprint, worldView))
+            if (canPlace(level, building, footprint, worldView))
                 return Optional.of(footprint.origin());
         }
         return Optional.empty();
@@ -117,7 +117,8 @@ final class BotBuildingPlanner {
         return centres;
     }
 
-    static boolean canPlace(ServerLevel level, Footprint footprint, BotWorldView worldView) {
+    static boolean canPlace(ServerLevel level, Building building, Footprint footprint,
+                            BotWorldView worldView) {
         BlockPos min = footprint.min();
         BlockPos max = footprint.max();
         BlockPos origin = footprint.origin();
@@ -134,6 +135,13 @@ final class BotBuildingPlanner {
         BlockPos visibilityMax = max.offset(BUILDING_GAP, 0, BUILDING_GAP);
         if (worldView != null && !worldView.isFootprintVisible(visibilityMin, visibilityMax))
             return false;
+
+        if (BuildingUtils.requiresNetherTerrain(building)) {
+            ArrayList<BuildingBlock> blocks = BuildingUtils.getAbsoluteBlockData(
+                    building.getRelativeBlockData(level), level, origin, Rotation.NONE);
+            if (!BuildingServerEvents.isOnNetherBlocks(blocks, origin, level))
+                return false;
+        }
 
         double requiredBorderDistance = Math.max(max.getX() - min.getX(), max.getZ() - min.getZ()) / 2.0 + BUILDING_GAP;
         if (level.getWorldBorder().getDistanceToBorder(footprint.centre().getX(), footprint.centre().getZ())

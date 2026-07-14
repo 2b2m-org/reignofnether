@@ -7,7 +7,6 @@ import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.building.buildings.neutral.NeutralTransportPortal;
-import com.solegendary.reignofnether.building.buildings.piglins.CentralPortal;
 import com.solegendary.reignofnether.building.buildings.piglins.PortalBasic;
 import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.PortalPlacement;
@@ -35,7 +34,6 @@ import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
-import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.util.MiscUtil;
 import com.solegendary.reignofnether.util.MyRenderer;
 import net.minecraft.client.Minecraft;
@@ -463,17 +461,8 @@ public class BuildingClientEvents {
     }
 
     private static boolean isNonPiglinOrOnNetherBlocks(BlockPos originPos) {
-        if (isBuildingToPlaceABridge()) {
-            return true;
-        }
-        boolean netherTerrainCustomBuilding = buildingToPlace instanceof CustomBuilding cb && cb.netherTerrainOnly;
-        if (!netherTerrainCustomBuilding && buildingToPlace.getFaction() != Faction.PIGLINS || buildingToPlace instanceof CentralPortal) {
-            return true;
-        }
-        if (buildingToPlace instanceof PortalBasic) {
-            return true;
-        }
-        return isOnNetherBlocks(blocksToDraw, originPos);
+        return !BuildingUtils.requiresNetherTerrain(buildingToPlace)
+                || isOnNetherBlocks(blocksToDraw, originPos);
     }
 
     public static boolean isOnNetherBlocks(List<BuildingBlock> blocks, BlockPos originPos) {
