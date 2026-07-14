@@ -68,17 +68,17 @@ Army budgets use the mod's population costs rather than unit head counts, giving
 | --- | --- | --- | --- |
 | Easy | 4 workers, food-heavy split | 1 unit ahead | attacks at 12 population; smaller 24-population army |
 | Medium | 5 workers, balanced split | 2 units ahead | attacks at 24 population; may regroup below 12 when pressured; balanced 36-population army |
-| Hard | 9 workers, construction-aware split | 3 units ahead | fields an opening force before expanding; attacks at 45 population or sooner with a clear observed advantage; 48-population army; may regroup below 24 |
+| Hard | 9 workers, construction-aware split | 3 units ahead | queues at least an 8/12/16-population opening for Rusher/Steady/Turtle before resuming worker production, with unit population able to round it upward; attacks at 45 population or sooner with a clear observed advantage; 48-population army; may regroup below 24 |
 
-Personalities are fair strategic tradeoffs layered on top of any difficulty:
+Personalities change strategy without resource grants, stat modifiers, extra vision, or faster construction or production. Matchup balance is still being validated:
 
 | Personality | Economy and timing | Army style | Target and defense style |
 | --- | --- | --- | --- |
-| Rusher | 1 fewer worker; attacks 4 population earlier | 25% ranged; 4-population-smaller army; commits longer before regrouping | attacks the nearest known structure; recalls committed armies only for critical buildings |
-| Steady | baseline economy and timing | 40% ranged; baseline army size | prioritizes the enemy capitol, then production |
-| Turtle | 1 extra worker; attacks 4 population later | 60% ranged; 4-population-larger army; regroups sooner when pressured | prioritizes production and recalls committed armies to defend threatened buildings |
+| Rusher | 1 fewer worker; attacks 4 population earlier | targets roughly 25% ranged population when both types are affordable; 4-population-smaller army; retreat threshold reduced by 4, with a minimum of 1 | attacks the nearest known structure; while attack-ready, recalls for critical Classic threats or its own threatened Wave base |
+| Steady | baseline economy and timing | targets roughly 40% ranged population when both types are affordable; baseline army size | prioritizes the enemy capitol, then production; uses the same attack-ready recall rule as Rusher |
+| Turtle | 1 extra worker; attacks 4 population later | targets roughly 60% ranged population when both types are affordable; 4-population-larger army; regroups sooner when pressured | prioritizes production, then the capitol; while attack-ready, also recalls for remembered allied threats |
 
-Bots use normal resource costs and the same gathering, construction, production, and combat command paths as human players. They defend recently damaged buildings, replace fallen builders, and fall back to nearby food sources while their farm regrows. With fog of war disabled, the map is visible to every player and bot. With fog enabled, bots remember structures discovered by their own buildings or their team's units, plus structures revealed by normal game rules. A reserved scout moves through unexplored terrain and disengages from incidental fights instead of stopping to attack.
+Bots use normal resource costs and the same gathering, construction, production, and combat command paths as human players. They defend recently damaged buildings, replace fallen builders, and fall back to nearby food sources while their farm regrows. With fog of war disabled, the map is visible to every player and bot. With fog enabled, bots remember structures discovered by their own buildings or their team's units, plus structures revealed by normal game rules. With at least two military units, the lowest-population unit is reserved as a scout; it explores unseen chunks and receives Move orders that clear incidental combat instead of stopping to fight.
 
 ## License
 

@@ -4,10 +4,10 @@ This document describes the AI opponent implementation on the `feature/basic-ai-
 
 ## Design principles
 
-- Bots obey the same resource costs, gathering rates, population limits, construction time, production time, unit stats, combat commands, fog of war, and victory rules as human players.
+- Bots obey the same resource costs, gathering rates, population limits, construction and production times, unit stats, combat command paths, and victory rules as human players. Fog uses a separate server-side visibility model described below; it is not yet identical to every client reveal rule.
 - Difficulty changes decision quality and cadence, not game rules. Bot creation explicitly removes research cheats.
-- Personalities make fair strategic tradeoffs rather than adding bonuses or handicaps.
-- Decisions are deterministic from the state a bot can observe. There is no hidden enemy-state query when fog of war is enabled.
+- Personalities change strategic timing and composition decisions without resource grants, stat modifiers, extra vision, or faster construction or production. Matchup balance is validated separately.
+- Combat targeting and scouting are deterministic from the bot's visible or remembered state under fog. Building placement still checks authoritative collision state before issuing a legal placement.
 - The implementation uses the mod's existing building, production, resource, unit-order, alliance, minimap-marker, and saved-data paths.
 
 The main components are [BotController](src/main/java/com/solegendary/reignofnether/bot/BotController.java), [BotDecisionMaker](src/main/java/com/solegendary/reignofnether/bot/BotDecisionMaker.java), [BotArmy](src/main/java/com/solegendary/reignofnether/bot/BotArmy.java), [BotWorldView](src/main/java/com/solegendary/reignofnether/bot/BotWorldView.java), [BotBuildingPlanner](src/main/java/com/solegendary/reignofnether/bot/BotBuildingPlanner.java), and [BotServerEvents](src/main/java/com/solegendary/reignofnether/bot/BotServerEvents.java). These classes provide the useful separation that an older experimental `RonApi`/`RoNAi` project was aiming for without adding a second abstraction over the whole mod.
@@ -16,13 +16,15 @@ The main components are [BotController](src/main/java/com/solegendary/reignofnet
 
 Army sizes are measured in population rather than unit count so the same budget applies across factions.
 
+Production targets count the full military population. Attack and retreat thresholds normally count the active main group after any fog scout and owned-beacon guards are reserved; the owned-beacon launch check counts those reserved units separately.
+
 | Difficulty | Decision profile | Economy and production | Army behavior |
 | --- | --- | --- | --- |
 | Easy | strategic decisions every 60 ticks; army orders refreshed every 400 ticks | 4 workers; food-heavy split; plans supply 1 unit ahead; queues 1 item | 24-population target; attacks at 12; retreat threshold 1, which effectively means no voluntary retreat with a live army |
 | Medium | decisions every 20 ticks; orders every 200 ticks | 5 workers; balanced split; plans supply 2 units ahead; queues up to 2 items | 36-population target; attacks at 24; may regroup below 12 when outmatched |
-| Hard | decisions every 10 ticks; orders every 100 ticks | 9 workers; construction-aware split; plans supply 3 units ahead; queues up to 2 items | fields an 8/12/16-population opening force by personality before completing its economy; targets 48 population; attacks at 45 or earlier with a clear observed advantage; may regroup below 24 |
+| Hard | decisions every 10 ticks; orders every 100 ticks | 9 workers; construction-aware split; plans supply 3 units ahead; queues up to 2 items | queues at least an 8/12/16-population opening by personality before resuming worker production; unit population can round the queued force upward; targets 48 population; attacks at 45 or earlier with a clear observed advantage; may regroup below 24 |
 
-All three levels reserve enough resources to replace one worker before buying another military unit. Hard is currently a stronger deterministic heuristic player, not a search-based or perfect-play AI. Establishing a reliable Hard > Medium > Easy match hierarchy remains an active validation item.
+All three levels reserve enough resources to replace one worker before buying another military unit. Hard is intended to be the strongest deterministic heuristic profile, not a search-based or perfect-play AI. Establishing a reliable Hard > Medium > Easy match hierarchy remains an active validation item.
 
 ## Personalities
 
@@ -30,9 +32,9 @@ Personalities layer strategic tradeoffs over every difficulty.
 
 | Personality | Economy and timing | Army composition and commitment | Targets, defense, and beacon behavior |
 | --- | --- | --- | --- |
-| Rusher | 1 fewer worker; army target and attack timing reduced by 4 population | aims for 25% ranged population; smaller force; lowest retreat threshold | attacks the nearest known valid structure; recalls a committed army only for the most important threats; keeps a 3-population beacon guard; selects Strength |
-| Steady | baseline worker, army, attack, and retreat values | aims for 40% ranged population | prefers capitols, then production; balanced defense; keeps a 6-population beacon guard; selects Regeneration |
-| Turtle | 1 extra worker; army target and attack timing increased by 4 population | aims for 60% ranged population; larger force; regroups sooner | prefers production, then capitols; responds to more allied threats; keeps a 9-population beacon guard and reinforces it aggressively; selects Resistance |
+| Rusher | 1 fewer worker; army target and attack timing reduced by 4 population | targets roughly 25% ranged population when both unit types are affordable; smaller force; retreat threshold reduced by 4, with a minimum of 1 | attacks the nearest known valid structure; while attack-ready, recalls for critical Classic threats or its own threatened Wave base; reserves up to 3 population for beacon guards, subject to unit-population granularity; selects Strength |
+| Steady | baseline worker, army, attack, and retreat values | targets roughly 40% ranged population when both unit types are affordable | prefers capitols, then production; balanced defense; reserves up to 6 population for beacon guards, subject to unit-population granularity; selects Regeneration |
+| Turtle | 1 extra worker; army target and attack timing increased by 4 population | targets roughly 60% ranged population when both unit types are affordable; larger force; regroups sooner | prefers production, then capitols; responds to more allied threats; reserves up to 9 population for beacon guards, subject to unit-population granularity, and reinforces them aggressively; selects Resistance |
 
 These are fixed strategic profiles, not cosmetic labels. They affect worker targets, the Hard opening, unit mix, attack and retreat thresholds, structure priorities, defense commitment, beacon garrisons, and beacon aura choice.
 
@@ -43,7 +45,7 @@ Each faction follows the same high-level economy and combat loop using faction-n
 | Faction | Current build and production plan | Faction-specific behavior | Not implemented yet |
 | --- | --- | --- | --- |
 | Villagers | Town Centre, Villager House, Wheat Farm, Barracks; Villager workers; Vindicators and Pillagers | normal overworld placement; melee/ranged personality mix | additional production buildings, job management, militia, enchanting, upgrades, heroes, and spell use |
-| Monsters | Mausoleum, Haunted House, Pumpkin Farm, Graveyard; Zombie Villager workers; Zombies and Skeletons | armies withdraw to friendly night sources or cover before daylight, hold while sheltered, and resume at night; Blood Moons suppress the daylight recall | advanced night timing, Sculk Sensor expansion, additional units/buildings, upgrades, heroes, and spell use |
+| Monsters | Mausoleum, Haunted House, Pumpkin Farm, Graveyard; Zombie Villager workers; Zombies and Skeletons | before daylight, unsheltered armies move to the nearest friendly night source, or home if none exists; units already under cover, in water or rain, in powder snow, or within a night source hold; Blood Moons disable recall, and the army resumes after dusk | advanced night timing, Sculk Sensor expansion, additional units/buildings, upgrades, heroes, and spell use |
 | Piglins | Central Portal, Netherwart Farm, two Basic Portals transformed into civilian and military roles; Grunt workers; Brutes and Headhunters | placement enforces Nether-terrain requirements; civilian/military portal roles are tracked and reconciled after reload | portal networks, distant resource portals, expansion, additional units/buildings, upgrades, heroes, and spell use |
 
 ## Economy, construction, and production
@@ -53,10 +55,10 @@ Bots currently:
 - start with three faction-native workers and normal starting resources;
 - build or rebuild their capitol, forecast supply from the actual population cost of the next unit, add one farm and one military production building, and train toward their worker and army targets;
 - assign workers between food and wood, rebalance them on a difficulty-specific cadence, use a completed farm while it has harvestable food, and fall back to world food while it regrows;
-- place buildings only in loaded chunks on flat, clear, visible ground inside the world border, with a three-block gap from existing buildings and the required Nether terrain where applicable;
+- for autonomously planned post-start buildings, require a loaded footprint on flat, clear ground inside current vision and the world border, with three-block separation and required Nether terrain; configured lobby capitols instead use the selected start-seat footprint after border and overlap checks;
 - use a real worker for construction and reassign an available worker if an unfinished building loses its builder;
-- repair damaged structures with one worker, prioritizing the capitol and production buildings, only while wood exceeds the next required construction package, and not beside a visible military threat;
-- queue real production items, respect the production queue and population budgets, preserve one worker's replacement cost, and keep the requested melee/ranged population mix;
+- repair damaged structures with one worker, prioritizing the capitol and production buildings, only while wood exceeds the largest configured farm, supply, or military construction package, including portal transforms, and not beside a visible military threat;
+- queue real production items and respect production-queue and population budgets; military purchases preserve one worker's replacement cost and target the requested melee/ranged population mix, falling back to any affordable unit;
 - reconcile Piglin civilian and military portal roles from saved origins, existing portal types, and active transform queues; and
 - on graceful shutdown, save each owner's queued-production costs back into only that owner's resource balance before the building queues are cleared, allowing the restarted controller to queue replacements without duplicating or losing another player's resources.
 
@@ -66,9 +68,9 @@ Current economy scope is intentionally basic: there is no ore assignment, resour
 
 With fog disabled, bots can consider all enemy buildings and units that normal server state exposes. With fog enabled:
 
-- a bot sees through its own buildings and allied units using fixed chunk-radius sight;
-- enemy buildings are remembered after their footprint becomes visible or normal capitol-loss reveal rules expose their owner;
-- remembered structures are removed when their last-known footprint is visible and the structure is gone;
+- a bot's own and allied units reveal a one-chunk radius; its own ordinary buildings reveal one chunk and its own capitol reveals two. Allied buildings and the client's Ghast, occupied-garrison, and revealed-owner special cases do not currently extend bot vision;
+- an enemy building is remembered when any chunk intersecting its footprint becomes visible or normal capitol-loss reveal rules expose its owner;
+- a remembered structure is removed when any chunk intersecting its last-known footprint is visible and no matching structure remains;
 - visible enemy combatants must be alive, ungarrisoned, hostile, and inside current bot-team vision; and
 - when the army has at least two units, its lowest-population unit is reserved as a scout. It traverses expanding waypoints and replaces stalled waypoints after 600 ticks without four blocks of progress;
 - an autonomous waypoint is complete only after the scout enters the waypoint's 16-by-16 chunk, ensuring that its one-chunk sight radius actually observes the target chunk and adjacent chunks; and
@@ -89,6 +91,7 @@ Bots currently:
 - engage threatening or substantial nearby armies instead of blindly base-racing;
 - have ranged units prioritize flying threats while ground units continue their attack move;
 - let Hard press a sufficiently large, clearly observed population advantage before its normal attack threshold;
+- while attack-ready, let Rusher and Steady recall for critical Classic threats or their own threatened Wave base, while Turtle also recalls for remembered allied threats;
 - pursue a locally observed retreating ground army only while ahead, then expire the pursuit; and
 - retreat an outmatched committed army to its home for a short regroup period according to difficulty and personality.
 
@@ -101,10 +104,10 @@ Lobby bots inherit their start seat's color/team and ready automatically. Allian
 Coordination uses the mod's minimap-marker channel rather than text chat:
 
 - an allied human marker becomes the preferred advice for 600 ticks and overrides bot advice;
-- an unknown marker sends the bot's scout to investigate;
+- with fog enabled and at least two military units, an otherwise unknown marker redirects the reserved scout; without an available scout, the marker remains advice but does not move the main army;
 - a marker near a known enemy building, threatened friendly building, or beacon prioritizes that objective;
 - bots publish deduplicated attack, defense, and beacon intents to allied bots and online human allies; and
-- bot advice expires, is rejected if the sender is no longer allied, and never reveals an unknown enemy by itself.
+- advice expires and is rejected if the sender is no longer allied; receiving bot advice never inserts an unknown building into fog memory, so an unknown coordinate must still be scouted.
 
 Current coordination is positional only. Bots do not assign complementary team roles, negotiate who attacks or defends, reserve targets for one another, acknowledge player orders, or send text-chat status.
 
@@ -152,12 +155,13 @@ Tactical state is intentionally transient: fog memory, scout waypoint, current t
 
 ## Validation status
 
-Implementation and test evidence reviewed on 2026-07-14 through commit `d7bba3a9`:
+Implementation and test evidence reviewed on 2026-07-14 through commit `545dd103`:
 
 - The latest local Gradle test run passed all 43 tests: 36 decision-policy tests, 2 bot command/identity tests, 2 RTS player identity tests, and 3 existing utility tests. The bot tests cover difficulty and personality bands, build goals, supply planning, resource reserves, worker safety, repairs, army orders, target priorities, anti-air behavior, scouting progress, Monster shelter timing, and beacon decisions.
 - A controlled, fog-enabled, adjacent-base hierarchy run at commit `39d470a2` recorded three expected higher-difficulty wins: Piglin Medium over Easy, Monster Hard over Medium, and Villager Medium over Easy.
 - The fourth controlled trial at that commit, Monster Medium over Easy, timed out without a winner. The run stopped at the first non-win, leaving 20 planned side/order/faction trials pending.
 - Commit `d7bba3a9` fixes both defects found from that timeout: autonomous scouts must enter their waypoint chunk before advancing, and a same-target Move can no longer be discarded while combat or Attack Move state needs clearing. The exact fog-enabled trial then passed: Medium discovered the enemy capitol, survived Easy's opening attack, issued 10 attack events, and won at tick 45,883 while sustaining 199.5 effective TPS.
+- Commit `545dd103` lets Hard press a clearly observed 5:4 army advantage when at least 12 enemy population is visible and its main army is at or above its personality-adjusted retreat threshold. In the exact Monster Hard-versus-Medium seed/side/order that had timed out after 96,018 simulated ticks, Medium attacked first with 24 units, Hard counterattacked below its normal 45-population timing, destroyed every opposing building, and won after 71,818 simulated ticks. The run sustained 186.7 effective TPS with no grants, refills, watchdog, or crash. The reciprocal side and creation order also passed, with Hard winning after 95,495 simulated ticks at 182.3 effective TPS.
 - A current-head graceful-restart fixture passed for commit `2aa8cee7`: two owners retained identity and role origins, requeued different transform costs to exactly zero remaining resources, reassigned their own workers to unfinished farms, advanced both farms, and completed Military and Civilian Portal transforms.
 - These targeted reruns validate the fixes, but the complete multi-seed, side/order-controlled difficulty hierarchy is still **not proven**.
 - An earlier Wave persistence fixture preserved an active wave portal across restart and preserved the wave-30 cap. It predates the current head and does not replace current-head mixed-team or natural-wave validation.
