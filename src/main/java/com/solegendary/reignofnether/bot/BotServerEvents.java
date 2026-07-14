@@ -7,6 +7,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.faction.Faction;
@@ -26,6 +27,7 @@ import com.solegendary.reignofnether.startpos.StartPos;
 import com.solegendary.reignofnether.startpos.StartPosServerEvents;
 import com.solegendary.reignofnether.tutorial.TutorialServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -44,6 +46,7 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -326,11 +329,11 @@ public final class BotServerEvents {
     static Optional<BotStartPlan> planLobbyBotStart(
             ServerLevel level, String ownerName, String displayName, Faction faction,
             BotDifficulty difficulty, BotPersonality personality, StartPos startPos) {
+        Building capitol = BotStrategy.forFaction(faction).capitol();
         BotBuildingPlanner.Footprint footprint = BotBuildingPlanner.footprintAtCentre(
-                level, BotStrategy.forFaction(faction).capitol(), startPos.pos);
+                level, capitol, startPos.pos);
         BotBuildingPlanner.loadChunks(level, footprint);
-        if (level.getWorldBorder().getDistanceToBorder(startPos.pos.getX(), startPos.pos.getZ()) < 1
-                || BotBuildingPlanner.overlapsExistingBuilding(footprint, 0))
+        if (!BotBuildingPlanner.canPlace(level, capitol, footprint, null))
             return Optional.empty();
         return Optional.of(createStartPlan(
                 level, ownerName, displayName, faction, difficulty, personality,
@@ -360,18 +363,27 @@ public final class BotServerEvents {
         ResearchServerEvents.removeAllCheatsFor(bot.name);
         PlayerClientboundPacket.addRTSPlayer(bot);
 
-        List<Entity> workers = spawnWorkers(level, bot, plan.home());
-        int[] workerIds = workers.stream().mapToInt(Entity::getId).toArray();
         BuildingPlacement capitol = BuildingServerEvents.placeBuilding(
                 strategy.capitol(), plan.footprint().origin(), Rotation.NONE,
-                bot.name, workerIds, false, false);
+                bot.name, new int[0], false, false);
         if (capitol == null || !BuildingServerEvents.getBuildings().contains(capitol)) {
             PlayerServerEvents.rtsPlayers.remove(bot);
             ResourcesServerEvents.resourcesList.removeIf(resources -> resources.ownerName.equals(bot.name));
-            workers.forEach(Entity::discard);
             PlayerClientboundPacket.removeRTSPlayer(bot.name);
             return null;
         }
+
+        List<Entity> workers = spawnWorkers(level, bot, plan.footprint());
+        if (workers.size() != 3) {
+            workers.forEach(Entity::discard);
+            BuildingServerEvents.discardUnstartedBuilding(capitol);
+            PlayerServerEvents.rtsPlayers.remove(bot);
+            ResourcesServerEvents.resourcesList.removeIf(resources -> resources.ownerName.equals(bot.name));
+            PlayerClientboundPacket.removeRTSPlayer(bot.name);
+            return null;
+        }
+        for (Entity entity : workers)
+            ((WorkerUnit) entity).getBuildRepairGoal().setBuildingTarget(capitol);
 
         CONTROLLERS.put(bot.name, new BotController(bot.name));
 
@@ -394,7 +406,8 @@ public final class BotServerEvents {
         PlayerClientboundPacket.removeRTSPlayer(bot.name);
     }
 
-    private static List<Entity> spawnWorkers(ServerLevel level, RTSPlayer bot, BlockPos home) {
+    private static List<Entity> spawnWorkers(ServerLevel level, RTSPlayer bot,
+                                             BotBuildingPlanner.Footprint capitol) {
         EntityType<? extends Unit> workerType = switch (bot.faction) {
             case VILLAGERS -> EntityRegistrar.VILLAGER_UNIT.get();
             case MONSTERS -> EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get();
@@ -402,18 +415,60 @@ public final class BotServerEvents {
             default -> throw new IllegalArgumentException("Unsupported bot faction: " + bot.faction);
         };
 
+        List<BlockPos> candidates = workerSpawnPositions(level, capitol);
         List<Entity> workers = new ArrayList<>();
-        for (int xOffset = -1; xOffset <= 1; xOffset++) {
+        int candidateIndex = 0;
+        while (workers.size() < 3 && candidateIndex < candidates.size()) {
             Entity entity = workerType.create(level);
             if (entity == null)
-                continue;
-            BlockPos feet = BotBuildingPlanner.groundAt(level, home.getX() + xOffset, home.getZ()).above();
+                break;
+            BlockPos feet = candidates.get(candidateIndex++);
             ((Unit) entity).setOwnerName(bot.name);
             entity.moveTo(feet, 0, 0);
-            level.addFreshEntity(entity);
-            workers.add(entity);
+            if (level.noCollision(entity) && level.addFreshEntity(entity))
+                workers.add(entity);
+            else
+                entity.discard();
         }
         return workers;
+    }
+
+    private static List<BlockPos> workerSpawnPositions(ServerLevel level,
+                                                       BotBuildingPlanner.Footprint capitol) {
+        List<BlockPos> candidates = new ArrayList<>();
+        BlockPos centre = capitol.centre();
+        int terraceY = capitol.origin().getY();
+        for (int offset = 1; offset <= 6; offset++) {
+            int minX = capitol.min().getX() - offset;
+            int maxX = capitol.max().getX() + offset;
+            int minZ = capitol.min().getZ() - offset;
+            int maxZ = capitol.max().getZ() + offset;
+            for (int x = minX; x <= maxX; x++) {
+                addWorkerSpawnCandidate(level, candidates, terraceY, x, minZ);
+                addWorkerSpawnCandidate(level, candidates, terraceY, x, maxZ);
+            }
+            for (int z = minZ + 1; z < maxZ; z++) {
+                addWorkerSpawnCandidate(level, candidates, terraceY, minX, z);
+                addWorkerSpawnCandidate(level, candidates, terraceY, maxX, z);
+            }
+        }
+        candidates.sort(Comparator
+                .comparingDouble((BlockPos pos) -> pos.distSqr(centre))
+                .thenComparingInt(BlockPos::getX)
+                .thenComparingInt(BlockPos::getZ));
+        return candidates;
+    }
+
+    private static void addWorkerSpawnCandidate(ServerLevel level, List<BlockPos> candidates,
+                                                int terraceY, int x, int z) {
+        BlockPos ground = BotBuildingPlanner.groundAt(level, x, z);
+        BlockPos feet = ground.above();
+        if (BotBuildingPlanner.isOnBaseTerrace(terraceY, ground.getY())
+                && level.getFluidState(ground).isEmpty()
+                && level.getFluidState(feet).isEmpty()
+                && level.getWorldBorder().isWithinBounds(feet)
+                && !level.getBlockState(ground).getCollisionShape(level, ground).isEmpty())
+            candidates.add(feet);
     }
 
     private static int removeBot(CommandSourceStack source, String displayName) {

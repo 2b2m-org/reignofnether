@@ -5,7 +5,6 @@ import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
-import com.solegendary.reignofnether.player.PlayerServerEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
@@ -15,18 +14,23 @@ import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 final class BotBuildingPlanner {
     private static final int BUILDING_GAP = 3;
-    private static final int CANDIDATE_DIRECTIONS = 32;
     private static final int MIN_RADIUS = 12;
-    private static final int MAX_RADIUS = 48;
-    private static final int RADIUS_STEP = 2;
+    private static final int MAX_RADIUS = 64;
+    // Flat roofs can pass footprint checks but strand builders above or below the starting terrace.
+    private static final int MAX_BASE_TERRACE_DELTA = 3;
     private static final double EXIT_LANE_HALF_WIDTH = 4;
+    private static final List<Offset> SEARCH_OFFSETS = createSearchOffsets();
+    private static final List<Rotation> BUILDING_ROTATIONS = List.of(
+            Rotation.NONE,
+            Rotation.CLOCKWISE_90,
+            Rotation.CLOCKWISE_180,
+            Rotation.COUNTERCLOCKWISE_90
+    );
 
     private BotBuildingPlanner() {
     }
@@ -55,11 +59,21 @@ final class BotBuildingPlanner {
     private record Axis(double x, double z) {
     }
 
-    private record Candidate(int xOffset, int zOffset, boolean blocksExitLane,
-                             double roleScore, int distanceSqr) {
+    private record Candidate(int xOffset, int zOffset, double forwardDistance,
+                             double lateralDistance, double roleScore, int distanceSqr) {
+    }
+
+    record Offset(int x, int z) {
+    }
+
+    record Placement(BlockPos origin, Rotation rotation) {
     }
 
     private record FootprintSize(double halfWidth, double halfDepth) {
+    }
+
+    private record BuildingVariant(Rotation rotation, ArrayList<BuildingBlock> blocks,
+                                   FootprintSize size) {
     }
 
     record Footprint(BlockPos origin, BlockPos min, BlockPos max, BlockPos centre) {
@@ -81,15 +95,45 @@ final class BotBuildingPlanner {
 
     static Optional<BlockPos> findPlacement(ServerLevel level, Building building, BlockPos home,
                                             boolean includeHome) {
-        return findPlacement(level, building, home, includeHome, null, PlacementRole.CAPITOL);
+        ArrayList<BuildingBlock> relativeBlocks = building.getRelativeBlockData(level);
+        return findPlacement(level, building, relativeBlocks, home, includeHome,
+                null, PlacementRole.CAPITOL, List.of(Rotation.NONE))
+                .map(Placement::origin);
     }
 
-    static Optional<BlockPos> findPlacement(ServerLevel level, Building building, BlockPos home,
-                                            boolean includeHome, BotWorldView worldView,
-                                            PlacementRole role) {
+    static Optional<Placement> findPlacement(ServerLevel level, Building building, BlockPos home,
+                                             boolean includeHome, BotWorldView worldView,
+                                             PlacementRole role) {
         ArrayList<BuildingBlock> relativeBlocks = building.getRelativeBlockData(level);
-        FootprintSize size = footprintSize(relativeBlocks);
-        for (Candidate candidate : candidates(level, home, includeHome, role, size)) {
+        return findPlacement(level, building, relativeBlocks, home, includeHome,
+                worldView, role, BUILDING_ROTATIONS);
+    }
+
+    private static Optional<Placement> findPlacement(
+            ServerLevel level, Building building, ArrayList<BuildingBlock> relativeBlocks,
+            BlockPos home, boolean includeHome, BotWorldView worldView,
+            PlacementRole role, List<Rotation> rotations) {
+        List<BuildingVariant> variants = rotations.stream()
+                .map(rotation -> {
+                    ArrayList<BuildingBlock> blocks = rotate(level, relativeBlocks, rotation);
+                    return new BuildingVariant(rotation, blocks, footprintSize(blocks));
+                })
+                .toList();
+        Axis front = frontAxis(level, home);
+        List<Candidate> candidates = candidates(includeHome, role, front);
+        Optional<Placement> placement = findPlacement(
+                level, building, home, worldView, role, front, variants, candidates, false);
+        if (placement.isPresent() || role == PlacementRole.CAPITOL)
+            return placement;
+        return findPlacement(level, building, home, worldView, role, front, variants, candidates, true);
+    }
+
+    private static Optional<Placement> findPlacement(
+            ServerLevel level, Building building, BlockPos home, BotWorldView worldView,
+            PlacementRole role, Axis front, List<BuildingVariant> variants,
+            List<Candidate> candidates,
+            boolean blockingExitLane) {
+        for (Candidate candidate : candidates) {
             BlockPos column = home.offset(candidate.xOffset(), 0, candidate.zOffset());
             if (!isChunkLoaded(level, column)) {
                 if (worldView != null)
@@ -100,9 +144,20 @@ final class BotBuildingPlanner {
             if (worldView != null && !worldView.isVisible(column))
                 continue;
             BlockPos centre = groundAt(level, column.getX(), column.getZ());
-            Footprint footprint = footprintAtCentre(level, relativeBlocks, centre);
-            if (canPlace(level, building, relativeBlocks, footprint, worldView))
-                return Optional.of(footprint.origin());
+            if (role != PlacementRole.CAPITOL
+                    && !isOnBaseTerrace(home.getY(), centre.getY()))
+                continue;
+            for (BuildingVariant variant : variants) {
+                if (role != PlacementRole.CAPITOL
+                        && blocksExitLane(candidate, variant.size(), front) != blockingExitLane)
+                    continue;
+                Footprint footprint = footprintAtCentre(level, variant.blocks(), centre);
+                if (!canOccupy(level, building, variant.blocks(), footprint, worldView))
+                    continue;
+                if (!BuildingUtils.hasPlacementClipping(
+                        level, variant.blocks(), footprint.origin()))
+                    return Optional.of(new Placement(footprint.origin(), variant.rotation()));
+            }
         }
         return Optional.empty();
     }
@@ -114,7 +169,12 @@ final class BotBuildingPlanner {
     private static Footprint footprintAtCentre(ServerLevel level,
                                                ArrayList<BuildingBlock> relativeBlocks,
                                                BlockPos centre) {
-        BlockPos origin = PlayerServerEvents.getBuildingOriginPos(centre, relativeBlocks);
+        BlockPos min = BuildingUtils.getMinCorner(relativeBlocks);
+        BlockPos max = BuildingUtils.getMaxCorner(relativeBlocks);
+        BlockPos origin = centre.offset(
+                -(max.getX() - min.getX()) / 2 - min.getX(),
+                0,
+                -(max.getZ() - min.getZ()) / 2 - min.getZ());
         return footprintAtOrigin(level, relativeBlocks, origin);
     }
 
@@ -155,54 +215,63 @@ final class BotBuildingPlanner {
                 SectionPos.blockToSectionCoord(pos.getZ()));
     }
 
-    private static List<Candidate> candidates(ServerLevel level, BlockPos home, boolean includeHome,
-                                              PlacementRole role, FootprintSize size) {
-        Axis front = frontAxis(level, home);
+    private static List<Candidate> candidates(boolean includeHome, PlacementRole role, Axis front) {
         List<Candidate> candidates = new ArrayList<>();
-        double forwardExtent = Math.abs(front.x()) * size.halfWidth()
-                + Math.abs(front.z()) * size.halfDepth() + BUILDING_GAP;
-        double lateralExtent = Math.abs(front.z()) * size.halfWidth()
-                + Math.abs(front.x()) * size.halfDepth() + BUILDING_GAP;
-        Set<Long> seenOffsets = new HashSet<>();
         if (includeHome)
-            addCandidate(candidates, seenOffsets, role, front, forwardExtent, lateralExtent, 0, 0);
-        for (int radius = MIN_RADIUS; radius <= MAX_RADIUS; radius += RADIUS_STEP) {
-            for (int direction = 0; direction < CANDIDATE_DIRECTIONS; direction++) {
-                double angle = direction * Math.PI * 2 / CANDIDATE_DIRECTIONS;
-                int x = (int) Math.round(Math.cos(angle) * radius);
-                int z = (int) Math.round(Math.sin(angle) * radius);
-                addCandidate(candidates, seenOffsets, role, front,
-                        forwardExtent, lateralExtent, x, z);
-            }
-        }
+            candidates.add(candidate(role, front, 0, 0));
+        for (Offset offset : SEARCH_OFFSETS)
+            candidates.add(candidate(role, front, offset.x(), offset.z()));
         candidates.sort(Comparator
-                .comparing(Candidate::blocksExitLane)
-                .thenComparingDouble(Candidate::roleScore)
+                .comparingDouble(Candidate::roleScore)
                 .thenComparingInt(Candidate::distanceSqr)
                 .thenComparingInt(Candidate::xOffset)
                 .thenComparingInt(Candidate::zOffset));
         return candidates;
     }
 
-    private static void addCandidate(List<Candidate> candidates, Set<Long> seenOffsets,
-                                     PlacementRole role, Axis front,
-                                     double forwardExtent, double lateralExtent,
-                                     int x, int z) {
-        long key = ((long) x << 32) ^ (z & 0xffffffffL);
-        if (seenOffsets.add(key)) {
-            int distanceSqr = x * x + z * z;
-            double forwardDistance = x * front.x() + z * front.z();
-            double lateralDistance = -x * front.z() + z * front.x();
-            candidates.add(new Candidate(
-                    x,
-                    z,
-                    role != PlacementRole.CAPITOL
-                            && blocksExitLane(forwardDistance, forwardExtent,
-                            lateralDistance, lateralExtent),
-                    role.score(forwardDistance, lateralDistance),
-                    distanceSqr
-            ));
+    static List<Offset> searchOffsets() {
+        return SEARCH_OFFSETS;
+    }
+
+    private static List<Offset> createSearchOffsets() {
+        int minDistanceSqr = MIN_RADIUS * MIN_RADIUS;
+        int maxDistanceSqr = MAX_RADIUS * MAX_RADIUS;
+        List<Offset> offsets = new ArrayList<>();
+        for (int x = -MAX_RADIUS; x <= MAX_RADIUS; x++) {
+            for (int z = -MAX_RADIUS; z <= MAX_RADIUS; z++) {
+                int distanceSqr = x * x + z * z;
+                if (distanceSqr >= minDistanceSqr && distanceSqr <= maxDistanceSqr)
+                    offsets.add(new Offset(x, z));
+            }
         }
+        return List.copyOf(offsets);
+    }
+
+    static boolean isOnBaseTerrace(int homeY, int candidateY) {
+        return Math.abs(candidateY - homeY) <= MAX_BASE_TERRACE_DELTA;
+    }
+
+    private static Candidate candidate(PlacementRole role, Axis front, int x, int z) {
+        int distanceSqr = x * x + z * z;
+        double forwardDistance = x * front.x() + z * front.z();
+        double lateralDistance = -x * front.z() + z * front.x();
+        return new Candidate(
+                x,
+                z,
+                forwardDistance,
+                lateralDistance,
+                role.score(forwardDistance, lateralDistance),
+                distanceSqr
+        );
+    }
+
+    private static ArrayList<BuildingBlock> rotate(ServerLevel level,
+                                                   ArrayList<BuildingBlock> blocks,
+                                                   Rotation rotation) {
+        ArrayList<BuildingBlock> rotated = new ArrayList<>(blocks.size());
+        for (BuildingBlock block : blocks)
+            rotated.add(block.rotate(level, rotation));
+        return rotated;
     }
 
     private static Axis frontAxis(ServerLevel level, BlockPos home) {
@@ -223,6 +292,16 @@ final class BotBuildingPlanner {
         );
     }
 
+    private static boolean blocksExitLane(Candidate candidate, FootprintSize size, Axis front) {
+        double forwardExtent = Math.abs(front.x()) * size.halfWidth()
+                + Math.abs(front.z()) * size.halfDepth() + BUILDING_GAP;
+        double lateralExtent = Math.abs(front.z()) * size.halfWidth()
+                + Math.abs(front.x()) * size.halfDepth() + BUILDING_GAP;
+        return blocksExitLane(
+                candidate.forwardDistance(), forwardExtent,
+                candidate.lateralDistance(), lateralExtent);
+    }
+
     static boolean blocksExitLane(double forwardDistance, double forwardExtent,
                                   double lateralDistance, double lateralExtent) {
         return forwardDistance + forwardExtent > 0
@@ -231,12 +310,14 @@ final class BotBuildingPlanner {
 
     static boolean canPlace(ServerLevel level, Building building, Footprint footprint,
                             BotWorldView worldView) {
-        return canPlace(level, building, building.getRelativeBlockData(level), footprint, worldView);
+        ArrayList<BuildingBlock> blocks = building.getRelativeBlockData(level);
+        return canOccupy(level, building, blocks, footprint, worldView)
+                && !BuildingUtils.hasPlacementClipping(level, blocks, footprint.origin());
     }
 
-    private static boolean canPlace(ServerLevel level, Building building,
-                                    ArrayList<BuildingBlock> relativeBlocks,
-                                    Footprint footprint, BotWorldView worldView) {
+    private static boolean canOccupy(ServerLevel level, Building building,
+                                     ArrayList<BuildingBlock> relativeBlocks,
+                                     Footprint footprint, BotWorldView worldView) {
         BlockPos min = footprint.min();
         BlockPos max = footprint.max();
         BlockPos origin = footprint.origin();
@@ -253,30 +334,10 @@ final class BotBuildingPlanner {
         BlockPos visibilityMax = max.offset(BUILDING_GAP, 0, BUILDING_GAP);
         if (worldView != null && !worldView.isFootprintVisible(visibilityMin, visibilityMax))
             return false;
-
-        if (BuildingUtils.requiresNetherTerrain(building)) {
-            ArrayList<BuildingBlock> blocks = BuildingUtils.getAbsoluteBlockData(
-                    relativeBlocks, level, origin, Rotation.NONE);
-            if (!BuildingServerEvents.isOnNetherBlocks(blocks, origin, level))
-                return false;
-        }
-
         double requiredBorderDistance = Math.max(max.getX() - min.getX(), max.getZ() - min.getZ()) / 2.0 + BUILDING_GAP;
         if (level.getWorldBorder().getDistanceToBorder(footprint.centre().getX(), footprint.centre().getZ())
                 < requiredBorderDistance)
             return false;
-
-        for (int x = min.getX(); x <= max.getX(); x++) {
-            for (int z = min.getZ(); z <= max.getZ(); z++) {
-                if (groundAt(level, x, z).getY() != origin.getY())
-                    return false;
-                for (int y = origin.getY() + 1; y <= max.getY(); y++) {
-                    var state = level.getBlockState(new BlockPos(x, y, z));
-                    if (!state.isAir() && !state.canBeReplaced())
-                        return false;
-                }
-            }
-        }
 
         AABB bounds = new AABB(
                 min.getX() - BUILDING_GAP,
@@ -286,7 +347,18 @@ final class BotBuildingPlanner {
                 level.getMaxBuildHeight(),
                 max.getZ() + BUILDING_GAP + 1
         );
-        return !overlapsExistingBuilding(bounds);
+        if (overlapsExistingBuilding(bounds))
+            return false;
+        if (!BuildingUtils.hasValidGroundSupport(level, relativeBlocks, origin))
+            return false;
+
+        if (BuildingUtils.requiresNetherTerrain(building)) {
+            ArrayList<BuildingBlock> blocks = BuildingUtils.getAbsoluteBlockData(
+                    relativeBlocks, level, origin, Rotation.NONE);
+            if (!BuildingServerEvents.isOnNetherBlocks(blocks, origin, level))
+                return false;
+        }
+        return true;
     }
 
     static boolean overlapsExistingBuilding(Footprint footprint, int gap) {

@@ -22,4 +22,22 @@ class BotBuildingPlannerTest {
         assertFalse(BotBuildingPlanner.blocksExitLane(20, 5, 10, 5));
         assertFalse(BotBuildingPlanner.blocksExitLane(-20, 5, 0, 5));
     }
+
+    @Test
+    void coreBuildingsStayOnTheCapitolTerrace() {
+        assertTrue(BotBuildingPlanner.isOnBaseTerrace(64, 61));
+        assertTrue(BotBuildingPlanner.isOnBaseTerrace(64, 67));
+        assertFalse(BotBuildingPlanner.isOnBaseTerrace(64, 60));
+        assertFalse(BotBuildingPlanner.isOnBaseTerrace(64, 68));
+    }
+
+    @Test
+    void denseSearchCoversIrregularAndOuterClearings() {
+        assertTrue(BotBuildingPlanner.searchOffsets()
+                .contains(new BotBuildingPlanner.Offset(42, 23)));
+        assertTrue(BotBuildingPlanner.searchOffsets()
+                .contains(new BotBuildingPlanner.Offset(56, 0)));
+        assertFalse(BotBuildingPlanner.searchOffsets()
+                .contains(new BotBuildingPlanner.Offset(5, 5)));
+    }
 }

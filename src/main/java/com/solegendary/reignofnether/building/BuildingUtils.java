@@ -20,8 +20,15 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.BarrierBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.IceBlock;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -33,6 +40,8 @@ import java.util.function.Predicate;
 
 public class BuildingUtils {
 
+    private static final float MIN_SUPPORTED_BLOCKS_PERCENT = 0.6f;
+
     public static List<Keybinding> keybindings = Arrays.asList();
 
     public static boolean requiresNetherTerrain(Building building) {
@@ -41,6 +50,49 @@ public class BuildingUtils {
             return false;
         return building.getFaction() == Faction.PIGLINS
                 || (building instanceof CustomBuilding customBuilding && customBuilding.netherTerrainOnly);
+    }
+
+    public static boolean hasValidGroundSupport(LevelAccessor level, List<BuildingBlock> blocks,
+                                                BlockPos origin) {
+        int supportedBlocks = 0;
+        int baseBlocks = 0;
+        for (BuildingBlock block : blocks) {
+            if (block.getBlockPos().getY() != 0)
+                continue;
+            BlockState buildingState = block.getBlockState();
+            BlockState groundState = level.getBlockState(block.getBlockPos().offset(origin));
+            if (!buildingState.isSolid() || groundState.getBlock() instanceof IceBlock)
+                continue;
+            baseBlocks++;
+            if (isLegalGroundSupport(groundState))
+                supportedBlocks++;
+        }
+        return baseBlocks == 0
+                || (float) supportedBlocks / baseBlocks >= MIN_SUPPORTED_BLOCKS_PERCENT;
+    }
+
+    public static boolean hasPlacementClipping(LevelAccessor level, List<BuildingBlock> blocks,
+                                               BlockPos origin) {
+        for (BuildingBlock block : blocks) {
+            BlockPos worldPos = block.getBlockPos().offset(origin).above();
+            BlockState worldState = level.getBlockState(worldPos);
+            BlockState buildingState = block.getBlockState();
+            boolean occupiedWorld = worldState.isSolid() || !worldState.getFluidState().isEmpty();
+            boolean occupiedBuilding = buildingState.isSolid()
+                    || !buildingState.getFluidState().isEmpty();
+            if (occupiedWorld && occupiedBuilding)
+                return true;
+        }
+        return false;
+    }
+
+    private static boolean isLegalGroundSupport(BlockState groundState) {
+        return groundState.isSolid()
+                && !(groundState.getBlock() instanceof IceBlock)
+                && !(groundState.getBlock() instanceof LeavesBlock)
+                && !(groundState.getBlock() instanceof BarrierBlock)
+                && !(groundState.getBlock() instanceof SlabBlock
+                        && groundState.getValue(BlockStateProperties.SLAB_TYPE) == SlabType.BOTTOM);
     }
 
     public static int getTotalCompletedBuildingsOwned(boolean isClientSide, String ownerName) {

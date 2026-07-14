@@ -56,8 +56,6 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -107,10 +105,6 @@ public class BuildingClientEvents {
     private static final long DOUBLE_CLICK_TIME_MS = 500;
 
     public static boolean isBuilt = false;
-
-    // minimum % of blocks below a building that need to be supported by a solid block for it to be placeable
-    // 1 means you can't have any gaps at all, 0 means you can place buildings in mid-air
-    private static final float MIN_SUPPORTED_BLOCKS_PERCENT = 0.6f;
 
     private static final float MIN_NETHER_BLOCKS_PERCENT = 0.8f; // piglin buildings must be build on at least 80%
     // nether blocks
@@ -394,45 +388,17 @@ public class BuildingClientEvents {
         if (isBuildingToPlaceABridge() || GameruleClient.slantedBuilding) {
             return false;
         }
-
-        for (BuildingBlock block : blocksToDraw) {
-            BlockPos bp = block.getBlockPos().offset(originPos).offset(0, 1, 0);
-            if ((MC.level.getBlockState(bp).isSolid() || !MC.level.getBlockState(bp).getFluidState().isEmpty()) && (block.getBlockState().isSolid() || !block.getBlockState().getFluidState().isEmpty())) {
-                return true;
-            }
-        }
-        return false;
+        return BuildingUtils.hasPlacementClipping(MC.level, blocksToDraw, originPos);
     }
 
-    // 90% all solid blocks at the base of the building must be on top of solid non-barrier blocks to be placeable
-    // excluding those under blocks which aren't solid anyway
+    // At least 60% of solid base blocks must be on solid, legal support, excluding
+    // base positions whose building block is non-solid.
     private static boolean isBuildingPlacementInAirOrOnIllegalBlocks(BlockPos originPos) {
         if (isBuildingToPlaceABridge() || GameruleClient.slantedBuilding) {
             return false;
         }
-        int solidBlocksBelow = 0;
-        int blocksBelow = 0;
-        for (BuildingBlock block : blocksToDraw) {
-            if (block.getBlockPos().getY() == 0 && MC.level != null) {
-                BlockPos bp = block.getBlockPos().offset(originPos).offset(0, 1, 0);
-                BlockState bs = block.getBlockState(); // building block
-                BlockState bsBelow = MC.level.getBlockState(bp.below()); // world block
-
-                if (bs.isSolid() && !(bsBelow.getBlock() instanceof IceBlock)) {
-                    blocksBelow += 1;
-                    if (bsBelow.isSolid() &&
-                            !(bsBelow.getBlock() instanceof LeavesBlock) &&
-                            !(bsBelow.getBlock() instanceof BarrierBlock) &&
-                            !(bsBelow.getBlock() instanceof SlabBlock && bsBelow.getValue(BlockStateProperties.SLAB_TYPE) == SlabType.BOTTOM)) {
-                        solidBlocksBelow += 1;
-                    }
-                }
-            }
-        }
-        if (blocksBelow <= 0) {
-            return false; // avoid division by 0
-        }
-        return ((float) solidBlocksBelow / (float) blocksBelow) < MIN_SUPPORTED_BLOCKS_PERCENT;
+        return MC.level != null
+                && !BuildingUtils.hasValidGroundSupport(MC.level, blocksToDraw, originPos);
     }
 
     // disallow the building borders from overlapping any other's, even if they don't collide physical blocks

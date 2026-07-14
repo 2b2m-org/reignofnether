@@ -23,7 +23,6 @@ import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.block.Rotation;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -242,18 +241,19 @@ public final class BotController {
         if (tick < nextBuildingPlacementTick)
             return false;
 
-        var origin = BotBuildingPlanner.findPlacement(
+        var planned = BotBuildingPlanner.findPlacement(
                 level, building, player.aiHomePos, false, worldView, role);
-        if (origin.isEmpty()) {
+        if (planned.isEmpty()) {
             nextBuildingPlacementTick = tick + BUILDING_PLACEMENT_RETRY_TICKS;
             return false;
         }
         nextBuildingPlacementTick = 0;
+        BotBuildingPlanner.Placement placementPlan = planned.get();
 
         BuildingPlacement placement = BuildingServerEvents.placeBuilding(
                 building,
-                origin.get(),
-                Rotation.NONE,
+                placementPlan.origin(),
+                placementPlan.rotation(),
                 ownerName,
                 new int[]{builder.getId()},
                 false,
@@ -272,7 +272,8 @@ public final class BotController {
         }
 
         ReignOfNether.LOGGER.info(
-                "[Bot] {} placed {} at {}", displayName, building.name, placement.originPos);
+                "[Bot] {} placed {} at {} rotation={}", displayName, building.name,
+                placement.originPos, placementPlan.rotation());
         return true;
     }
 
