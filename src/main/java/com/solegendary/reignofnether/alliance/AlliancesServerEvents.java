@@ -69,16 +69,6 @@ public class AlliancesServerEvents {
         return alliances.getOrDefault(owner1, Collections.emptySet()).contains(owner2);
     }
 
-    public static boolean isEligibleCaptureOwner(String currentOwner, String candidateOwner) {
-        RTSPlayer candidate = PlayerServerEvents.getRTSPlayer(candidateOwner);
-        return candidate == null
-                || isEligibleCaptureOwner(candidate.aiControlled, isAllied(currentOwner, candidateOwner));
-    }
-
-    static boolean isEligibleCaptureOwner(boolean aiControlled, boolean allied) {
-        return !aiControlled || !allied;
-    }
-
     // New method to retrieve direct allies
     public static Set<String> getAllAllies(String owner) {
         return alliances.getOrDefault(owner, Collections.emptySet());

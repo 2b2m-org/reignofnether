@@ -1252,10 +1252,15 @@ public class BuildingPlacement {
             }
         }
         if (!ownerHasUnit) {
-            String highestPopPlayer = CaptureDecision.highestPopulationOwner(playerPopCounts);
-            if (highestPopPlayer != null) {
-                if (!AlliancesServerEvents.isEligibleCaptureOwner(ownerName, highestPopPlayer))
-                    return false;
+            String highestPopPlayer = null;
+            int highestPop = 0;
+            for (String playerName : playerPopCounts.keySet()) {
+                if (playerPopCounts.get(playerName) > highestPop) {
+                    highestPop = playerPopCounts.get(playerName);
+                    highestPopPlayer = playerName;
+                }
+            }
+            if (highestPop > 0 && highestPopPlayer != null) {
                 boolean capturedByAlly = AlliancesServerEvents.isAllied(ownerName, highestPopPlayer);
 
                 if (!highestPopPlayer.equals(ownerName) &&
