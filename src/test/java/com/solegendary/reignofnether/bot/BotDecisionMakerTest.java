@@ -103,12 +103,12 @@ class BotDecisionMakerTest {
                 () -> assertEquals(BotGoal.TRAIN_ARMY,
                         BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                        true, true, 7, 11, 18, 40, false, 1, 3,
+                                        true, true, 7, 26, 33, 60, false, 1, 3,
                                         true, true, true))),
                 () -> assertEquals(BotGoal.TRAIN_WORKER,
                         BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                        true, true, 7, 12, 19, 40, false, 1, 3,
+                                        true, true, 7, 27, 34, 60, false, 1, 3,
                                         true, true, true))),
                 () -> assertEquals(BotGoal.TRAIN_WORKER,
                         BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.TURTLE,
@@ -129,16 +129,20 @@ class BotDecisionMakerTest {
     }
 
     @Test
-    void hardOpeningArmySizeReflectsPersonality() {
+    void hardOpeningArmyMatchesMediumPressureWithAScoutReserve() {
         assertAll(
-                () -> assertEquals(8, BotDecisionMaker.openingArmyPopulation(
-                        BotDifficulty.HARD, BotPersonality.RUSHER)),
-                () -> assertEquals(12, BotDecisionMaker.openingArmyPopulation(
-                        BotDifficulty.HARD, BotPersonality.STEADY)),
-                () -> assertEquals(16, BotDecisionMaker.openingArmyPopulation(
-                        BotDifficulty.HARD, BotPersonality.TURTLE)),
+                () -> assertEquals(23, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.RUSHER, 3)),
+                () -> assertEquals(27, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 3)),
+                () -> assertEquals(31, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.TURTLE, 3)),
+                () -> assertEquals(25, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 1)),
+                () -> assertEquals(26, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 2)),
                 () -> assertEquals(0, BotDecisionMaker.openingArmyPopulation(
-                        BotDifficulty.MEDIUM, BotPersonality.TURTLE))
+                        BotDifficulty.MEDIUM, BotPersonality.TURTLE, 3))
         );
     }
 

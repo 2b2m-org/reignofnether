@@ -74,33 +74,34 @@ public final class BotDecisionMaker {
             return BotGoal.BUILD_MILITARY;
         if (!context.militaryReady())
             return shouldTrainWorker(difficulty, personality,
-                    context.workersAndQueued(), context.armyAndQueuedPopulation())
+                    context.workersAndQueued(), context.armyAndQueuedPopulation(),
+                    context.armyPopulationCost())
                     ? BotGoal.TRAIN_WORKER
                     : BotGoal.WAIT_FOR_MILITARY;
         if (shouldTrainWorker(difficulty, personality,
-                context.workersAndQueued(), context.armyAndQueuedPopulation()))
+                context.workersAndQueued(), context.armyAndQueuedPopulation(),
+                context.armyPopulationCost()))
             return BotGoal.TRAIN_WORKER;
         return BotGoal.TRAIN_ARMY;
     }
 
-    static int openingArmyPopulation(BotDifficulty difficulty, BotPersonality personality) {
+    static int openingArmyPopulation(BotDifficulty difficulty, BotPersonality personality,
+                                     int armyUnitPopulation) {
         if (difficulty != BotDifficulty.HARD)
             return 0;
-        return switch (personality) {
-            case RUSHER -> 8;
-            case STEADY -> 12;
-            case TURTLE -> 16;
-        };
+        return attackPopulation(BotDifficulty.MEDIUM, personality) + Math.max(1, armyUnitPopulation);
     }
 
     static boolean shouldTrainWorker(BotDifficulty difficulty, BotPersonality personality,
-                                     int workersAndQueued, int armyAndQueuedPopulation) {
+                                     int workersAndQueued, int armyAndQueuedPopulation,
+                                     int armyUnitPopulation) {
         int targetWorkers = targetWorkers(difficulty, personality);
         if (workersAndQueued >= targetWorkers)
             return false;
         int initialWorkers = Math.min(targetWorkers, 5);
         return workersAndQueued < initialWorkers
-                || armyAndQueuedPopulation >= openingArmyPopulation(difficulty, personality);
+                || armyAndQueuedPopulation >= openingArmyPopulation(
+                        difficulty, personality, armyUnitPopulation);
     }
 
     public static int foodWorkerCount(BotDifficulty difficulty, BotPersonality personality,
