@@ -37,15 +37,18 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import static com.solegendary.reignofnether.building.BuildingUtils.getAbsoluteBlockData;
 
 public class BeaconPlacement extends ProductionPlacement implements RangeIndicator {
+    private static final int AURA_SWITCH_TICKS = 50;
+
     public BlockPos beaconPos;
     private Holder<MobEffect> auraEffect = null;
     private boolean beaconActive = false;
+    private Holder<MobEffect> pendingAuraEffect = null;
+    private String pendingAuraOwner = null;
+    private int pendingAuraTicks = 0;
     public BeaconPlacement(Building building, Level level, BlockPos originPos, Rotation rotation, String ownerName, ArrayList<BuildingBlock> blocks, boolean isCapitol) {
         super(building, level, originPos, rotation, ownerName, blocks, isCapitol);
         for (BuildingBlock bb : blocks)
@@ -119,6 +122,7 @@ public class BeaconPlacement extends ProductionPlacement implements RangeIndicat
     }
 
     public void activate(Holder<MobEffect> effect) {
+        clearPendingAura();
         beaconActive = true;
         auraEffect = effect;
         if (!level.isClientSide()) {
@@ -128,6 +132,7 @@ public class BeaconPlacement extends ProductionPlacement implements RangeIndicat
     }
 
     public void deactivate() {
+        clearPendingAura();
         beaconActive = false;
         auraEffect = null;
         if (!level.isClientSide()) {
@@ -138,13 +143,11 @@ public class BeaconPlacement extends ProductionPlacement implements RangeIndicat
 
     // serverside only
     public void setAuraEffect(Holder<MobEffect> effect) {
-        // turn off the beacon
-        // after delay, turn on the beacon and change the effect
         if (isBeaconActive()) {
             deactivate();
-            CompletableFuture.delayedExecutor(2500, TimeUnit.MILLISECONDS).execute(() -> {
-                activate(effect);
-            });
+            pendingAuraEffect = effect;
+            pendingAuraOwner = ownerName;
+            pendingAuraTicks = AURA_SWITCH_TICKS;
         } else {
             activate(effect);
         }
@@ -153,6 +156,14 @@ public class BeaconPlacement extends ProductionPlacement implements RangeIndicat
     @Override
     public void tick(Level tickLevel) {
         super.tick(tickLevel);
+        if (!tickLevel.isClientSide() && pendingAuraEffect != null) {
+            if (!ownerName.equals(pendingAuraOwner)) {
+                clearPendingAura();
+            } else if (--pendingAuraTicks <= 0) {
+                Holder<MobEffect> effect = pendingAuraEffect;
+                activate(effect);
+            }
+        }
         if (tickLevel.isClientSide && tickAgeAfterBuilt > 0 && tickAgeAfterBuilt % 100 == 0)
             updateHighlightBps();
 
@@ -188,6 +199,12 @@ public class BeaconPlacement extends ProductionPlacement implements RangeIndicat
                 ResourcesServerEvents.addSubtractResources(new Resources(this.ownerName, 1, 1, 1));
             }
         }
+    }
+
+    private void clearPendingAura() {
+        pendingAuraEffect = null;
+        pendingAuraOwner = null;
+        pendingAuraTicks = 0;
     }
 
     @Override

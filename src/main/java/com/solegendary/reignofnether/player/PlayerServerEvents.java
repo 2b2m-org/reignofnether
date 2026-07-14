@@ -1096,11 +1096,17 @@ public class PlayerServerEvents {
                 System.err.println("ConcurrentModificationException during beaconVictory: " + e.getMessage());
             }
         } else {
-            for (RTSPlayer p : rtsPlayers) {
-                String n = p.name;
-                if (AlliancesServerEvents.isAllied(playerName, n) || n.equals(playerName)) continue;
-                defeat(n, Component.translatable("server.reignofnether.beacon_defeat").getString());
+            List<String> losers;
+            synchronized (rtsPlayers) {
+                losers = rtsPlayers.stream()
+                        .map(player -> player.name)
+                        .filter(name -> !name.equals(playerName)
+                                && !AlliancesServerEvents.isAllied(playerName, name))
+                        .toList();
             }
+            String reason = Component.translatable("server.reignofnether.beacon_defeat").getString();
+            for (String loser : losers)
+                defeat(loser, reason);
         }
     }
 
