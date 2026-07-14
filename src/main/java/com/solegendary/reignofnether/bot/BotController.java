@@ -39,6 +39,12 @@ public final class BotController {
     private static final int WORKER_FLEE_TARGET_CHANGE_DISTANCE_SQR = 8 * 8;
     private static final int WORKER_FLEE_ARRIVAL_DISTANCE_SQR = 4 * 4;
 
+    private record ArmyComposition(int meleePopulation, int rangedPopulation) {
+        int totalPopulation() {
+            return meleePopulation + rangedPopulation;
+        }
+    }
+
     private final String ownerName;
     private final String displayName;
     private final BotSelf self;
@@ -120,7 +126,7 @@ public final class BotController {
                     && (nextGoal == BotGoal.WAIT_FOR_MILITARY || context.militaryReady()
                     || context.workersAndQueued()
                     >= BotDecisionMaker.targetWorkers(difficulty, personality));
-            assignWorkerJobs(strategy, difficulty, personality, productionPriority,
+            assignWorkerJobs(strategy, difficulty, personality, nextGoal, productionPriority,
                     availableWorkers, visibleMilitaryEnemies);
             nextWorkerReconcileTick = tick + difficulty.workerReconcileTicks();
         }
@@ -225,6 +231,34 @@ public final class BotController {
                 + self.queuedPopulation(strategy.ranged());
     }
 
+    private ArmyComposition armyComposition(BotStrategy strategy) {
+        List<LivingEntity> army = self.army();
+        int currentRangedPopulation = BotSelf.population(army.stream()
+                .filter(RangedAttackerUnit.class::isInstance)
+                .toList());
+        return new ArmyComposition(
+                BotSelf.population(army) - currentRangedPopulation
+                        + self.queuedPopulation(strategy.melee()),
+                currentRangedPopulation + self.queuedPopulation(strategy.ranged())
+        );
+    }
+
+    private BotDecisionMaker.ArmyUnitChoice chooseArmyUnit(
+            BotStrategy strategy, BotPersonality personality, ArmyComposition composition,
+            int targetPopulation, boolean meleeAvailable, boolean rangedAvailable) {
+        ResourceCost meleeCost = strategy.melee().getCost(false, ownerName);
+        ResourceCost rangedCost = strategy.ranged().getCost(false, ownerName);
+        return BotDecisionMaker.chooseArmyUnit(
+                personality,
+                composition.meleePopulation(),
+                composition.rangedPopulation(),
+                meleeAvailable && BotDecisionMaker.fitsArmyPopulation(
+                        composition.totalPopulation(), Math.max(1, meleeCost.population), targetPopulation),
+                rangedAvailable && BotDecisionMaker.fitsArmyPopulation(
+                        composition.totalPopulation(), Math.max(1, rangedCost.population), targetPopulation)
+        );
+    }
+
     private boolean buildStructure(ServerLevel level, RTSPlayer player, Building building, ProductionItem transform,
                                    BotBuildingPlanner.PlacementRole role, BotDifficulty difficulty) {
         if (!self.canAfford(building))
@@ -283,15 +317,8 @@ public final class BotController {
         if (building == null || !building.isBuilt)
             return;
 
-        List<LivingEntity> army = self.army();
-        List<LivingEntity> ranged = army.stream()
-                .filter(RangedAttackerUnit.class::isInstance)
-                .toList();
-        int currentRangedPopulation = BotSelf.population(ranged);
-        int rangedPopulation = currentRangedPopulation + self.queuedPopulation(strategy.ranged());
-        int meleePopulation = BotSelf.population(army) - currentRangedPopulation
-                + self.queuedPopulation(strategy.melee());
-        int armyAndQueuedPopulation = meleePopulation + rangedPopulation;
+        ArmyComposition composition = armyComposition(strategy);
+        int armyAndQueuedPopulation = composition.totalPopulation();
         int targetPopulation = BotDecisionMaker.targetArmyPopulation(difficulty, personality);
         if (armyAndQueuedPopulation >= targetPopulation
                 || building.productionQueue.size() >= difficulty.maxProductionQueue())
@@ -310,19 +337,9 @@ public final class BotController {
                 && BotDecisionMaker.canSpendAndPreserveReserve(resources, rangedCost, workerCost)
                 && (portalTransformCost == null || BotDecisionMaker.canSpendWithoutDelaying(
                         resources, rangedCost, portalTransformCost));
-        int meleePopulationCost = Math.max(1, meleeCost.population);
-        int rangedPopulationCost = Math.max(1, rangedCost.population);
-        BotDecisionMaker.ArmyUnitChoice choice = BotDecisionMaker.chooseArmyUnit(
-                personality,
-                meleePopulation,
-                rangedPopulation,
-                canAffordMelee
-                        && BotDecisionMaker.fitsArmyPopulation(
-                        armyAndQueuedPopulation, meleePopulationCost, targetPopulation),
-                canAffordRanged
-                        && BotDecisionMaker.fitsArmyPopulation(
-                        armyAndQueuedPopulation, rangedPopulationCost, targetPopulation)
-        );
+        BotDecisionMaker.ArmyUnitChoice choice = chooseArmyUnit(
+                strategy, personality, composition, targetPopulation,
+                canAffordMelee, canAffordRanged);
         ProductionItem item = switch (choice) {
             case MELEE -> strategy.melee();
             case RANGED -> strategy.ranged();
@@ -489,7 +506,8 @@ public final class BotController {
     }
 
     private void assignWorkerJobs(BotStrategy strategy, BotDifficulty difficulty,
-                                  BotPersonality personality, boolean productionPriority,
+                                  BotPersonality personality, BotGoal goal,
+                                  boolean productionPriority,
                                   List<LivingEntity> workers,
                                   List<LivingEntity> visibleEnemies) {
         BuildingPlacement farm = self.building(strategy.farm());
@@ -497,17 +515,22 @@ public final class BotController {
             farm = null;
 
         reassignOrphanedBuilders(workers, visibleEnemies);
-        int foodWorkers = BotDecisionMaker.foodWorkerCount(
-                difficulty, personality, workers.size(), productionPriority);
+        List<LivingEntity> assignableWorkers = workers.stream()
+                .filter(this::isAvailableBuilder)
+                .toList();
+        BotDecisionMaker.WorkerAllocation allocation = BotDecisionMaker.workerAllocation(
+                difficulty, personality, assignableWorkers.size(), productionPriority,
+                self.resources(), plannedResourceTarget(strategy, difficulty, personality, goal));
         int workerIndex = 0;
-        for (LivingEntity entity : workers) {
+        for (LivingEntity entity : assignableWorkers) {
             WorkerUnit worker = (WorkerUnit) entity;
             Unit unit = (Unit) entity;
-            ResourceName resource = workerIndex++ < foodWorkers ? ResourceName.FOOD : ResourceName.WOOD;
-            if (worker.getBuildRepairGoal().getBuildingTarget() != null
-                    || !worker.getBuildRepairGoal().queuedBuildings.isEmpty()
-                    || unit.getReturnResourcesGoal().getBuildingTarget() != null)
-                continue;
+            ResourceName resource = workerIndex < allocation.food()
+                    ? ResourceName.FOOD
+                    : (workerIndex < allocation.food() + allocation.wood()
+                    ? ResourceName.WOOD
+                    : ResourceName.ORE);
+            workerIndex++;
 
             BuildingPlacement targetFarm = resource == ResourceName.FOOD ? farm : null;
             GatherResourcesGoal gather = worker.getGatherResourceGoal();
@@ -517,6 +540,65 @@ public final class BotController {
                 gather.setTargetFarm(targetFarm);
             }
         }
+    }
+
+    private ResourceCost plannedResourceTarget(BotStrategy strategy, BotDifficulty difficulty,
+                                               BotPersonality personality, BotGoal goal) {
+        return switch (goal) {
+            case BUILD_CAPITOL -> strategy.capitol().cost;
+            case BUILD_SUPPLY -> structurePackageCost(
+                    strategy.supply(), strategy.supplyTransform());
+            case BUILD_FARM -> strategy.farm().cost;
+            case BUILD_MILITARY -> structurePackageCost(
+                    strategy.military(), strategy.militaryTransform());
+            case TRAIN_WORKER -> {
+                ResourceCost pendingTransform = self.pendingPortalTransformCost(strategy);
+                yield pendingTransform == null
+                        ? strategy.worker().getCost(false, ownerName)
+                        : pendingTransform;
+            }
+            case TRAIN_ARMY -> {
+                ResourceCost pendingTransform = self.pendingPortalTransformCost(strategy);
+                if (pendingTransform != null)
+                    yield pendingTransform;
+                ResourceCost melee = strategy.melee().getCost(false, ownerName);
+                ResourceCost ranged = strategy.ranged().getCost(false, ownerName);
+                ArmyComposition composition = armyComposition(strategy);
+                BotDecisionMaker.ArmyUnitChoice choice = chooseArmyUnit(
+                        strategy,
+                        personality,
+                        composition,
+                        BotDecisionMaker.targetArmyPopulation(difficulty, personality),
+                        true,
+                        true
+                );
+                ResourceCost unit = switch (choice) {
+                    case MELEE -> melee;
+                    case RANGED -> ranged;
+                    case NONE -> null;
+                };
+                yield unit == null ? null : addResourceCosts(
+                        unit, strategy.worker().getCost(false, ownerName));
+            }
+            case WAIT_FOR_MILITARY -> self.pendingPortalTransformCost(strategy);
+            case WAIT_FOR_CAPITOL -> null;
+        };
+    }
+
+    private ResourceCost structurePackageCost(Building building, ProductionItem transform) {
+        if (transform == null)
+            return building.cost;
+        return addResourceCosts(
+                building.cost, transform.getCost(false, ownerName));
+    }
+
+    private static ResourceCost addResourceCosts(ResourceCost first, ResourceCost second) {
+        return ResourceCost.Research(
+                first.food + second.food,
+                first.wood + second.wood,
+                first.ore + second.ore,
+                0
+        );
     }
 
     private boolean maintainRepairs(List<LivingEntity> workers, List<LivingEntity> visibleEnemies,

@@ -20,6 +20,9 @@ public final class BotDecisionMaker {
         RANGED
     }
 
+    public record WorkerAllocation(int food, int wood, int ore) {
+    }
+
     public enum ScoutWaypointDecision {
         KEEP,
         PROGRESS,
@@ -119,6 +122,73 @@ public final class BotDecisionMaker {
         };
     }
 
+    public static WorkerAllocation workerAllocation(
+            BotDifficulty difficulty, BotPersonality personality, int totalWorkers,
+            boolean productionPriority, Resources resources, ResourceCost target) {
+        int workers = Math.max(0, totalWorkers);
+        int foodWorkers = foodWorkerCount(
+                difficulty, personality, workers, productionPriority);
+        int[] allocation = {foodWorkers, workers - foodWorkers, 0};
+        if (workers == 0 || resources == null || target == null)
+            return new WorkerAllocation(allocation[0], allocation[1], allocation[2]);
+
+        int[] available = {resources.food, resources.wood, resources.ore};
+        int[] required = {target.food, target.wood, target.ore};
+        boolean[] deficient = new boolean[3];
+        int deficientResources = 0;
+        for (int resource = 0; resource < deficient.length; resource++) {
+            deficient[resource] = available[resource] < required[resource];
+            if (deficient[resource])
+                deficientResources++;
+        }
+        if (deficientResources == 0)
+            return new WorkerAllocation(allocation[0], allocation[1], allocation[2]);
+
+        if (deficientResources > workers) {
+            allocation = new int[3];
+            for (int worker = 0; worker < workers; worker++) {
+                int resource = highestPriorityDeficit(required, deficient, allocation);
+                allocation[resource] = 1;
+            }
+        } else {
+            for (int resource = 0; resource < deficient.length; resource++) {
+                if (!deficient[resource] || allocation[resource] > 0)
+                    continue;
+                int donor = allocationDonor(allocation, deficient);
+                allocation[donor]--;
+                allocation[resource]++;
+            }
+        }
+        return new WorkerAllocation(allocation[0], allocation[1], allocation[2]);
+    }
+
+    private static int highestPriorityDeficit(int[] required, boolean[] deficient,
+                                              int[] allocation) {
+        int best = -1;
+        for (int resource = 0; resource < deficient.length; resource++) {
+            if (!deficient[resource] || allocation[resource] > 0)
+                continue;
+            if (best < 0 || required[resource] > required[best])
+                best = resource;
+        }
+        return best;
+    }
+
+    private static int allocationDonor(int[] allocation, boolean[] deficient) {
+        int donor = -1;
+        for (int resource = 0; resource < allocation.length; resource++) {
+            if (allocation[resource] == 0
+                    || deficient[resource] && allocation[resource] == 1)
+                continue;
+            if (donor < 0
+                    || (deficient[donor] && !deficient[resource])
+                    || (deficient[donor] == deficient[resource]
+                    && allocation[resource] > allocation[donor]))
+                donor = resource;
+        }
+        return donor;
+    }
+
     static boolean fitsArmyPopulation(int armyPopulation, int unitPopulation, int targetPopulation) {
         return armyPopulation + unitPopulation <= targetPopulation;
     }
@@ -149,19 +219,19 @@ public final class BotDecisionMaker {
 
     public static ArmyUnitChoice chooseArmyUnit(BotPersonality personality, int meleePopulation,
                                                  int rangedPopulation,
-                                                 boolean canAffordMelee, boolean canAffordRanged) {
+                                                 boolean meleeAvailable, boolean rangedAvailable) {
         int armyPopulation = meleePopulation + rangedPopulation;
         boolean preferRanged = armyPopulation > 0
                 && rangedPopulation * personality.compositionDenominator()
                 < armyPopulation * personality.rangedNumerator();
 
-        if (preferRanged && canAffordRanged)
+        if (preferRanged && rangedAvailable)
             return ArmyUnitChoice.RANGED;
-        if (!preferRanged && canAffordMelee)
+        if (!preferRanged && meleeAvailable)
             return ArmyUnitChoice.MELEE;
-        if (canAffordMelee)
+        if (meleeAvailable)
             return ArmyUnitChoice.MELEE;
-        if (canAffordRanged)
+        if (rangedAvailable)
             return ArmyUnitChoice.RANGED;
         return ArmyUnitChoice.NONE;
     }

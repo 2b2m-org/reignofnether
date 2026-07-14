@@ -514,6 +514,92 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void workerAllocationPreservesNormalFoodAndWoodSplits() {
+        assertEquals(
+                new BotDecisionMaker.WorkerAllocation(3, 1, 0),
+                BotDecisionMaker.workerAllocation(
+                        BotDifficulty.EASY,
+                        BotPersonality.STEADY,
+                        4,
+                        false,
+                        new Resources("bot", 0, 0, 0),
+                        ResourceCost.Unit(170, 80, 0, 1, 1)
+                )
+        );
+    }
+
+    @Test
+    void workerAllocationCoversCapitolRebuildResourcesWithoutCheating() {
+        ResourceCost capitol = ResourceCost.Building(0, 350, 250, 10);
+
+        assertAll(
+                () -> assertEquals(
+                        new BotDecisionMaker.WorkerAllocation(1, 1, 1),
+                        BotDecisionMaker.workerAllocation(
+                                BotDifficulty.EASY,
+                                BotPersonality.STEADY,
+                                3,
+                                false,
+                                new Resources("bot", 0, 100, 0),
+                                capitol
+                        )
+                ),
+                () -> assertEquals(
+                        new BotDecisionMaker.WorkerAllocation(0, 1, 1),
+                        BotDecisionMaker.workerAllocation(
+                                BotDifficulty.EASY,
+                                BotPersonality.STEADY,
+                                2,
+                                false,
+                                new Resources("bot", 0, 0, 0),
+                                capitol
+                        )
+                ),
+                () -> assertEquals(
+                        new BotDecisionMaker.WorkerAllocation(0, 1, 0),
+                        BotDecisionMaker.workerAllocation(
+                                BotDifficulty.EASY,
+                                BotPersonality.STEADY,
+                                1,
+                                false,
+                                new Resources("bot", 0, 0, 0),
+                                capitol
+                        )
+                ),
+                () -> assertEquals(
+                        new BotDecisionMaker.WorkerAllocation(0, 0, 1),
+                        BotDecisionMaker.workerAllocation(
+                                BotDifficulty.EASY,
+                                BotPersonality.STEADY,
+                                1,
+                                false,
+                                new Resources("bot", 0, 350, 0),
+                                capitol
+                        )
+                )
+        );
+    }
+
+    @Test
+    void workerAllocationFundsConfiguredMixedResourceCosts() {
+        BotDecisionMaker.WorkerAllocation allocation = BotDecisionMaker.workerAllocation(
+                BotDifficulty.MEDIUM,
+                BotPersonality.STEADY,
+                3,
+                false,
+                new Resources("bot", 0, 200, 0),
+                ResourceCost.Unit(90, 60, 120, 1, 1)
+        );
+
+        assertAll(
+                () -> assertEquals(2, allocation.food()),
+                () -> assertEquals(0, allocation.wood()),
+                () -> assertEquals(1, allocation.ore()),
+                () -> assertEquals(3, allocation.food() + allocation.wood() + allocation.ore())
+        );
+    }
+
+    @Test
     void monsterArmyShelterWindowSpansMidnightThroughDaylight() {
         assertAll(
                 () -> assertFalse(BotDecisionMaker.shouldShelterMonsterArmy(21999, false)),
@@ -560,6 +646,20 @@ class BotDecisionMakerTest {
         assertAll(
                 () -> assertTrue(BotDecisionMaker.fitsArmyPopulation(33, 3, 36)),
                 () -> assertFalse(BotDecisionMaker.fitsArmyPopulation(34, 3, 36))
+        );
+    }
+
+    @Test
+    void armyFundingSelectsTheConfiguredUnitThatFits() {
+        assertEquals(
+                BotDecisionMaker.ArmyUnitChoice.RANGED,
+                BotDecisionMaker.chooseArmyUnit(
+                        BotPersonality.STEADY,
+                        9,
+                        6,
+                        BotDecisionMaker.fitsArmyPopulation(15, 3, 17),
+                        BotDecisionMaker.fitsArmyPopulation(15, 2, 17)
+                )
         );
     }
 
