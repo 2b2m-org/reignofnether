@@ -6,6 +6,8 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.buildings.placements.PortalPlacement;
+import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.fogofwar.FrozenChunkClientboundPacket;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
@@ -13,9 +15,10 @@ import com.solegendary.reignofnether.sounds.SoundAction;
 import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
 import com.solegendary.reignofnether.time.TimeUtils;
 import com.solegendary.reignofnether.tutorial.TutorialServerEvents;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
-import com.solegendary.reignofnether.faction.Faction;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
@@ -25,11 +28,15 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import static com.solegendary.reignofnether.time.TimeUtils.getWaveSurvivalTimeModifier;
@@ -54,6 +61,8 @@ public class SurvivalServerEvents {
     private static long ticks = 0;
 
     private static ArrayList<BuildingPlacement> lastPortals = new ArrayList<>();
+    private static final Map<BlockPos, WavePortal.SaveState> restoredPortalStates = new HashMap<>();
+    private static boolean awaitingPortalRestore = false;
 
     private static ServerLevel serverLevel = null;
 
@@ -62,30 +71,68 @@ public class SurvivalServerEvents {
     }
 
     public static void saveData(ServerLevel level) {
+        updateSaveData(level);
+        level.getDataStorage().save();
+        //ReignOfNether.LOGGER.info("saved survival data in serverevents");
+    }
+
+    private static void updateSaveData(ServerLevel level) {
         SurvivalSaveData survivalData = SurvivalSaveData.getInstance(level);
         survivalData.isEnabled = isEnabled;
         survivalData.waveNumber = nextWave.number;
         survivalData.lastStartedWaveNumber = lastStartedWaveNumber;
         survivalData.difficulty = difficulty;
         survivalData.randomSeed = Wave.randomSeed;
+        survivalData.portalStates.clear();
+        survivalData.portalStates.putAll(restoredPortalStates);
+        for (WavePortal portal : portals)
+            survivalData.portalStates.put(portal.getPortal().originPos, portal.saveState());
         survivalData.save();
-        level.getDataStorage().save();
-        //ReignOfNether.LOGGER.info("saved survival data in serverevents");
     }
 
-    @SubscribeEvent
+    private static void saveWaveAndBuildings(ServerLevel level) {
+        updateSaveData(level);
+        BuildingServerEvents.saveBuildings(level);
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void loadWaveData(ServerStartedEvent evt) {
         ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
         if (level != null) {
+            serverLevel = level;
+            currentWave = null;
+            enemies.clear();
+            portals.clear();
+            lastPortals.clear();
+            restoredPortalStates.clear();
+            lastTime = -1;
+            lastEnemyCount = 0;
+            ticks = 0;
+            lastFaction = Faction.NONE;
+
             SurvivalSaveData survivalData = SurvivalSaveData.getInstance(level);
             isEnabled = survivalData.isEnabled;
-            nextWave = Wave.getWave(survivalData.waveNumber);
             lastStartedWaveNumber = survivalData.lastStartedWaveNumber;
             Wave.randomSeed = survivalData.randomSeed;
             Wave.reseedWaves();
+            int nextWaveNumber = survivalData.waveNumber;
+            // Older saves wrote the active wave to the next-wave pointer just before spawning it.
+            // Matching values prove that wave already started and the pointer must advance.
+            if (isEnabled && survivalData.legacyWavePointer
+                    && nextWaveNumber == lastStartedWaveNumber)
+                nextWaveNumber += 1;
+            nextWave = Wave.getWave(nextWaveNumber);
             difficulty = survivalData.difficulty;
+            if (isEnabled)
+                restoredPortalStates.putAll(survivalData.portalStates);
+            awaitingPortalRestore = !restoredPortalStates.isEmpty();
 
             if (isEnabled()) {
+                for (LivingEntity entity : UnitServerEvents.getAllUnits())
+                    if (entity.level() == level && entity.isAlive()
+                            && entity instanceof Unit unit && ENEMY_OWNER_NAME.equals(unit.getOwnerName()))
+                        registerEnemy(unit);
+                reconcilePortals();
                 SurvivalClientboundPacket.enableAndSetDifficulty(difficulty);
                 SurvivalClientboundPacket.setWaveNumber(nextWave.number);
             }
@@ -150,13 +197,23 @@ public class SurvivalServerEvents {
         for (WaveEnemy enemy : enemies)
             enemy.tick(TICK_INTERVAL);
 
-        // detect new portals and update portals list accordingly
+        reconcilePortals();
+
+        for (WavePortal portal : portals)
+            portal.tick(TICK_INTERVAL);
+        updateSaveData(serverLevel);
+
+        lastTime = normTime;
+        lastEnemyCount = enemyCount;
+    }
+
+    private static void reconcilePortals() {
         List<BuildingPlacement> currentPortals = new ArrayList<>();
         for (BuildingPlacement b : BuildingServerEvents.getBuildings()) {
             if (ENEMY_OWNER_NAME.equals(b.ownerName) && b instanceof PortalPlacement) {
                 currentPortals.add(b);
                 if (!lastPortals.contains(b))
-                    SurvivalServerEvents.portals.add(new WavePortal((PortalPlacement) b, currentWave != null ? currentWave : nextWave));
+                    SurvivalServerEvents.portals.add(createWavePortal((PortalPlacement) b));
             }
         }
 
@@ -164,12 +221,27 @@ public class SurvivalServerEvents {
 
         lastPortals.clear();
         lastPortals.addAll(currentPortals);
+        if (awaitingPortalRestore) {
+            restoredPortalStates.clear();
+            awaitingPortalRestore = false;
+        }
+    }
 
-        for (WavePortal portal : portals)
-            portal.tick(TICK_INTERVAL);
+    private static WavePortal createWavePortal(PortalPlacement portal) {
+        WavePortal.SaveState restoredState = restoredPortalStates.remove(portal.originPos);
+        if (restoredState != null)
+            return new WavePortal(portal, Wave.getWave(restoredState.waveNumber()), restoredState);
+        if (currentWave != null)
+            return new WavePortal(portal, currentWave);
 
-        lastTime = normTime;
-        lastEnemyCount = enemyCount;
+        Wave restoredWave = Wave.getWave(lastStartedWaveNumber);
+        return new WavePortal(portal, restoredWave,
+                new WavePortal.SaveState(
+                        restoredWave.number,
+                        0,
+                        0,
+                        restoredWave.population * PlayerServerEvents.rtsPlayers.size()
+                ));
     }
 
     @SubscribeEvent
@@ -205,14 +277,13 @@ public class SurvivalServerEvents {
         ArrayList<WaveEnemy> enemiesCopy = new ArrayList<>(enemies);
         for (WaveEnemy enemy : enemiesCopy)
             enemy.getEntity().kill();
-        ArrayList<WavePortal> portalsCopy = new ArrayList<>(portals);
-        for (WavePortal portal : portalsCopy)
-            portal.portal.destroy(serverLevel);
+        destroyPortals();
         enemies.clear();
         portals.clear();
         lastPortals.clear();
         currentWave = null;
         lastEnemyCount = 0;
+        saveWaveAndBuildings(serverLevel);
         return 1;
     }
 
@@ -234,9 +305,7 @@ public class SurvivalServerEvents {
     public static void reset() {
         for (WaveEnemy enemy : new ArrayList<>(enemies))
             enemy.getEntity().kill();
-        ArrayList<WavePortal> portalsCopy = new ArrayList<>(portals);
-        for (WavePortal portal : portalsCopy)
-            portal.portal.destroy(serverLevel);
+        destroyPortals();
         difficulty = WaveDifficulty.EASY;
         isEnabled = false;
         portals.clear();
@@ -244,13 +313,23 @@ public class SurvivalServerEvents {
         lastPortals.clear();
         currentWave = null;
         lastStartedWaveNumber = 0;
+        restoredPortalStates.clear();
+        awaitingPortalRestore = false;
         Wave.randomSeed = System.currentTimeMillis();
         Wave.reseedWaves();
         nextWave = Wave.getWave(1);
         SurvivalClientboundPacket.setWaveRandomSeed(Wave.randomSeed);
         lastTime = -1;
         if (serverLevel != null)
-            saveData(serverLevel);
+            saveWaveAndBuildings(serverLevel);
+    }
+
+    private static void destroyPortals() {
+        for (WavePortal portal : new ArrayList<>(portals)) {
+            FrozenChunkClientboundPacket.setBuildingDestroyedServerside(portal.portal.originPos);
+            BuildingServerEvents.getBuildings().remove(portal.portal);
+            portal.portal.destroy(serverLevel);
+        }
     }
 
     @SubscribeEvent
@@ -335,14 +414,16 @@ public class SurvivalServerEvents {
 
     // triggered at nightfall
     public static void startNextWave(ServerLevel level) {
-        lastStartedWaveNumber = nextWave.number;
-        saveData(level);
-        currentWave = nextWave;
-        System.out.println("starting wave: " + nextWave.faction.name());
-        nextWave.start(level);
-        nextWave = Wave.getWave(nextWave.number + 1);
+        Wave startingWave = nextWave;
+        lastStartedWaveNumber = startingWave.number;
+        currentWave = startingWave;
+        System.out.println("starting wave: " + startingWave.faction.name());
+        startingWave.start(level);
+        reconcilePortals();
+        nextWave = Wave.getWave(startingWave.number + 1);
         System.out.println("next wave: " + nextWave.faction.name());
         SurvivalClientboundPacket.setWaveNumber(nextWave.number);
+        saveWaveAndBuildings(level);
     }
 
     // triggered when last enemy is killed
@@ -350,6 +431,14 @@ public class SurvivalServerEvents {
         PlayerServerEvents.sendMessageToAllPlayers("survival.reignofnether.wave_cleared", true);
         SoundClientboundPacket.playSoundForAllPlayers(SoundAction.ALLY);
         currentWave = null;
+        saveWaveAndBuildings(level);
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent evt) {
+        ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
+        if (level != null)
+            saveData(level);
     }
 
     public static void setWaveNumber(int waveNumber) {

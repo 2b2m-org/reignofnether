@@ -25,6 +25,8 @@ import static com.solegendary.reignofnether.survival.spawners.WaveSpawner.getMod
 
 public class WavePortal {
 
+    record SaveState(int waveNumber, int spawnTicks, int initialSpawnPopulation, int targetPopulation) {}
+
     private static final int SPAWN_TICKS_MAX = 600;
     private int spawnTicks = 0;
 
@@ -36,15 +38,31 @@ public class WavePortal {
     private BlockPos lastOnPos;
 
     public WavePortal(PortalPlacement portal, Wave wave) {
+        this(portal, wave, new SaveState(
+                wave.number,
+                0,
+                (wave.population * PlayerServerEvents.rtsPlayers.size() / wave.getNumPortals()) / 2,
+                wave.population * PlayerServerEvents.rtsPlayers.size()
+        ));
+    }
+
+    WavePortal(PortalPlacement portal, Wave wave, SaveState state) {
         this.portal = portal;
         this.portal.selfBuilding = true;
+        if (!this.portal.isBuilt && !this.portal.hasPendingBlockPlacements())
+            this.portal.refreshBlocks();
         this.wave = wave;
-        this.targetPopulation = wave.population * PlayerServerEvents.rtsPlayers.size();
-        this.initialSpawnPop = (targetPopulation / wave.getNumPortals()) / 2;
+        this.targetPopulation = state.targetPopulation();
+        this.spawnTicks = state.spawnTicks();
+        this.initialSpawnPop = state.initialSpawnPopulation();
     }
 
     public PortalPlacement getPortal() {
         return portal;
+    }
+
+    SaveState saveState() {
+        return new SaveState(wave.number, spawnTicks, initialSpawnPop, targetPopulation);
     }
 
     public void tick(long ticksToAdd) {
