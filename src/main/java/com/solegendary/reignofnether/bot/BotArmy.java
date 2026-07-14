@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
+import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
@@ -13,11 +14,13 @@ import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,6 +40,8 @@ final class BotArmy {
     private static final double ARMY_INTERCEPTION_DISTANCE_SQR = 48 * 48;
     private static final double OBJECTIVE_PROGRESS_DISTANCE = 2;
     private static final double SCOUT_REACHED_DISTANCE_SQR = 144;
+    private static final int BEACON_GARRISON_MARGIN = 6;
+    private static final int BEACON_RETRY_TICKS = 600;
     private static final int[][] SCOUT_DIRECTIONS = {
             {1, 0}, {0, 1}, {-1, 0}, {0, -1},
             {1, 1}, {-1, 1}, {-1, -1}, {1, -1}
@@ -49,6 +54,12 @@ final class BotArmy {
     private final Map<BlockPos, Integer> targetCooldowns = new HashMap<>();
     private final Map<BuildingPlacement, Integer> friendlyBuildingBlockCounts = new HashMap<>();
     private final Map<BlockPos, Integer> defenseThreats = new HashMap<>();
+    private final Set<Integer> beaconGuardIds = new HashSet<>();
+    private BeaconPlacement trackedBeacon;
+    private String trackedBeaconOwner = "";
+    private double beaconAssaultBestDistance;
+    private int beaconAssaultLastProgressTick;
+    private int beaconRetryAfterTick;
     private AttackObjective objective;
     private double objectiveBestDistance;
     private int objectiveFewestBlocks;
@@ -88,6 +99,8 @@ final class BotArmy {
         if (fullArmy.isEmpty()) {
             clearObjective();
             clearScout();
+            beaconGuardIds.clear();
+            clearBeaconAssault();
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -103,17 +116,52 @@ final class BotArmy {
             return;
         }
 
+        boolean survivalEnabled = SurvivalServerEvents.isEnabled();
+        BeaconPlacement beacon = survivalEnabled ? null : worldView.capturableBeacon();
+        int visibleEnemyPopulationInBeaconRing = visibleEnemyPopulationInBeaconRing(
+                visibleEnemyCombatants, beacon);
+        BotDecisionMaker.BeaconControl beaconControl = beaconControl(beacon);
+        BotDecisionMaker.BeaconOrder beaconOrder = BotDecisionMaker.chooseBeaconOrder(
+                difficulty,
+                personality,
+                BotSelf.population(main),
+                visibleEnemyPopulationInBeaconRing,
+                beaconControl
+        );
+        if (beaconOrder == BotDecisionMaker.BeaconOrder.GARRISON) {
+            activateBeaconAura(beacon, personality);
+            List<LivingEntity> guards = reconcileBeaconGuards(
+                    main, beacon, BotDecisionMaker.beaconGuardCount(personality));
+            garrisonBeacon(guards, beacon);
+            main = main.stream()
+                    .filter(entity -> !beaconGuardIds.contains(entity.getId()))
+                    .toList();
+            beaconOrder = BotDecisionMaker.shouldReinforceBeacon(
+                    visibleEnemyPopulationInBeaconRing,
+                    BotSelf.population(guards))
+                    ? BotDecisionMaker.BeaconOrder.CONTEST
+                    : BotDecisionMaker.BeaconOrder.NONE;
+        } else {
+            beaconGuardIds.clear();
+        }
+        if (main.isEmpty()) {
+            clearObjective();
+            nextCommandTick = tick + difficulty.attackRefreshTicks();
+            return;
+        }
+
         BlockPos armyPos = armyCentroidRepresentative(main);
+        beaconOrder = applyBeaconBackoff(beaconOrder, beaconControl, beacon, main, tick);
         int mainPopulation = BotSelf.population(main);
         BotWorldView.KnownEnemyBuilding target = resolveObjective(player);
         if (objective != null && target == null)
             clearObjective();
-        boolean survivalEnabled = SurvivalServerEvents.isEnabled();
         if (survivalEnabled && objective == null
                 && mainPopulation >= BotDecisionMaker.attackPopulation(difficulty, personality))
             target = selectEnemyBuilding(player, personality, armyPos);
 
-        boolean attackReady = objective != null || target != null;
+        boolean attackReady = objective != null || target != null
+                || beaconOrder != BotDecisionMaker.BeaconOrder.NONE;
         BuildingPlacement defenseTarget = selectDefenseTarget(
                 strategy, personality, player.aiHomePos, attackReady, survivalEnabled, tick);
         boolean defenseThreat = defenseTarget != null;
@@ -159,7 +207,10 @@ final class BotArmy {
             return;
         }
         if (armyOrder == BotDecisionMaker.ArmyOrder.HOLD) {
-            attackMoveArmy(main, player.aiHomePos.above());
+            if (beaconOrder == BotDecisionMaker.BeaconOrder.NONE)
+                attackMoveArmy(main, player.aiHomePos.above());
+            else
+                captureBeacon(main, beacon, armyPos);
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -177,6 +228,12 @@ final class BotArmy {
                     ? selectRangedTarget(tacticalEnemyArmy, armyPos, player.aiHomePos)
                     : null;
             engageEnemyArmy(main, attackMoveTarget, rangedTarget);
+            nextCommandTick = tick + difficulty.attackRefreshTicks();
+            return;
+        }
+
+        if (beaconOrder != BotDecisionMaker.BeaconOrder.NONE) {
+            captureBeacon(main, beacon, armyPos);
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -206,6 +263,167 @@ final class BotArmy {
 
         attackMoveArmy(main, objective.anchor());
         nextCommandTick = tick + difficulty.attackRefreshTicks();
+    }
+
+    private BotDecisionMaker.BeaconControl beaconControl(BeaconPlacement beacon) {
+        if (beacon == null)
+            return BotDecisionMaker.BeaconControl.ABSENT;
+        if (beacon.ownerName.isBlank())
+            return BotDecisionMaker.BeaconControl.NEUTRAL;
+        if (beacon.ownerName.equals(ownerName))
+            return BotDecisionMaker.BeaconControl.OWNED;
+        if (AlliancesServerEvents.isAllied(ownerName, beacon.ownerName))
+            return BotDecisionMaker.BeaconControl.ALLIED;
+        return BotDecisionMaker.BeaconControl.HOSTILE;
+    }
+
+    private static int visibleEnemyPopulationInBeaconRing(List<LivingEntity> visibleEnemies,
+                                                           BeaconPlacement beacon) {
+        if (beacon == null)
+            return 0;
+        int range = beacon.getBuilding().captureRange;
+        double rangeSqr = range * range;
+        return BotSelf.population(visibleEnemies.stream()
+                .filter(enemy -> !(enemy instanceof WorkerUnit))
+                .filter(enemy -> enemy.position().distanceToSqr(
+                        beacon.centrePos.getX(),
+                        beacon.minCorner.getY(),
+                        beacon.centrePos.getZ()) <= rangeSqr)
+                .toList());
+    }
+
+    private void captureBeacon(List<LivingEntity> army, BeaconPlacement beacon, BlockPos armyPos) {
+        clearObjective();
+        attackMoveArmy(army, beacon.getClosestGroundPos(armyPos, 1));
+    }
+
+    private BotDecisionMaker.BeaconOrder applyBeaconBackoff(
+            BotDecisionMaker.BeaconOrder desiredOrder,
+            BotDecisionMaker.BeaconControl control,
+            BeaconPlacement beacon,
+            List<LivingEntity> army,
+            int tick) {
+        if (beacon == null) {
+            clearBeaconState();
+            return desiredOrder;
+        }
+        if (trackedBeacon != beacon || !trackedBeaconOwner.equals(beacon.ownerName)) {
+            trackedBeacon = beacon;
+            trackedBeaconOwner = beacon.ownerName;
+            beaconRetryAfterTick = 0;
+            clearBeaconAssault();
+        }
+        if (control == BotDecisionMaker.BeaconControl.OWNED
+                || control == BotDecisionMaker.BeaconControl.ALLIED) {
+            beaconRetryAfterTick = 0;
+            clearBeaconAssault();
+            return desiredOrder;
+        }
+        if (desiredOrder == BotDecisionMaker.BeaconOrder.NONE) {
+            clearBeaconAssault();
+            if (tick >= beaconRetryAfterTick) {
+                beaconRetryAfterTick = tick + BEACON_RETRY_TICKS;
+                ReignOfNether.LOGGER.info(
+                        "[Bot] {} delaying a defended beacon push", displayName);
+            }
+            return desiredOrder;
+        }
+        if (tick < beaconRetryAfterTick)
+            return BotDecisionMaker.BeaconOrder.NONE;
+
+        BlockPos captureCentre = new BlockPos(
+                beacon.centrePos.getX(), beacon.minCorner.getY(), beacon.centrePos.getZ());
+        double distance = closestArmyDistance(army, captureCentre);
+        if (beaconAssaultLastProgressTick == 0) {
+            beaconAssaultBestDistance = distance;
+            beaconAssaultLastProgressTick = tick;
+        } else if (distance + OBJECTIVE_PROGRESS_DISTANCE < beaconAssaultBestDistance) {
+            beaconAssaultBestDistance = distance;
+            beaconAssaultLastProgressTick = tick;
+        } else if (tick - beaconAssaultLastProgressTick >= OBJECTIVE_STALL_TICKS) {
+            beaconRetryAfterTick = tick + BEACON_RETRY_TICKS;
+            clearBeaconAssault();
+            ReignOfNether.LOGGER.info(
+                    "[Bot] {} abandoning a stalled beacon push", displayName);
+            return BotDecisionMaker.BeaconOrder.NONE;
+        }
+        return desiredOrder;
+    }
+
+    private void clearBeaconState() {
+        trackedBeacon = null;
+        trackedBeaconOwner = "";
+        beaconRetryAfterTick = 0;
+        clearBeaconAssault();
+    }
+
+    private void clearBeaconAssault() {
+        beaconAssaultBestDistance = 0;
+        beaconAssaultLastProgressTick = 0;
+    }
+
+    private void activateBeaconAura(BeaconPlacement beacon, BotPersonality personality) {
+        if (!beacon.ownerName.equals(ownerName))
+            return;
+        UnitAction action = BotDecisionMaker.beaconAuraAction(personality);
+        if (beacon.getAuraEffect() == BeaconPlacement.getMobEffectForAction(action))
+            return;
+        boolean offCooldown = beacon.getAbilities().stream()
+                .filter(ability -> ability.action == action)
+                .anyMatch(ability -> ability.isOffCooldown(beacon));
+        if (!offCooldown)
+            return;
+        UnitServerEvents.addActionItem(
+                ownerName,
+                action,
+                -1,
+                new int[0],
+                BlockPos.ZERO,
+                beacon.originPos
+        );
+    }
+
+    private List<LivingEntity> reconcileBeaconGuards(List<LivingEntity> army, BeaconPlacement beacon,
+                                                      int targetCount) {
+        beaconGuardIds.removeIf(id -> army.stream().noneMatch(entity -> entity.getId() == id));
+        int guardCount = Math.min(targetCount, army.size());
+        while (beaconGuardIds.size() > guardCount)
+            beaconGuardIds.remove(beaconGuardIds.stream().max(Integer::compareTo).orElseThrow());
+        int missingGuards = guardCount - beaconGuardIds.size();
+        if (missingGuards > 0)
+            army.stream()
+                    .filter(entity -> !beaconGuardIds.contains(entity.getId()))
+                    .sorted(Comparator
+                            .comparingInt((LivingEntity entity) -> isFlying(entity) ? 1 : 0)
+                            .thenComparingDouble(entity -> entity.position().distanceToSqr(
+                                    beacon.centrePos.getX(),
+                                    beacon.minCorner.getY(),
+                                    beacon.centrePos.getZ()))
+                            .thenComparingInt(BotSelf::population)
+                            .thenComparingInt(LivingEntity::getId))
+                    .limit(missingGuards)
+                    .forEach(entity -> beaconGuardIds.add(entity.getId()));
+        return army.stream()
+                .filter(entity -> beaconGuardIds.contains(entity.getId()))
+                .toList();
+    }
+
+    private void garrisonBeacon(List<LivingEntity> army, BeaconPlacement beacon) {
+        int innerRange = Math.max(1, beacon.getBuilding().captureRange - BEACON_GARRISON_MARGIN);
+        double innerRangeSqr = innerRange * innerRange;
+        List<LivingEntity> inside = new ArrayList<>();
+        List<LivingEntity> outside = new ArrayList<>();
+        for (LivingEntity entity : army) {
+            if (entity.position().distanceToSqr(
+                    beacon.centrePos.getX(),
+                    beacon.minCorner.getY(),
+                    beacon.centrePos.getZ()) <= innerRangeSqr)
+                inside.add(entity);
+            else
+                outside.add(entity);
+        }
+        holdArmy(inside);
+        attackMoveArmy(outside, beacon.getClosestGroundPos(beacon.centrePos, 1));
     }
 
     private LivingEntity reconcileScout(List<LivingEntity> army) {
@@ -557,6 +775,23 @@ final class BotArmy {
                 .min(Comparator.comparingDouble(entity -> entity.blockPosition().distSqr(mean)))
                 .orElseThrow()
                 .blockPosition();
+    }
+
+    private void holdArmy(List<LivingEntity> army) {
+        int[] ids = army.stream()
+                .filter(entity -> entity instanceof Unit unit && !unit.getHoldPosition())
+                .mapToInt(LivingEntity::getId)
+                .toArray();
+        if (ids.length == 0)
+            return;
+        UnitServerEvents.addActionItem(
+                ownerName,
+                UnitAction.HOLD,
+                -1,
+                ids,
+                BlockPos.ZERO,
+                BlockPos.ZERO
+        );
     }
 
     private void attackMoveArmy(List<LivingEntity> army, BlockPos target) {

@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.bot;
 
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.Resources;
+import com.solegendary.reignofnether.unit.UnitAction;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -208,6 +209,84 @@ class BotDecisionMakerTest {
                                         0, false, false))
                 );
             }
+    }
+
+    @Test
+    void beaconOrdersCaptureOpenGroundAndWaitForACombatReadyContest() {
+        for (BotDifficulty difficulty : BotDifficulty.values())
+            for (BotPersonality personality : BotPersonality.values()) {
+                int threshold = BotDecisionMaker.attackPopulation(difficulty, personality);
+                assertAll(
+                        () -> assertEquals(BotDecisionMaker.BeaconOrder.NONE,
+                                BotDecisionMaker.chooseBeaconOrder(
+                                        difficulty, personality, threshold, 0,
+                                        BotDecisionMaker.BeaconControl.ABSENT)),
+                        () -> assertEquals(BotDecisionMaker.BeaconOrder.CAPTURE,
+                                BotDecisionMaker.chooseBeaconOrder(
+                                        difficulty, personality, 1, 0,
+                                        BotDecisionMaker.BeaconControl.NEUTRAL)),
+                        () -> assertEquals(BotDecisionMaker.BeaconOrder.CAPTURE,
+                                BotDecisionMaker.chooseBeaconOrder(
+                                        difficulty, personality, threshold - 1, threshold - 2,
+                                        BotDecisionMaker.BeaconControl.NEUTRAL)),
+                        () -> assertEquals(BotDecisionMaker.BeaconOrder.NONE,
+                                BotDecisionMaker.chooseBeaconOrder(
+                                        difficulty, personality, threshold - 1, threshold - 1,
+                                        BotDecisionMaker.BeaconControl.NEUTRAL)),
+                        () -> assertEquals(BotDecisionMaker.BeaconOrder.CAPTURE,
+                                BotDecisionMaker.chooseBeaconOrder(
+                                        difficulty, personality, threshold - 1, 1,
+                                        BotDecisionMaker.BeaconControl.HOSTILE)),
+                        () -> assertEquals(BotDecisionMaker.BeaconOrder.NONE,
+                                BotDecisionMaker.chooseBeaconOrder(
+                                        difficulty, personality, threshold - 1, threshold - 1,
+                                        BotDecisionMaker.BeaconControl.HOSTILE)),
+                        () -> assertEquals(BotDecisionMaker.BeaconOrder.CONTEST,
+                                BotDecisionMaker.chooseBeaconOrder(
+                                        difficulty, personality, threshold, threshold,
+                                        BotDecisionMaker.BeaconControl.HOSTILE)),
+                        () -> assertEquals(BotDecisionMaker.BeaconOrder.CAPTURE,
+                                BotDecisionMaker.chooseBeaconOrder(
+                                        difficulty, personality, 1, 0,
+                                        BotDecisionMaker.BeaconControl.HOSTILE)),
+                        () -> assertEquals(BotDecisionMaker.BeaconOrder.GARRISON,
+                                BotDecisionMaker.chooseBeaconOrder(
+                                        difficulty, personality, 1, 0,
+                                        BotDecisionMaker.BeaconControl.OWNED)),
+                        () -> assertEquals(BotDecisionMaker.BeaconOrder.NONE,
+                                BotDecisionMaker.chooseBeaconOrder(
+                                        difficulty, personality, 1, 0,
+                                        BotDecisionMaker.BeaconControl.ALLIED))
+                );
+            }
+    }
+
+    @Test
+    void beaconOwnersReinforceOnlyWhenTheirGuardsNeedHelp() {
+        assertAll(
+                () -> assertFalse(BotDecisionMaker.shouldReinforceBeacon(0, 1)),
+                () -> assertFalse(BotDecisionMaker.shouldReinforceBeacon(1, 2)),
+                () -> assertTrue(BotDecisionMaker.shouldReinforceBeacon(2, 2)),
+                () -> assertTrue(BotDecisionMaker.shouldReinforceBeacon(3, 2))
+        );
+    }
+
+    @Test
+    void beaconGarrisonsAndAurasExpressPersonalityWithoutGeneratingResources() {
+        assertAll(
+                () -> assertEquals(1,
+                        BotDecisionMaker.beaconGuardCount(BotPersonality.RUSHER)),
+                () -> assertEquals(2,
+                        BotDecisionMaker.beaconGuardCount(BotPersonality.STEADY)),
+                () -> assertEquals(3,
+                        BotDecisionMaker.beaconGuardCount(BotPersonality.TURTLE)),
+                () -> assertEquals(UnitAction.BEACON_STRENGTH,
+                        BotDecisionMaker.beaconAuraAction(BotPersonality.RUSHER)),
+                () -> assertEquals(UnitAction.BEACON_REGENERATION,
+                        BotDecisionMaker.beaconAuraAction(BotPersonality.STEADY)),
+                () -> assertEquals(UnitAction.BEACON_RESISTANCE,
+                        BotDecisionMaker.beaconAuraAction(BotPersonality.TURTLE))
+        );
     }
 
     @Test

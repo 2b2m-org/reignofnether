@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.bot;
 
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.Resources;
+import com.solegendary.reignofnether.unit.UnitAction;
 
 public final class BotDecisionMaker {
     private static final double SCOUT_PROGRESS_BLOCKS = 4;
@@ -26,6 +27,21 @@ public final class BotDecisionMaker {
         DEFEND,
         ATTACK_MOVE,
         RETREAT
+    }
+
+    public enum BeaconControl {
+        ABSENT,
+        NEUTRAL,
+        OWNED,
+        ALLIED,
+        HOSTILE
+    }
+
+    public enum BeaconOrder {
+        NONE,
+        CAPTURE,
+        CONTEST,
+        GARRISON
     }
 
     private BotDecisionMaker() {
@@ -128,6 +144,46 @@ public final class BotDecisionMaker {
         if (attackReady || armyPopulation >= attackPopulation(difficulty, personality))
             return ArmyOrder.ATTACK_MOVE;
         return ArmyOrder.HOLD;
+    }
+
+    public static BeaconOrder chooseBeaconOrder(BotDifficulty difficulty, BotPersonality personality,
+                                                 int armyPopulation, int visibleEnemyPopulationInRing,
+                                                 BeaconControl control) {
+        if (armyPopulation <= 0)
+            return BeaconOrder.NONE;
+        return switch (control) {
+            case ABSENT -> BeaconOrder.NONE;
+            case OWNED -> BeaconOrder.GARRISON;
+            case ALLIED -> BeaconOrder.NONE;
+            case NEUTRAL, HOSTILE -> {
+                if (armyPopulation > visibleEnemyPopulationInRing)
+                    yield BeaconOrder.CAPTURE;
+                yield armyPopulation >= attackPopulation(difficulty, personality)
+                        ? BeaconOrder.CONTEST
+                        : BeaconOrder.NONE;
+            }
+        };
+    }
+
+    public static int beaconGuardCount(BotPersonality personality) {
+        return switch (personality) {
+            case RUSHER -> 1;
+            case STEADY -> 2;
+            case TURTLE -> 3;
+        };
+    }
+
+    static boolean shouldReinforceBeacon(int visibleEnemyPopulationInRing, int guardPopulation) {
+        return visibleEnemyPopulationInRing > 0
+                && visibleEnemyPopulationInRing >= guardPopulation;
+    }
+
+    public static UnitAction beaconAuraAction(BotPersonality personality) {
+        return switch (personality) {
+            case RUSHER -> UnitAction.BEACON_STRENGTH;
+            case STEADY -> UnitAction.BEACON_REGENERATION;
+            case TURTLE -> UnitAction.BEACON_RESISTANCE;
+        };
     }
 
     public static int targetWorkers(BotDifficulty difficulty, BotPersonality personality) {

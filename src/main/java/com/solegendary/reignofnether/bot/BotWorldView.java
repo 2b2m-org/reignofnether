@@ -4,6 +4,8 @@ import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
+import com.solegendary.reignofnether.building.buildings.neutral.CapturableBeacon;
+import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
@@ -117,6 +119,17 @@ final class BotWorldView {
         }
         result.sort(java.util.Comparator.comparingInt(LivingEntity::getId));
         return result;
+    }
+
+    BeaconPlacement capturableBeacon() {
+        // Its location, owner, and timer are broadcast to every player even under fog of war.
+        return BuildingServerEvents.getBuildings().stream()
+                .filter(BeaconPlacement.class::isInstance)
+                .map(BeaconPlacement.class::cast)
+                .filter(beacon -> beacon.isBuilt
+                        && beacon.getBuilding() instanceof CapturableBeacon)
+                .findFirst()
+                .orElse(null);
     }
 
     private void updateVisibleChunks(String ownerName, List<BuildingPlacement> buildings) {
