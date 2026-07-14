@@ -46,15 +46,18 @@ public final class RtsPathfinder {
         // proving the obvious (the 250ms freeze on leaf orders).
         BlockPos snapped = findStandable(level, target, mobility, footprintRadius, clearanceCells, fireCost, SNAP_RADIUS);
         boolean reachableGoal = snapped != null;
+        // `reach` applies to the ordered target. If that blocked target is moved to a standable cell, applying
+        // the radius again could stop the unit up to SNAP_RADIUS + reach blocks from the original order.
+        int pathReach = reachableGoal && !snapped.equals(target) ? 0 : reach;
         if (reachableGoal) target = snapped;
         int maxNodes = reachableGoal ? PathfinderConfig.MAX_NODES : PathfinderConfig.MAX_NODES_UNREACHABLE_GOAL;
         if (PathfinderWorkerPool.isInitialised()) {
-            PathfinderWorkerPool.submit(level, start, target, reach, mobility, clearanceCells, footprintRadius, fireCost, canClimb, maxNodes, valid, onReady);
+            PathfinderWorkerPool.submit(level, start, target, pathReach, mobility, clearanceCells, footprintRadius, fireCost, canClimb, maxNodes, valid, onReady);
         } else {
             try {
                 int dilation = PathfinderConfig.dilationFor(start, target);
                 ChunkSnapshot snap = ChunkSnapshot.capture(level, start, target, dilation, mobility, clearanceCells, footprintRadius, fireCost, canClimb);
-                GridAStar.Result r = GridAStar.search(snap, start, target, reach, PathfinderConfig.MAX_RADIUS, maxNodes);
+                GridAStar.Result r = GridAStar.search(snap, start, target, pathReach, PathfinderConfig.MAX_RADIUS, maxNodes);
                 onReady.onPath(PathConverter.toMcPath(r.waypoints, target, r.reached, snap), false);
             } catch (Throwable t) {
                 ReignOfNether.LOGGER.error("Sync pathfinder failed", t);
