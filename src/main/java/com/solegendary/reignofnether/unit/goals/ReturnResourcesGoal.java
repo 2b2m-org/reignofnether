@@ -87,11 +87,12 @@ public class ReturnResourcesGoal extends MoveToTargetBlockGoal {
 
     // only count as building if in range of the target - building is actioned in Building.tick()
     public boolean canDropOff() {
-        if (buildingTarget != null && this.moveTarget != null)
+        BlockPos target = getNavigationTarget();
+        if (buildingTarget != null && target != null)
             if (buildingTarget.isBuilt && buildingTarget.getBuilding().canAcceptResources &&
                 BuildingServerEvents.getUnitToBuildingRelationship((Unit) this.mob, buildingTarget) == Relationship.OWNED &&
                 BuildingServerEvents.getBuildings().contains(buildingTarget))
-                return buildingTarget.isPosInsideBuilding(mob.getOnPos()) || MiscUtil.isMobInRangeOfPos(moveTarget, mob, 1.5f);
+                return buildingTarget.isPosInsideBuilding(mob.getOnPos()) || MiscUtil.isMobInRangeOfPos(target, mob, 1.5f);
         return false;
     }
 

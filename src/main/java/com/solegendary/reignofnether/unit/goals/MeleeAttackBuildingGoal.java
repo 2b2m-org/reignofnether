@@ -48,8 +48,9 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
             // we haven't reached the target, esp. for Brutes.
             // A1+A5: if the repathed final node matches the previous one, the target is unreachable —
             // stop instead of looping. Otherwise back off exponentially.
-            if (this.mob.getNavigation().isDone() && moveTarget != null &&
-                    this.mob.getOnPos().distSqr(moveTarget) > 1 && !isAttacking()) {
+            BlockPos target = getNavigationTarget();
+            if (this.mob.getNavigation().isDone() && target != null &&
+                    this.mob.getOnPos().distSqr(target) > 1 && !isAttacking()) {
                 if (recalcCooldown > 0) {
                     recalcCooldown -= 1;
                 } else {
@@ -121,8 +122,9 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
 
     // only count as building if in range of the target - building is actioned in Building.tick()
     public boolean isAttacking() {
-        if (buildingTarget != null && this.moveTarget != null)
-            return MiscUtil.isMobInRangeOfPos(moveTarget, mob, 2);
+        BlockPos target = getNavigationTarget();
+        if (buildingTarget != null && target != null)
+            return MiscUtil.isMobInRangeOfPos(target, mob, 2);
         return false;
     }
 

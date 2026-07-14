@@ -120,10 +120,11 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
         if (this.mob.level().isClientSide())
             return isBuildingServerside;
 
-        if (buildingTarget != null && this.moveTarget != null)
+        BlockPos target = getNavigationTarget();
+        if (buildingTarget != null && target != null)
             if (BuildingServerEvents.getUnitToBuildingRelationship((Unit) this.mob, buildingTarget) == Relationship.OWNED ||
                 buildingTarget.getBuilding() instanceof AbstractBridge)
-                return MiscUtil.isMobInRangeOfPos(moveTarget, mob, 2); // buildingTarget.isPosInsideBuilding(mob.getOnPos())
+                return MiscUtil.isMobInRangeOfPos(target, mob, 2); // buildingTarget.isPosInsideBuilding(mob.getOnPos())
         return false;
     }
 

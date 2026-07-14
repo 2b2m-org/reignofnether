@@ -28,9 +28,10 @@ public class UsePortalGoal extends MoveToTargetBlockGoal {
             if (buildingTarget.getBlocksPlaced() <= 0) {
                 stopUsingPortal();
             }
-            if (moveTarget != null && this.mob.distanceToSqr(new Vec3(moveTarget.getX() + 0.5f,
-                moveTarget.getY() + 0.5f,
-                moveTarget.getZ() + 0.5f
+            BlockPos target = getNavigationTarget();
+            if (target != null && this.mob.distanceToSqr(new Vec3(target.getX() + 0.5f,
+                target.getY() + 0.5f,
+                target.getZ() + 0.5f
             )) <= 3f) {
                 // teleport to destination
                 if (portal.hasDestination()) {

@@ -25,6 +25,7 @@ public class MoveToTargetBlockGoal extends Goal {
 
     protected final Mob mob;
     @Nullable protected BlockPos moveTarget = null;
+    @Nullable private BlockPos navigationTarget = null;
     protected boolean persistent; // will keep trying to move back to the target if moved externally
     protected int moveReachRange = 0; // how far away from the target block to stop moving (manhattan distance)
 
@@ -93,8 +94,9 @@ public class MoveToTargetBlockGoal extends Goal {
         }
         // PathNavigation has a max length, so once the unit finishes its current path but still isn't at the
         // target, restart to continue the journey (RTS delivers long routes in segments) or retry.
-        if (this.mob.getNavigation().isDone() && moveTarget != null &&
-            this.mob.getOnPos().distSqr(moveTarget) > getMinDistToRecalculateSqr()) {
+        BlockPos resolvedTarget = getNavigationTarget();
+        if (this.mob.getNavigation().isDone() && resolvedTarget != null &&
+            this.mob.getOnPos().distSqr(resolvedTarget) > getMinDistToRecalculateSqr()) {
             // start() is expensive and repeats every tick on a stuck mob (eg. targeting over water), so it must
             // be throttled. The synchronous vanilla path has its new final node ready, so decide the backoff
             // and arm the cooldown gate right here. The async RTS path isn't ready yet (start() just fired the
@@ -122,6 +124,7 @@ public class MoveToTargetBlockGoal extends Goal {
         else if (this.mob.getNavigation().isDone()) {
             if (!persistent && !((Unit) this.mob).getHoldPosition()) {
                 moveTarget = null;
+                navigationTarget = null;
             }
             return false;
         }
@@ -130,6 +133,7 @@ public class MoveToTargetBlockGoal extends Goal {
 
     public void start() {
         isRunning = true;
+        navigationTarget = null;
         // Cleared on every start(); canContinueToUse re-sets it after this call when it fires an async repath,
         // so a fresh order (started directly here) never inherits a previous repath's deferred backoff.
         pendingRepath = false;
@@ -181,6 +185,8 @@ public class MoveToTargetBlockGoal extends Goal {
             }
         }
          */
+        if (path != null)
+            navigationTarget = path.getTarget();
         this.mob.getNavigation().moveTo(path, Unit.getSpeedModifier(u));
         // Broadcast the path so clients can render it briefly. Server-only — clients
         // that received the packet decide whether to render based on ownership/FOW.
@@ -225,6 +231,9 @@ public class MoveToTargetBlockGoal extends Goal {
             repathFromFinalNode = null;
             return;
         }
+        // Keep the ordered target for spell/item aim while movement checks use the standable cell resolved by
+        // the pathfinder. Otherwise navigation can finish at a snapped cell without the goal ever arriving.
+        navigationTarget = path.getTarget();
         // Follow even a partial (unreachable) path so the unit still makes progress toward the target.
         this.mob.getNavigation().moveTo(path, Unit.getSpeedModifier(u));
         // The RTS pathfinder is async: node 0 is the unit's position when the request was SUBMITTED, a few
@@ -279,6 +288,7 @@ public class MoveToTargetBlockGoal extends Goal {
         // Only fire a fresh path on an actual target change
         boolean changed = !Objects.equals(bp, this.moveTarget);
         if (changed) {
+            navigationTarget = null;
             resetRecalcBackoff();
             recalcCooldown = 0;
         }
@@ -290,6 +300,11 @@ public class MoveToTargetBlockGoal extends Goal {
 
     public BlockPos getMoveTarget() {
         return this.moveTarget;
+    }
+
+    @Nullable
+    protected BlockPos getNavigationTarget() {
+        return navigationTarget != null ? navigationTarget : moveTarget;
     }
 
     @Nullable public BlockPos getFinalNodePos() {
@@ -321,6 +336,7 @@ public class MoveToTargetBlockGoal extends Goal {
         repathFromFinalNode = null;
         pathRequestSeq++; // cancel any in-flight path so a late result can't restart movement after a stop.
         this.moveTarget = null;
+        this.navigationTarget = null;
         this.mob.getNavigation().stop();
         if (this.mob.isVehicle() && this.mob.getPassengers().get(0) instanceof Unit unit)
             unit.getMoveGoal().stopMoving();

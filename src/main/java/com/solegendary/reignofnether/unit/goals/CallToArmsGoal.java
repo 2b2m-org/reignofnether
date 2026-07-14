@@ -41,9 +41,10 @@ public class CallToArmsGoal extends MoveToTargetBlockGoal {
     }
 
     public boolean isInRange() {
-        if (buildingTarget != null && this.moveTarget != null)
+        BlockPos target = getNavigationTarget();
+        if (buildingTarget != null && target != null)
             if (BuildingServerEvents.getUnitToBuildingRelationship((Unit) this.mob, buildingTarget) == Relationship.OWNED)
-                return MiscUtil.isMobInRangeOfPos(moveTarget, mob, 2);
+                return MiscUtil.isMobInRangeOfPos(target, mob, 2);
         return false;
     }
 
