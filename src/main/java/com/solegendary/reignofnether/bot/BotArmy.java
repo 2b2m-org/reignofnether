@@ -21,8 +21,10 @@ import net.minecraft.world.entity.Mob;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 final class BotArmy {
     private static final int TARGET_REVISIT_TICKS = 600;
@@ -31,6 +33,7 @@ final class BotArmy {
     private static final int ALLY_DEFENSE_MEMORY_TICKS = 1200;
     private static final int REGROUP_TICKS = 200;
     private static final double DEFENSE_DISTANCE_SQR = 64 * 64;
+    private static final double SURVIVAL_DEFENSE_DISTANCE_SQR = 128 * 128;
     private static final double ARMY_INTERCEPTION_DISTANCE_SQR = 48 * 48;
     private static final double OBJECTIVE_PROGRESS_DISTANCE = 2;
     private static final double SCOUT_REACHED_DISTANCE_SQR = 144;
@@ -69,7 +72,7 @@ final class BotArmy {
               BotDifficulty difficulty, BotPersonality personality) {
         int tick = level.getServer().getTickCount();
         List<LivingEntity> visibleEnemyCombatants = worldView.visibleEnemyCombatants(player);
-        observeFriendlyBuildingDamage(visibleEnemyCombatants, tick);
+        observeFriendlyBuildingThreats(visibleEnemyCombatants, tick);
         if (tick < nextCommandTick)
             return;
         command(level, player, strategy, difficulty, personality, visibleEnemyCombatants, tick);
@@ -118,8 +121,6 @@ final class BotArmy {
                 visibleEnemyCombatants, armyPos, player.aiHomePos);
         int tacticalEnemyPopulation = BotSelf.population(tacticalEnemyArmy);
         boolean hasRangedResponder = main.stream().anyMatch(RangedAttackerUnit.class::isInstance);
-        boolean rangedFlyingThreat = hasRangedResponder
-                && tacticalEnemyArmy.stream().anyMatch(BotArmy::isFlying);
 
         if (tick < regroupUntilTick) {
             attackMoveArmy(main, player.aiHomePos.above());
@@ -133,10 +134,17 @@ final class BotArmy {
         if (armyOrder == BotDecisionMaker.ArmyOrder.DEFEND) {
             if (objective != null)
                 objectiveLastProgressTick = tick;
-            BlockPos defensePos = defenseTarget.getClosestGroundPos(armyPos, 1);
-            if (rangedFlyingThreat)
-                engageEnemyArmy(main, defensePos,
-                        selectRangedTarget(tacticalEnemyArmy, armyPos, player.aiHomePos));
+            List<LivingEntity> defenseEnemies = defenseEnemies(
+                    visibleEnemyCombatants, defenseTarget, survivalEnabled);
+            LivingEntity groundEnemy = closestDefenseEnemy(defenseEnemies, defenseTarget, false);
+            LivingEntity flyingEnemy = hasRangedResponder
+                    ? closestDefenseEnemy(tacticalEnemyArmy, defenseTarget, true)
+                    : null;
+            BlockPos defensePos = groundEnemy != null
+                    ? groundEnemy.blockPosition()
+                    : defenseTarget.getClosestGroundPos(armyPos, 1);
+            if (flyingEnemy != null)
+                engageEnemyArmy(main, defensePos, flyingEnemy);
             else
                 attackMoveArmy(main, defensePos);
             nextCommandTick = tick + difficulty.attackRefreshTicks();
@@ -262,7 +270,7 @@ final class BotArmy {
         ReignOfNether.LOGGER.info("[Bot] {} scouting at {}", displayName, scoutTarget);
     }
 
-    private void observeFriendlyBuildingDamage(List<LivingEntity> visibleEnemies, int tick) {
+    private void observeFriendlyBuildingThreats(List<LivingEntity> visibleEnemies, int tick) {
         List<BuildingPlacement> friendlyBuildings = BuildingServerEvents.getBuildings().stream()
                 .filter(building -> AlliancesServerEvents.isAlliedOrOwned(ownerName, building.ownerName))
                 .toList();
@@ -270,17 +278,44 @@ final class BotArmy {
                 !friendlyBuildings.contains(building) || !worldView.isVisible(building.centrePos));
         defenseThreats.keySet().removeIf(origin -> friendlyBuildings.stream()
                 .noneMatch(building -> building.originPos.equals(origin)));
+        boolean survivalEnabled = SurvivalServerEvents.isEnabled();
+        double defenseDistanceSqr = survivalEnabled
+                ? SURVIVAL_DEFENSE_DISTANCE_SQR
+                : DEFENSE_DISTANCE_SQR;
+        Set<BuildingPlacement> proximityThreats = new HashSet<>();
+        if (survivalEnabled) {
+            for (LivingEntity enemy : visibleEnemies) {
+                BuildingPlacement nearest = null;
+                double nearestDistance = Double.MAX_VALUE;
+                for (BuildingPlacement building : friendlyBuildings) {
+                    if (!worldView.isVisible(building.centrePos)
+                            || building.getBuilding().invulnerable)
+                        continue;
+                    double distance = distanceToDefenseBuildingSqr(enemy, building, true);
+                    if (distance <= defenseDistanceSqr && distance < nearestDistance) {
+                        nearest = building;
+                        nearestDistance = distance;
+                    }
+                }
+                if (nearest != null)
+                    proximityThreats.add(nearest);
+            }
+        }
 
         for (BuildingPlacement building : friendlyBuildings) {
             if (!worldView.isVisible(building.centrePos))
                 continue;
             int blocksPlaced = building.getBlocksPlaced();
             Integer previous = friendlyBuildingBlockCounts.put(building, blocksPlaced);
-            if (previous == null || blocksPlaced >= previous)
+            boolean buildingDamaged = previous != null && blocksPlaced < previous;
+            if (!survivalEnabled && !buildingDamaged)
                 continue;
-            boolean enemyNearby = visibleEnemies.stream().anyMatch(enemy ->
-                    enemy.blockPosition().distSqr(building.centrePos) <= DEFENSE_DISTANCE_SQR);
-            if (!enemyNearby)
+            boolean enemyNearby = proximityThreats.contains(building)
+                    || buildingDamaged && visibleEnemies.stream().anyMatch(enemy ->
+                            distanceToDefenseBuildingSqr(enemy, building, survivalEnabled)
+                                    <= defenseDistanceSqr);
+            if (!BotDecisionMaker.shouldRememberDefenseThreat(
+                    survivalEnabled, buildingDamaged, enemyNearby))
                 continue;
 
             int memoryTicks = building.ownerName.equals(ownerName)
@@ -288,10 +323,44 @@ final class BotArmy {
                     : ALLY_DEFENSE_MEMORY_TICKS;
             Integer previousExpiry = defenseThreats.put(building.originPos, tick + memoryTicks);
             if (previousExpiry == null || previousExpiry < tick) {
-                ReignOfNether.LOGGER.info("[Bot] {} defending damaged {} at {}",
-                        displayName, building.getBuilding().name, building.originPos);
+                ReignOfNether.LOGGER.info("[Bot] {} defending {} {} at {}",
+                        displayName, buildingDamaged ? "damaged" : "threatened",
+                        building.getBuilding().name, building.originPos);
             }
         }
+    }
+
+    private static List<LivingEntity> defenseEnemies(List<LivingEntity> visibleEnemies,
+                                                       BuildingPlacement building,
+                                                       boolean survivalEnabled) {
+        double distanceSqr = survivalEnabled
+                ? SURVIVAL_DEFENSE_DISTANCE_SQR
+                : DEFENSE_DISTANCE_SQR;
+        return visibleEnemies.stream()
+                .filter(enemy -> distanceToDefenseBuildingSqr(enemy, building, survivalEnabled)
+                        <= distanceSqr)
+                .toList();
+    }
+
+    private static double distanceToDefenseBuildingSqr(LivingEntity enemy,
+                                                         BuildingPlacement building,
+                                                         boolean survivalEnabled) {
+        return survivalEnabled
+                ? building.centrePos.distToCenterSqr(enemy.position())
+                : enemy.blockPosition().distSqr(building.centrePos);
+    }
+
+    private static LivingEntity closestDefenseEnemy(List<LivingEntity> enemies,
+                                                      BuildingPlacement building,
+                                                      boolean flying) {
+        return enemies.stream()
+                .filter(enemy -> isFlying(enemy) == flying)
+                .min(Comparator
+                        .comparingDouble((LivingEntity enemy) ->
+                                building.centrePos.distToCenterSqr(enemy.position()))
+                        .thenComparingDouble(LivingEntity::getHealth)
+                        .thenComparingInt(LivingEntity::getId))
+                .orElse(null);
     }
 
     private BuildingPlacement selectDefenseTarget(BotStrategy strategy, BotPersonality personality,

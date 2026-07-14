@@ -154,6 +154,11 @@ public final class BotDecisionMaker {
         return survivalEnabled ? ownBuildingThreatened : criticalBuildingThreatened;
     }
 
+    static boolean shouldRememberDefenseThreat(boolean survivalEnabled, boolean buildingDamaged,
+                                               boolean enemyNearby) {
+        return enemyNearby && (survivalEnabled || buildingDamaged);
+    }
+
     static int defensePriority(boolean survivalEnabled, boolean ownBuilding, boolean criticalBuilding) {
         if (survivalEnabled)
             return (ownBuilding ? 0 : 2) + (criticalBuilding ? 0 : 1);

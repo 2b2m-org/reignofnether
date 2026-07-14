@@ -363,6 +363,16 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void survivalTeamsRespondBeforeVisibleEnemiesDamageAnAlliedBase() {
+        assertAll(
+                () -> assertTrue(BotDecisionMaker.shouldRememberDefenseThreat(true, false, true)),
+                () -> assertTrue(BotDecisionMaker.shouldRememberDefenseThreat(false, true, true)),
+                () -> assertFalse(BotDecisionMaker.shouldRememberDefenseThreat(false, false, true)),
+                () -> assertFalse(BotDecisionMaker.shouldRememberDefenseThreat(true, true, false))
+        );
+    }
+
+    @Test
     void rangedTargetingPrioritizesFlyersWithoutOpeningTheStrategicGate() {
         assertAll(
                 () -> assertFalse(BotDecisionMaker.shouldFocusEnemyArmy(
