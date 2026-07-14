@@ -242,12 +242,15 @@ final class BotArmy {
             target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
 
         int reservedPopulation = fullArmyPopulation - mainPopulation;
-        boolean reservedAttackReady = reservedPopulation > 0
-                && BotDecisionMaker.shouldLaunchWithReservedUnits(
-                        difficulty, personality, mainPopulation, reservedPopulation);
+        boolean fullArmyAttackReady = BotDecisionMaker.shouldLaunchWithReservedUnits(
+                difficulty, personality, mainPopulation, reservedPopulation);
+        boolean reservedLaunchReady = reservedPopulation > 0
+                && fullArmyAttackReady;
+        boolean garrisonAttackReady = beaconControl == BotDecisionMaker.BeaconControl.OWNED
+                && fullArmyAttackReady;
         boolean attackReady = objective != null || target != null
                 || beaconOrder != BotDecisionMaker.BeaconOrder.NONE
-                || reservedAttackReady;
+                || garrisonAttackReady;
         BuildingPlacement defenseTarget = selectDefenseTarget(
                 strategy, personality, player.aiHomePos, teamAdviceTarget,
                 attackReady, survivalEnabled, tick);
@@ -312,7 +315,9 @@ final class BotArmy {
 
         BotDecisionMaker.ArmyOrder armyOrder = BotDecisionMaker.chooseArmyOrder(
                 difficulty, personality, mainPopulation, tacticalEnemyPopulation,
-                attackReady || pressVisibleAdvantage || pursuitTarget != null, defenseThreat);
+                attackReady || reservedLaunchReady || pressVisibleAdvantage
+                        || pursuitTarget != null,
+                defenseThreat);
         if (armyOrder != BotDecisionMaker.ArmyOrder.DEFEND)
             activeDefenseIntent = null;
         if (armyOrder == BotDecisionMaker.ArmyOrder.DEFEND) {
