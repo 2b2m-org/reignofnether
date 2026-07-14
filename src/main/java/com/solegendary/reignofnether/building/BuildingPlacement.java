@@ -1255,6 +1255,8 @@ public class BuildingPlacement {
         int highestPop = 0;
         if (!ownerHasUnit) {
             for (String playerName : playerPopCounts.keySet()) {
+                if (!AlliancesServerEvents.isEligibleCaptureOwner(ownerName, playerName))
+                    continue;
                 if (playerPopCounts.get(playerName) > highestPop) {
                     highestPop = playerPopCounts.get(playerName);
                     highestPopPlayer = playerName;
