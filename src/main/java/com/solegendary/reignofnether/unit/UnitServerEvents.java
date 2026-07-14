@@ -40,6 +40,7 @@ import com.solegendary.reignofnether.util.EnchantmentUtil;
 import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -63,11 +64,11 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.*;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -75,6 +76,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.common.damagesource.DamageContainer;
+import net.neoforged.neoforge.event.entity.EntityEvent;
 import net.neoforged.neoforge.event.entity.*;
 import net.neoforged.neoforge.event.entity.living.*;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -108,8 +110,6 @@ public class UnitServerEvents {
     private static final List<UnitActionItem> unitActionFastQueue = Collections.synchronizedList(new ArrayList<>());
 
     private static final ArrayList<LivingEntity> allUnits = new ArrayList<>();
-
-    private static final HashMap<Integer, ChunkAccess> forcedUnitChunks = new HashMap<>();
 
     private static final Random RANDOM = new Random();
 
@@ -427,20 +427,49 @@ saveTicks += 1;
                 entity.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.AIR));
             }
 
-            ChunkAccess chunk = evt.getLevel().getChunk(entity.getOnPos());
+            ChunkPos chunk = entity.chunkPosition();
             ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk((ServerLevel) evt.getLevel(),
                 entity,
-                chunk.getPos().x,
-                chunk.getPos().z,
+                chunk.x,
+                chunk.z,
                 true,
                 true
             );
-            forcedUnitChunks.put(entity.getId(), chunk);
         }
 
         if (evt.getEntity() instanceof Projectile proj) {
             proj.getPersistentData().putFloat("accuracyRoll", RANDOM.nextFloat());
         }
+    }
+
+    @SubscribeEvent
+    public static void onEntityEnteringSection(EntityEvent.EnteringSection evt) {
+        if (!evt.didChunkChange() || !(evt.getEntity() instanceof Unit)
+            || !(evt.getEntity().level() instanceof ServerLevel level))
+            return;
+
+        Entity entity = evt.getEntity();
+        int oldChunkX = SectionPos.x(evt.getPackedOldPos());
+        int oldChunkZ = SectionPos.z(evt.getPackedOldPos());
+        int newChunkX = SectionPos.x(evt.getPackedNewPos());
+        int newChunkZ = SectionPos.z(evt.getPackedNewPos());
+
+        // Keep the destination ticking before releasing the source. Polling after movement leaves a window
+        // where the destination can stop ticking the entity.
+        ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk(level,
+            entity,
+            newChunkX,
+            newChunkZ,
+            true,
+            true
+        );
+        ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk(level,
+            entity,
+            oldChunkX,
+            oldChunkZ,
+            false,
+            true
+        );
     }
 
     @SubscribeEvent
@@ -453,15 +482,14 @@ saveTicks += 1;
             allUnits.removeIf(e -> e.getId() == entity.getId());
             lastSyncedEffects.remove(entity.getId());
             UnitSyncClientboundPacket.sendLeavePacket(entity);
-            ChunkAccess chunk = forcedUnitChunks.remove(entity.getId());
-            if (chunk != null)
-                ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk((ServerLevel) evt.getLevel(),
-                    entity,
-                    chunk.getPos().x,
-                    chunk.getPos().z,
-                    false,
-                    true
-                );
+            ChunkPos chunk = entity.chunkPosition();
+            ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk((ServerLevel) evt.getLevel(),
+                entity,
+                chunk.x,
+                chunk.z,
+                false,
+                true
+            );
         }
 
         // if a player has no more units, then they are defeated
@@ -773,32 +801,6 @@ saveTicks += 1;
                     UnitSyncWorkerClientBoundPacket.sendSyncWorkerPacket(entity);
                 }
 
-                // remove old chunk // add current chunk
-                ChunkAccess newChunk = evt.getLevel().getChunk(entity.getOnPos());
-                ChunkAccess oldChunk = forcedUnitChunks.get(entity.getId());
-                boolean chunkNeedsUpdate = oldChunk != null && (
-                    oldChunk.getPos().x != newChunk.getPos().x || oldChunk.getPos().z != newChunk.getPos().z
-                );
-
-                if (chunkNeedsUpdate) {
-                    ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk((ServerLevel) evt.getLevel(),
-                        entity,
-                        oldChunk.getPos().x,
-                        oldChunk.getPos().z,
-                        false,
-                        true
-                    );
-                    ReignOfNether.CHUNK_TICKET_CONTROLLER.forceChunk((ServerLevel) evt.getLevel(),
-                        entity,
-                        newChunk.getPos().x,
-                        newChunk.getPos().z,
-                        true,
-                        true
-                    );
-                    forcedUnitChunks.put(entity.getId(), newChunk);
-                    //ReignOfNether.LOGGER.info("Updated forced chunk for entity: " + entity.getId() + " at: " +
-                    // newChunk.getPos().x + "," + newChunk.getPos().z);
-                }
             }
         }
         synchronized (unitActionSlowQueue) {
