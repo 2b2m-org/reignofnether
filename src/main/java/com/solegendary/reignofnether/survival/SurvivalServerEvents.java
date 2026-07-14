@@ -50,6 +50,7 @@ public class SurvivalServerEvents {
     public static final long TICK_INTERVAL = 10;
     private static long lastTime = -1;
     private static long lastEnemyCount = 0;
+    private static int lastStartedWaveNumber = 0;
     private static long ticks = 0;
 
     private static ArrayList<BuildingPlacement> lastPortals = new ArrayList<>();
@@ -64,6 +65,7 @@ public class SurvivalServerEvents {
         SurvivalSaveData survivalData = SurvivalSaveData.getInstance(level);
         survivalData.isEnabled = isEnabled;
         survivalData.waveNumber = nextWave.number;
+        survivalData.lastStartedWaveNumber = lastStartedWaveNumber;
         survivalData.difficulty = difficulty;
         survivalData.randomSeed = Wave.randomSeed;
         survivalData.save();
@@ -78,6 +80,7 @@ public class SurvivalServerEvents {
             SurvivalSaveData survivalData = SurvivalSaveData.getInstance(level);
             isEnabled = survivalData.isEnabled;
             nextWave = Wave.getWave(survivalData.waveNumber);
+            lastStartedWaveNumber = survivalData.lastStartedWaveNumber;
             Wave.randomSeed = survivalData.randomSeed;
             Wave.reseedWaves();
             difficulty = survivalData.difficulty;
@@ -205,6 +208,11 @@ public class SurvivalServerEvents {
         ArrayList<WavePortal> portalsCopy = new ArrayList<>(portals);
         for (WavePortal portal : portalsCopy)
             portal.portal.destroy(serverLevel);
+        enemies.clear();
+        portals.clear();
+        lastPortals.clear();
+        currentWave = null;
+        lastEnemyCount = 0;
         return 1;
     }
 
@@ -217,13 +225,14 @@ public class SurvivalServerEvents {
             difficulty = diff;
             isEnabled = true;
             SurvivalClientboundPacket.enableAndSetDifficulty(difficulty);
+            SurvivalClientboundPacket.setWaveNumber(nextWave.number);
             if (serverLevel != null)
                 saveData(serverLevel);
         }
     }
 
     public static void reset() {
-        for (WaveEnemy enemy : enemies)
+        for (WaveEnemy enemy : new ArrayList<>(enemies))
             enemy.getEntity().kill();
         ArrayList<WavePortal> portalsCopy = new ArrayList<>(portals);
         for (WavePortal portal : portalsCopy)
@@ -232,6 +241,9 @@ public class SurvivalServerEvents {
         isEnabled = false;
         portals.clear();
         enemies.clear();
+        lastPortals.clear();
+        currentWave = null;
+        lastStartedWaveNumber = 0;
         Wave.randomSeed = System.currentTimeMillis();
         Wave.reseedWaves();
         nextWave = Wave.getWave(1);
@@ -260,7 +272,7 @@ public class SurvivalServerEvents {
                 isEnabled() &&
                 ENEMY_OWNER_NAME.equals(unit.getOwnerName())) {
 
-            enemies.add(new WaveEnemy(unit));
+            registerEnemy(unit);
         }
     }
 
@@ -306,6 +318,10 @@ public class SurvivalServerEvents {
         return enemies;
     }
 
+    static void registerEnemy(Unit unit) {
+        enemies.add(new WaveEnemy(unit));
+    }
+
     public static int getTotalEnemyPopulation() {
         int pop = 0;
         for (WaveEnemy waveEnemy : getCurrentEnemies())
@@ -319,6 +335,7 @@ public class SurvivalServerEvents {
 
     // triggered at nightfall
     public static void startNextWave(ServerLevel level) {
+        lastStartedWaveNumber = nextWave.number;
         saveData(level);
         currentWave = nextWave;
         System.out.println("starting wave: " + nextWave.faction.name());
@@ -338,5 +355,9 @@ public class SurvivalServerEvents {
     public static void setWaveNumber(int waveNumber) {
         nextWave = Wave.getWave(waveNumber);
         SurvivalClientboundPacket.setWaveNumber(nextWave.number);
+    }
+
+    public static int getLastStartedWaveNumber() {
+        return lastStartedWaveNumber;
     }
 }

@@ -10,15 +10,20 @@ import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.gamemode.GameMode;
+import com.solegendary.reignofnether.gamemode.GameModeClientboundPacket;
 import com.solegendary.reignofnether.player.PlayerClientboundPacket;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.survival.SurvivalServerEvents;
+import com.solegendary.reignofnether.survival.WaveDifficulty;
 import com.solegendary.reignofnether.startpos.StartPos;
 import com.solegendary.reignofnether.startpos.StartPosServerEvents;
+import com.solegendary.reignofnether.tutorial.TutorialServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -92,6 +97,13 @@ public final class BotServerEvents {
                                         .then(addDifficultyBranch(BotDifficulty.HARD)))))
                 .then(Commands.literal("list").executes(context -> listBots(context.getSource())))
                 .then(BotLobby.command())
+                .then(Commands.literal("wave-survival")
+                        .then(Commands.argument("difficulty", StringArgumentType.word())
+                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                        List.of("beginner", "easy", "medium", "hard", "extreme"), builder))
+                                .executes(context -> startWaveSurvival(
+                                        context.getSource(),
+                                        StringArgumentType.getString(context, "difficulty")))))
                 .then(Commands.literal("remove")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .suggests(BotServerEvents::suggestBotNames)
@@ -149,18 +161,23 @@ public final class BotServerEvents {
         ServerLevel level = event.getServer().getLevel(Level.OVERWORLD);
         if (level == null)
             return;
+        List<RTSPlayer> players;
+        synchronized (PlayerServerEvents.rtsPlayers) {
+            players = new ArrayList<>(PlayerServerEvents.rtsPlayers);
+        }
+
         if (SurvivalServerEvents.isEnabled()) {
             if (!survivalAlliancesReady) {
                 AlliancesServerEvents.applyCoopAlliances();
+                if (!players.isEmpty()
+                        && players.stream().allMatch(player -> player.aiControlled)
+                        && !PlayerServerEvents.rtsLocked) {
+                    PlayerServerEvents.setRTSLock(true, true);
+                }
                 survivalAlliancesReady = true;
             }
         } else {
             survivalAlliancesReady = false;
-        }
-
-        List<RTSPlayer> players;
-        synchronized (PlayerServerEvents.rtsPlayers) {
-            players = new ArrayList<>(PlayerServerEvents.rtsPlayers);
         }
 
         Set<String> activeNames = new HashSet<>();
@@ -394,6 +411,61 @@ public final class BotServerEvents {
         return controllers.size();
     }
 
+    private static int startWaveSurvival(CommandSourceStack source, String difficultyName) {
+        WaveDifficulty difficulty = parseWaveDifficulty(difficultyName);
+        if (difficulty == null) {
+            source.sendFailure(Component.literal("Unknown Wave Survival difficulty '" + difficultyName
+                    + "'. Use beginner, easy, medium, hard, or extreme."));
+            return 0;
+        }
+        if (!source.getLevel().dimension().equals(Level.OVERWORLD)) {
+            source.sendFailure(Component.literal("Wave Survival can only be started from the Overworld."));
+            return 0;
+        }
+        if (SurvivalServerEvents.isEnabled()) {
+            source.sendFailure(Component.literal("Wave Survival is already active."));
+            return 0;
+        }
+        if (TutorialServerEvents.isEnabled()
+                || source.getServer().getGameRules().getRule(GameRuleRegistrar.SCENARIO_MODE).get()) {
+            source.sendFailure(Component.literal("Wave Survival cannot start during a tutorial or scenario."));
+            return 0;
+        }
+        if (source.getServer().getGameRules().getRule(GameRuleRegistrar.PVP_MODES_ONLY).get()) {
+            source.sendFailure(Component.literal("Wave Survival is disabled while pvpModesOnly is enabled."));
+            return 0;
+        }
+        if (StartPosServerEvents.isStartingGame() || StartPosServerEvents.hasReservations()) {
+            source.sendFailure(Component.literal("Clear the match lobby before starting bot Wave Survival."));
+            return 0;
+        }
+
+        List<RTSPlayer> players;
+        synchronized (PlayerServerEvents.rtsPlayers) {
+            players = new ArrayList<>(PlayerServerEvents.rtsPlayers);
+        }
+        if (players.isEmpty()) {
+            source.sendFailure(Component.literal("Add at least one RTS bot before starting Wave Survival."));
+            return 0;
+        }
+        if (players.stream().anyMatch(player -> !player.aiControlled)) {
+            source.sendFailure(Component.literal(
+                    "This command starts bot-only Wave Survival. Human players start it from the RTS game-mode menu."));
+            return 0;
+        }
+
+        SurvivalServerEvents.enable(difficulty);
+        GameModeClientboundPacket.setAndLockAllClientGameModes(GameMode.SURVIVAL);
+        AlliancesServerEvents.applyCoopAlliances();
+        PlayerServerEvents.initializeMatchTime(source.getLevel());
+        PlayerServerEvents.setRTSLock(true, true);
+        survivalAlliancesReady = true;
+        source.sendSuccess(() -> Component.literal("Started bot Wave Survival on "
+                + difficulty.name().toLowerCase(Locale.ROOT) + " difficulty with "
+                + players.size() + (players.size() == 1 ? " bot." : " bots.")), true);
+        return 1;
+    }
+
     private static int setDifficulty(CommandSourceStack source, String displayName, String level) {
         RTSPlayer player = findAiBotByDisplayName(displayName);
         if (player == null) {
@@ -459,6 +531,17 @@ public final class BotServerEvents {
             case "villager", "villagers" -> Faction.VILLAGERS;
             case "monster", "monsters" -> Faction.MONSTERS;
             case "piglin", "piglins" -> Faction.PIGLINS;
+            default -> null;
+        };
+    }
+
+    private static WaveDifficulty parseWaveDifficulty(String value) {
+        return switch (value.toLowerCase(Locale.ROOT)) {
+            case "beginner" -> WaveDifficulty.BEGINNER;
+            case "easy" -> WaveDifficulty.EASY;
+            case "medium" -> WaveDifficulty.MEDIUM;
+            case "hard" -> WaveDifficulty.HARD;
+            case "extreme" -> WaveDifficulty.EXTREME;
             default -> null;
         };
     }

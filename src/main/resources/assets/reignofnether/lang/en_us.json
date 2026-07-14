@@ -1510,6 +1510,7 @@
     "survival.reignofnether.wave_cleared": "Your enemies have been defeated... for now.",
     "survival.reignofnether.remaining_enemies_one": "1 enemy remains",
     "survival.reignofnether.remaining_enemies": "%d enemies remain",
+    "survival.reignofnether.run_ended": "Wave Survival ended at wave %d.",
 
     "survival.reignofnether.next_wave": "Next Wave: %d (Tier %d %s)",
 

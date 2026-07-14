@@ -1032,7 +1032,8 @@ public class PlayerServerEvents {
             ResourcesServerEvents.resourcesList.removeIf(rl -> rl.ownerName.equals(playerName));
 
             // Check if only allied players are left or if a single player remains
-            if (!serverLevel.getServer().getGameRules().getRule(GameRuleRegistrar.COOP_MODE).get()) {
+            if (!SurvivalServerEvents.isEnabled()
+                    && !serverLevel.getServer().getGameRules().getRule(GameRuleRegistrar.COOP_MODE).get()) {
                 if (rtsPlayers.size() > 1) {
                     // Get the set of remaining player names
                     Set<String> remainingPlayers = new HashSet<>();
@@ -1065,6 +1066,11 @@ public class PlayerServerEvents {
                     PlayerClientboundPacket.victory(winner.name);
                     broadcastMatchStats(Set.of(winner.name));
                 }
+            } else if (SurvivalServerEvents.isEnabled() && rtsPlayers.isEmpty()) {
+                int waveReached = SurvivalServerEvents.getLastStartedWaveNumber();
+                sendMessageToAllPlayers("survival.reignofnether.run_ended", true, waveReached);
+                SurvivalServerEvents.reset();
+                broadcastMatchStats(Set.of());
             }
         }
     }
