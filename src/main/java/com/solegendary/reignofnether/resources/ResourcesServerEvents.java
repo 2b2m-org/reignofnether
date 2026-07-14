@@ -43,6 +43,7 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.block.CropGrowEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.*;
@@ -93,7 +94,8 @@ public class ResourcesServerEvents {
             int prodWood = 0;
             int prodOre = 0;
             for (BuildingPlacement building : BuildingServerEvents.getBuildings()) {
-                if (building instanceof ProductionPlacement pBuilding) {
+                if (building instanceof ProductionPlacement pBuilding
+                        && pBuilding.ownerName.equals(r.ownerName)) {
                     for (ActiveProduction item : pBuilding.productionQueue) {
                         prodFood += item.item.getCost(false, pBuilding.ownerName).food;
                         prodWood += item.item.getCost(false, pBuilding.ownerName).wood;
@@ -139,7 +141,7 @@ saveTicks += 1;
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onServerStopping(ServerStoppingEvent evt) {
         ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
         if (level != null) {
@@ -444,7 +446,6 @@ saveTicks += 1;
         FALLING_LOGS.put(Blocks.CRIMSON_HYPHAE, BlockRegistrar.FALLING_CRIMSON_STEM.get());
     }
 }
-
 
 
 
