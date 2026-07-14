@@ -120,6 +120,7 @@ final class BotArmy {
         List<LivingEntity> visibleEnemyCombatants = worldView.visibleEnemyCombatants(player);
         observeFriendlyBuildingThreats(visibleEnemyCombatants, tick);
         if (shelteringFromSun) {
+            clearPursuit();
             shelterMonsterArmy(level, player, self.army());
             objectiveLastProgressTick = tick;
             beaconAssaultLastProgressTick = tick;
@@ -211,6 +212,7 @@ final class BotArmy {
         }
         if (main.isEmpty()) {
             clearObjective();
+            clearPursuit();
             activeDefenseIntent = null;
             if (beaconOrder != BotDecisionMaker.BeaconOrder.NONE)
                 announceBeaconIntent(level, beacon, teamAdviceTarget, tick);
@@ -248,8 +250,8 @@ final class BotArmy {
         List<LivingEntity> visibleEnemyArmy = visibleEnemyCombatants.stream()
                 .filter(enemy -> !(enemy instanceof WorkerUnit))
                 .toList();
-        List<LivingEntity> tacticalEnemyMilitary = tacticalEnemyArmy.stream()
-                .filter(enemy -> !(enemy instanceof WorkerUnit))
+        List<LivingEntity> tacticalGroundEnemyMilitary = tacticalEnemyArmy.stream()
+                .filter(enemy -> !(enemy instanceof WorkerUnit) && !isFlying(enemy))
                 .toList();
         int visibleEnemyArmyPopulation = BotSelf.population(visibleEnemyArmy);
         boolean pressVisibleAdvantage = BotDecisionMaker.shouldPressVisibleAdvantage(
@@ -263,9 +265,9 @@ final class BotArmy {
                 if (teamAdvicePriority(teamAdviceTarget, target.centre()) != 0)
                     shareTeamIntent(level, objective.anchor(), tick);
             } else if (!survivalEnabled && (defenseThreat || pursuitTarget != null)
-                    && !tacticalEnemyMilitary.isEmpty()) {
+                    && !tacticalGroundEnemyMilitary.isEmpty()) {
                 boolean startingPursuit = pursuitTarget == null;
-                pursuitTarget = armyCentroidRepresentative(tacticalEnemyMilitary);
+                pursuitTarget = armyCentroidRepresentative(tacticalGroundEnemyMilitary);
                 pursuitUntilTick = tick + PURSUIT_TICKS;
                 if (startingPursuit)
                     ReignOfNether.LOGGER.info(
