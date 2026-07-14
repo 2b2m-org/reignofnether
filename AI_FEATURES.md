@@ -12,11 +12,13 @@ This document describes the AI opponent implementation on the `feature/basic-ai-
 
 The main components are [BotController](src/main/java/com/solegendary/reignofnether/bot/BotController.java), [BotDecisionMaker](src/main/java/com/solegendary/reignofnether/bot/BotDecisionMaker.java), [BotArmy](src/main/java/com/solegendary/reignofnether/bot/BotArmy.java), [BotWorldView](src/main/java/com/solegendary/reignofnether/bot/BotWorldView.java), [BotBuildingPlanner](src/main/java/com/solegendary/reignofnether/bot/BotBuildingPlanner.java), and [BotServerEvents](src/main/java/com/solegendary/reignofnether/bot/BotServerEvents.java). These classes provide the useful separation that an older experimental `RonApi`/`RoNAi` project was aiming for without adding a second abstraction over the whole mod.
 
+`BotStrategy`, `BotDifficulty`, and `BotPersonality` are built-in policy inputs, not a public add-on API or runtime AI-script registry. Adding a personality currently requires a code change.
+
 ## Difficulties
 
 Army sizes are measured in population rather than unit count so the same budget applies across factions.
 
-Production targets count the full military population. Attack and retreat thresholds normally count the active main group after any fog scout and owned-beacon guards are reserved; the owned-beacon launch check counts those reserved units separately.
+Production targets count the full military population. Normal attack launches count the active main group plus units reserved for fog scouting or beacon guarding, preventing a reserved unit from stranding the main group below its launch gate. Retreat and visible-advantage comparisons still use the active main group.
 
 | Difficulty | Decision profile | Economy and production | Army behavior |
 | --- | --- | --- | --- |
@@ -95,6 +97,8 @@ Bots currently:
 - pursue a locally observed retreating ground army only while ahead, then expire the pursuit; and
 - retreat an outmatched committed army to its home for a short regroup period according to difficulty and personality.
 
+Reserve-inclusive readiness is scoped to launch order selection. A reserved fog scout does not by itself make Rusher or Steady ignore normal defense or broaden local enemy engagement; owned-beacon garrisons retain their existing special defense behavior.
+
 The bot commands the main army as one group, but it does not yet have a true staging point, formation/cohesion check, straggler regrouping, separate defense/harass groups, choke-point routing, focus-fire controller beyond the ranged anti-air target, pullback micro, or spellcasting.
 
 ## Teams and communication
@@ -110,6 +114,8 @@ Coordination uses the mod's minimap-marker channel rather than text chat:
 - advice expires and is rejected if the sender is no longer allied; receiving bot advice never inserts an unknown building into fog memory, so an unknown coordinate must still be scouted.
 
 Current coordination is positional only. Bots do not assign complementary team roles, negotiate who attacks or defends, reserve targets for one another, acknowledge player orders, or send text-chat status.
+
+Lobby bots receive teams from their configured start seats, and Wave Survival creates the co-op alliances it needs. Ad-hoc `/rts-bot add` bots have no team or alliance argument; the normal `/ally` command targets online human players rather than bot identities. Human coordination with an allied bot therefore currently uses minimap markers.
 
 ## Game modes
 
@@ -155,13 +161,14 @@ Tactical state is intentionally transient: fog memory, scout waypoint, current t
 
 ## Validation status
 
-Implementation and test evidence reviewed on 2026-07-14 through commit `545dd103`:
+Implementation reviewed through commit `fff6b0cd`; runtime evidence below is pinned to the commit named in each result:
 
 - The latest local Gradle test run passed all 43 tests: 36 decision-policy tests, 2 bot command/identity tests, 2 RTS player identity tests, and 3 existing utility tests. The bot tests cover difficulty and personality bands, build goals, supply planning, resource reserves, worker safety, repairs, army orders, target priorities, anti-air behavior, scouting progress, Monster shelter timing, and beacon decisions.
 - A controlled, fog-enabled, adjacent-base hierarchy run at commit `39d470a2` recorded three expected higher-difficulty wins: Piglin Medium over Easy, Monster Hard over Medium, and Villager Medium over Easy.
 - The fourth controlled trial at that commit, Monster Medium over Easy, timed out without a winner. The run stopped at the first non-win, leaving 20 planned side/order/faction trials pending.
 - Commit `d7bba3a9` fixes both defects found from that timeout: autonomous scouts must enter their waypoint chunk before advancing, and a same-target Move can no longer be discarded while combat or Attack Move state needs clearing. The exact fog-enabled trial then passed: Medium discovered the enemy capitol, survived Easy's opening attack, issued 10 attack events, and won at tick 45,883 while sustaining 199.5 effective TPS.
 - Commit `545dd103` lets Hard press a clearly observed 5:4 army advantage when at least 12 enemy population is visible and its main army is at or above its personality-adjusted retreat threshold. In the exact Monster Hard-versus-Medium seed/side/order that had timed out after 96,018 simulated ticks, Medium attacked first with 24 units, Hard counterattacked below its normal 45-population timing, destroyed every opposing building, and won after 71,818 simulated ticks. The run sustained 186.7 effective TPS with no grants, refills, watchdog, or crash. The reciprocal side and creation order also passed, with Hard winning after 95,495 simulated ticks at 182.3 effective TPS.
+- Commit `70015c02` prevents a fog scout or beacon guard from leaving an otherwise ready army permanently below its launch threshold. Commit `fff6b0cd` confines the general reserve signal to launch selection so ordinary defense and local-engagement policy remain unchanged. In reciprocal fresh-world Villager Medium-versus-Easy runs at `fff6b0cd`, Medium won from both sides and creation orders after 29,653 and 29,325 simulated ticks at 172.3 and 177.0 effective TPS, with no resource grants or refills. The second run also directly inspected `fog enabled=true` from live server state.
 - A current-head graceful-restart fixture passed for commit `2aa8cee7`: two owners retained identity and role origins, requeued different transform costs to exactly zero remaining resources, reassigned their own workers to unfinished farms, advanced both farms, and completed Military and Civilian Portal transforms.
 - These targeted reruns validate the fixes, but the complete multi-seed, side/order-controlled difficulty hierarchy is still **not proven**.
 - An earlier Wave persistence fixture preserved an active wave portal across restart and preserved the wave-30 cap. It predates the current head and does not replace current-head mixed-team or natural-wave validation.
@@ -187,7 +194,9 @@ Implementation and test evidence reviewed on 2026-07-14 through commit `545dd103
 - [ ] Split military roles into the smallest useful groups: main attack, minimal local defense, short-lived harass, beacon guard, and Wave response. Coordinate these roles between allied bots instead of duplicating every response.
 - [ ] Expand tactical micro with bounded focus fire, damaged-unit pullback, better anti-air allocation, Creeper target selection for garrisons/crowds, and faction-native spells. Keep actions within human-legal command and information limits.
 - [ ] Add map analysis for reachable regions, routes, choke points, safe staging sides, and attack angles before adding more build-order complexity.
-- [ ] Add resource-node awareness and expansion: locate renewable clusters, choose safe outposts, place Stockpiles or Piglin portals near distant resources, and support additional capitols only when the economy can sustain them.
+- [ ] Add fog-legal resource-node awareness and expansion: incrementally cluster visible resources, track capacity and depletion, avoid over-assigning a farm or node, choose safe outposts, place Stockpiles or Piglin portals near distant resources, and preserve valid worker assignments across reload. If repeated global scans become a measured hotspot, maintain a small per-owner index rather than a whole-mod wrapper API.
+- [ ] Make base layout semantic and compact: keep farms near the capitol, score production positions by front/rear intent, preserve movement lanes, and permit proxy or resource placements only from fog-legal information.
+- [ ] Add urgency-based multi-builder construction and deterministic replacement-builder selection while retaining normal worker commands and costs.
 - [ ] Add prerequisite-aware research, upgrades, building transformations, and additional production buildings. Then add hero training, resurrection, skill selection, creeping, and spell use faction by faction.
 - [ ] Deepen faction plans: Villager jobs/militia/enchanting, Monster night attacks and Sculk expansion, and Piglin portal-network expansion, while retaining the shared fair-policy core.
 - [ ] Add a conservative, team-aware surrender decision only for mathematically hopeless states. Never use surrender to hide navigation bugs, timeouts, or poor play.
@@ -196,6 +205,7 @@ Implementation and test evidence reviewed on 2026-07-14 through commit `545dd103
 ### P2: authoring and quality of life
 
 - [ ] Add lobby UI controls for bot faction, difficulty, personality, start seat, and team after the command workflow is stable.
+- [ ] Add pre-match team assignment for command-created bots while respecting alliance locks and co-op rules; do not add an unrestricted mid-match force-alliance command.
 - [ ] Add more personalities only when each one changes observable strategy across factions and remains fair—for example, an expansion-focused macro player or a harassment-focused skirmisher.
 - [ ] Make build, unit, research, harvest, and attack priorities data-driven if multiple independently authored AI scripts create a real need. Do not introduce a broad `RonApi`, integer type-ID layer, or generic timer framework while the existing native classes remain sufficient.
 - [ ] Profile 4- and 6-bot matches at normal and accelerated tick rates, then optimize measured server-thread hotspots without weakening decisions or replacing end-to-end tests with synthetic benchmarks.
