@@ -178,6 +178,17 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void attackThresholdsStayAboveRetreatThresholds() {
+        for (BotDifficulty difficulty : BotDifficulty.values()) {
+            for (BotPersonality personality : BotPersonality.values()) {
+                assertTrue(BotDecisionMaker.attackPopulation(difficulty, personality)
+                                >= BotDecisionMaker.retreatPopulation(difficulty, personality),
+                        () -> difficulty + "/" + personality + " must not alternate attack and retreat orders");
+            }
+        }
+    }
+
+    @Test
     void uncommittedArmiesRespectPersonalityAttackThresholds() {
         for (BotDifficulty difficulty : BotDifficulty.values())
             for (BotPersonality personality : BotPersonality.values()) {
