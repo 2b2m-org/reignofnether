@@ -176,6 +176,28 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void uncommittedArmiesRespectPersonalityAttackThresholds() {
+        for (BotDifficulty difficulty : BotDifficulty.values())
+            for (BotPersonality personality : BotPersonality.values()) {
+                int threshold = BotDecisionMaker.attackPopulation(difficulty, personality);
+                assertAll(
+                        () -> assertTrue(threshold
+                                        >= BotDecisionMaker.retreatPopulation(difficulty, personality),
+                                () -> difficulty + "/" + personality
+                                        + " must become attack-ready before retreat checks can apply"),
+                        () -> assertEquals(BotDecisionMaker.ArmyOrder.HOLD,
+                                BotDecisionMaker.chooseArmyOrder(
+                                        difficulty, personality, threshold - 1,
+                                        0, false, false)),
+                        () -> assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
+                                BotDecisionMaker.chooseArmyOrder(
+                                        difficulty, personality, threshold,
+                                        0, false, false))
+                );
+            }
+    }
+
+    @Test
     void hardPlansSupplyFurtherAhead() {
         BotDecisionContext context = new BotDecisionContext(
                 true, true, 9, 13, 20, false, 1, 3,
@@ -278,8 +300,32 @@ class BotDecisionMakerTest {
                         false, true, 36, 9)),
                 () -> assertTrue(BotDecisionMaker.shouldFocusEnemyArmy(
                         true, true, 36, 3)),
-                () -> assertTrue(BotDecisionMaker.shouldDefend(BotPersonality.TURTLE, true, false)),
-                () -> assertTrue(BotDecisionMaker.shouldDefend(BotPersonality.RUSHER, true, true))
+                () -> assertTrue(BotDecisionMaker.shouldDefend(
+                        BotPersonality.TURTLE, true, false, false, false)),
+                () -> assertTrue(BotDecisionMaker.shouldDefend(
+                        BotPersonality.RUSHER, true, false, true, true))
+        );
+    }
+
+    @Test
+    void attackReadySurvivalBotsPrioritizeOwnBaseAndLeaveAlliedResponseToTurtles() {
+        assertAll(
+                () -> assertFalse(BotDecisionMaker.shouldDefend(
+                        BotPersonality.STEADY, true, true, false, true)),
+                () -> assertFalse(BotDecisionMaker.shouldDefend(
+                        BotPersonality.RUSHER, true, true, false, false)),
+                () -> assertTrue(BotDecisionMaker.shouldDefend(
+                        BotPersonality.TURTLE, true, true, false, false)),
+                () -> assertTrue(BotDecisionMaker.shouldDefend(
+                        BotPersonality.STEADY, true, true, true, false)),
+                () -> assertTrue(BotDecisionMaker.shouldDefend(
+                        BotPersonality.STEADY, false, true, false, false)),
+                () -> assertTrue(BotDecisionMaker.shouldDefend(
+                        BotPersonality.STEADY, true, false, false, true)),
+                () -> assertTrue(BotDecisionMaker.defensePriority(false, false, true)
+                        < BotDecisionMaker.defensePriority(false, true, false)),
+                () -> assertTrue(BotDecisionMaker.defensePriority(true, true, false)
+                        < BotDecisionMaker.defensePriority(true, false, true))
         );
     }
 

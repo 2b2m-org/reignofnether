@@ -100,15 +100,15 @@ public final class BotDecisionMaker {
 
     public static ArmyOrder chooseArmyOrder(BotDifficulty difficulty, BotPersonality personality,
                                              int armyPopulation, int visibleEnemyPopulation,
-                                             boolean attackCommitted,
+                                             boolean attackReady,
                                              boolean homeThreat) {
         if (homeThreat)
             return ArmyOrder.DEFEND;
         int retreatPopulation = retreatPopulation(difficulty, personality);
-        if (attackCommitted && retreatPopulation > 0 && armyPopulation < retreatPopulation
+        if (attackReady && retreatPopulation > 0 && armyPopulation < retreatPopulation
                 && visibleEnemyPopulation >= armyPopulation)
             return ArmyOrder.RETREAT;
-        if (attackCommitted || armyPopulation >= attackPopulation(difficulty, personality))
+        if (attackReady || armyPopulation >= attackPopulation(difficulty, personality))
             return ArmyOrder.ATTACK_MOVE;
         return ArmyOrder.HOLD;
     }
@@ -129,14 +129,23 @@ public final class BotDecisionMaker {
         return Math.max(0, difficulty.retreatPopulation() + personality.retreatPopulationOffset());
     }
 
-    public static boolean shouldDefend(BotPersonality personality, boolean attackCommitted,
+    public static boolean shouldDefend(BotPersonality personality, boolean attackReady,
+                                       boolean survivalEnabled, boolean ownBuildingThreatened,
                                        boolean criticalBuildingThreatened) {
-        return !attackCommitted || criticalBuildingThreatened || personality == BotPersonality.TURTLE;
+        if (!attackReady || personality == BotPersonality.TURTLE)
+            return true;
+        return survivalEnabled ? ownBuildingThreatened : criticalBuildingThreatened;
     }
 
-    public static boolean shouldFocusEnemyArmy(boolean enemyThreatensHome, boolean attackCommitted,
+    static int defensePriority(boolean survivalEnabled, boolean ownBuilding, boolean criticalBuilding) {
+        if (survivalEnabled)
+            return (ownBuilding ? 0 : 2) + (criticalBuilding ? 0 : 1);
+        return (criticalBuilding ? 0 : 2) + (ownBuilding ? 0 : 1);
+    }
+
+    public static boolean shouldFocusEnemyArmy(boolean enemyThreatensHome, boolean attackReady,
                                                 int armyPopulation, int nearbyEnemyPopulation) {
-        return nearbyEnemyPopulation > 0 && (enemyThreatensHome || !attackCommitted
+        return nearbyEnemyPopulation > 0 && (enemyThreatensHome || !attackReady
                 || nearbyEnemyPopulation * 3 >= armyPopulation);
     }
 
