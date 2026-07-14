@@ -131,10 +131,10 @@ class BotDecisionMakerTest {
                         < BotDifficulty.MEDIUM.targetArmyPopulation()),
                 () -> assertTrue(BotDifficulty.MEDIUM.targetArmyPopulation()
                         < BotDifficulty.HARD.targetArmyPopulation()),
-                () -> assertTrue(BotDifficulty.EASY.retreatPopulation()
-                        < BotDifficulty.MEDIUM.retreatPopulation()),
-                () -> assertTrue(BotDifficulty.MEDIUM.retreatPopulation()
-                        < BotDifficulty.HARD.retreatPopulation()),
+                () -> assertTrue(BotDifficulty.HARD.decisionIntervalTicks()
+                        < BotDifficulty.MEDIUM.decisionIntervalTicks()),
+                () -> assertTrue(BotDifficulty.MEDIUM.decisionIntervalTicks()
+                        < BotDifficulty.EASY.decisionIntervalTicks()),
                 () -> assertEquals(5, BotDifficulty.MEDIUM.targetWorkers()),
                 () -> assertEquals(24, BotDifficulty.EASY.targetArmyPopulation()),
                 () -> assertEquals(36, BotDifficulty.MEDIUM.targetArmyPopulation()),
@@ -166,6 +166,24 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void difficultyBandsRemainDistinctAcrossPersonalities() {
+        assertAll(
+                () -> assertTrue(BotDecisionMaker.attackPopulation(
+                                BotDifficulty.MEDIUM, BotPersonality.RUSHER)
+                        > BotDecisionMaker.attackPopulation(BotDifficulty.EASY, BotPersonality.TURTLE)),
+                () -> assertTrue(BotDecisionMaker.attackPopulation(
+                                BotDifficulty.HARD, BotPersonality.RUSHER)
+                        > BotDecisionMaker.attackPopulation(BotDifficulty.MEDIUM, BotPersonality.TURTLE)),
+                () -> assertTrue(BotDecisionMaker.targetArmyPopulation(
+                                BotDifficulty.MEDIUM, BotPersonality.RUSHER)
+                        > BotDecisionMaker.targetArmyPopulation(BotDifficulty.EASY, BotPersonality.TURTLE)),
+                () -> assertTrue(BotDecisionMaker.targetArmyPopulation(
+                                BotDifficulty.HARD, BotPersonality.RUSHER)
+                        > BotDecisionMaker.targetArmyPopulation(BotDifficulty.MEDIUM, BotPersonality.TURTLE))
+        );
+    }
+
+    @Test
     void attackGatesRemainReachableWithAFogScoutReserved() {
         for (BotDifficulty difficulty : BotDifficulty.values()) {
             for (BotPersonality personality : BotPersonality.values()) {
@@ -179,11 +197,13 @@ class BotDecisionMakerTest {
     }
 
     @Test
-    void attackThresholdsStayAboveRetreatThresholds() {
+    void attackThresholdsStayStrictlyAbovePositiveRetreatThresholds() {
         for (BotDifficulty difficulty : BotDifficulty.values()) {
             for (BotPersonality personality : BotPersonality.values()) {
+                assertTrue(BotDecisionMaker.retreatPopulation(difficulty, personality) > 0,
+                        () -> difficulty + "/" + personality + " must retain when outmatched");
                 assertTrue(BotDecisionMaker.attackPopulation(difficulty, personality)
-                                >= BotDecisionMaker.retreatPopulation(difficulty, personality),
+                                > BotDecisionMaker.retreatPopulation(difficulty, personality),
                         () -> difficulty + "/" + personality + " must not alternate attack and retreat orders");
             }
         }
@@ -317,12 +337,22 @@ class BotDecisionMakerTest {
     @Test
     void workerSplitsKeepWoodIncomeAndHardFrontLoadsConstruction() {
         assertAll(
-                () -> assertEquals(3, BotDecisionMaker.foodWorkerCount(BotDifficulty.EASY, 4, false)),
-                () -> assertEquals(3, BotDecisionMaker.foodWorkerCount(BotDifficulty.MEDIUM, 5, false)),
-                () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(BotDifficulty.MEDIUM, 5, true)),
-                () -> assertEquals(2, BotDecisionMaker.foodWorkerCount(BotDifficulty.HARD, 5, false)),
-                () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(BotDifficulty.HARD, 9, false)),
-                () -> assertEquals(6, BotDecisionMaker.foodWorkerCount(BotDifficulty.HARD, 9, true))
+                () -> assertEquals(3, BotDecisionMaker.foodWorkerCount(
+                        BotDifficulty.EASY, BotPersonality.STEADY, 4, false)),
+                () -> assertEquals(3, BotDecisionMaker.foodWorkerCount(
+                        BotDifficulty.MEDIUM, BotPersonality.STEADY, 5, false)),
+                () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(
+                        BotDifficulty.MEDIUM, BotPersonality.STEADY, 5, true)),
+                () -> assertEquals(2, BotDecisionMaker.foodWorkerCount(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 5, false)),
+                () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 5, true)),
+                () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 9, false)),
+                () -> assertEquals(8, BotDecisionMaker.foodWorkerCount(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 9, true)),
+                () -> assertEquals(8, BotDecisionMaker.foodWorkerCount(
+                        BotDifficulty.HARD, BotPersonality.TURTLE, 10, true))
         );
     }
 
@@ -341,13 +371,13 @@ class BotDecisionMakerTest {
     }
 
     @Test
-    void armyCompositionWaitsForMissingMeleeInsteadOfOverproducingRanged() {
+    void armyCompositionFallsBackToAnyAffordableUnit() {
         for (BotPersonality personality : BotPersonality.values()) {
             assertEquals(BotDecisionMaker.ArmyUnitChoice.MELEE,
                     BotDecisionMaker.chooseArmyUnit(personality, 18, 15, true, false));
             assertEquals(BotDecisionMaker.ArmyUnitChoice.RANGED,
                     BotDecisionMaker.chooseArmyUnit(personality, 0, 0, false, true));
-            assertEquals(BotDecisionMaker.ArmyUnitChoice.NONE,
+            assertEquals(BotDecisionMaker.ArmyUnitChoice.RANGED,
                     BotDecisionMaker.chooseArmyUnit(personality, 12, 18, false, true));
             assertEquals(BotDecisionMaker.ArmyUnitChoice.NONE,
                     BotDecisionMaker.chooseArmyUnit(personality, 0, 0, false, false));
@@ -430,7 +460,7 @@ class BotDecisionMakerTest {
                                 24, 0, false, false)),
                 () -> assertEquals(BotDecisionMaker.ArmyOrder.RETREAT,
                         BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
-                                15, 15, true, false)),
+                                11, 11, true, false)),
                 () -> assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
                         BotDecisionMaker.chooseArmyOrder(BotDifficulty.HARD, BotPersonality.STEADY,
                                 15, 3, true, false)),

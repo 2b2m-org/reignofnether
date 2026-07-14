@@ -80,16 +80,17 @@ public final class BotDecisionMaker {
         return BotGoal.TRAIN_ARMY;
     }
 
-    public static int foodWorkerCount(BotDifficulty difficulty, int totalWorkers, boolean economyComplete) {
+    public static int foodWorkerCount(BotDifficulty difficulty, BotPersonality personality,
+                                      int totalWorkers, boolean productionReady) {
         if (totalWorkers <= 1)
             return Math.max(totalWorkers, 0);
         return switch (difficulty) {
             case EASY -> totalWorkers - 1;
-            case MEDIUM -> economyComplete
+            case MEDIUM -> productionReady
                     ? totalWorkers - 1
                     : Math.max(1, (totalWorkers * 3 + 4) / 5);
-            case HARD -> economyComplete
-                    ? Math.max(1, (totalWorkers * 2 + 2) / 3)
+            case HARD -> productionReady
+                    ? Math.max(1, totalWorkers - (personality == BotPersonality.TURTLE ? 2 : 1))
                     : Math.max(1, (totalWorkers * 4) / 9);
         };
     }
@@ -129,7 +130,7 @@ public final class BotDecisionMaker {
             return ArmyUnitChoice.MELEE;
         if (canAffordMelee)
             return ArmyUnitChoice.MELEE;
-        if (armyPopulation == 0 && canAffordRanged)
+        if (canAffordRanged)
             return ArmyUnitChoice.RANGED;
         return ArmyUnitChoice.NONE;
     }
@@ -149,7 +150,7 @@ public final class BotDecisionMaker {
         if (homeThreat)
             return ArmyOrder.DEFEND;
         int retreatPopulation = retreatPopulation(difficulty, personality);
-        if (attackReady && retreatPopulation > 0 && armyPopulation < retreatPopulation
+        if (attackReady && armyPopulation < retreatPopulation
                 && visibleEnemyPopulation >= armyPopulation)
             return ArmyOrder.RETREAT;
         if (attackReady || armyPopulation >= attackPopulation(difficulty, personality))
@@ -217,7 +218,7 @@ public final class BotDecisionMaker {
     }
 
     public static int retreatPopulation(BotDifficulty difficulty, BotPersonality personality) {
-        return Math.max(0, difficulty.retreatPopulation() + personality.retreatPopulationOffset());
+        return Math.max(1, attackPopulation(difficulty, personality) / personality.retreatDivisor());
     }
 
     public static boolean shouldDefend(BotPersonality personality, boolean attackReady,
