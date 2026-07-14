@@ -241,8 +241,10 @@ final class BotArmy {
                 .toList());
         boolean pressVisibleAdvantage = BotDecisionMaker.shouldPressVisibleAdvantage(
                 difficulty, personality, mainPopulation, visibleEnemyArmyPopulation);
-        if (pressVisibleAdvantage && objective == null) {
-            target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
+        if (pressVisibleAdvantage && beaconOrder == BotDecisionMaker.BeaconOrder.NONE
+                && objective == null) {
+            if (target == null)
+                target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
             if (target != null) {
                 startObjective(target, armyPos, tick, main.size());
                 if (teamAdvicePriority(teamAdviceTarget, target.centre()) != 0)
