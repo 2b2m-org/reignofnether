@@ -83,7 +83,9 @@ public final class BotDecisionMaker {
             return Math.max(totalWorkers, 0);
         return switch (difficulty) {
             case EASY -> totalWorkers - 1;
-            case MEDIUM -> Math.max(1, (totalWorkers * 3 + 4) / 5);
+            case MEDIUM -> economyComplete
+                    ? totalWorkers - 1
+                    : Math.max(1, (totalWorkers * 3 + 4) / 5);
             case HARD -> economyComplete
                     ? Math.max(1, (totalWorkers * 2 + 2) / 3)
                     : Math.max(1, (totalWorkers * 4) / 9);

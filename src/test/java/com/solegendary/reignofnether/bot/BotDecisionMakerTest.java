@@ -319,6 +319,7 @@ class BotDecisionMakerTest {
         assertAll(
                 () -> assertEquals(3, BotDecisionMaker.foodWorkerCount(BotDifficulty.EASY, 4, false)),
                 () -> assertEquals(3, BotDecisionMaker.foodWorkerCount(BotDifficulty.MEDIUM, 5, false)),
+                () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(BotDifficulty.MEDIUM, 5, true)),
                 () -> assertEquals(2, BotDecisionMaker.foodWorkerCount(BotDifficulty.HARD, 5, false)),
                 () -> assertEquals(4, BotDecisionMaker.foodWorkerCount(BotDifficulty.HARD, 9, false)),
                 () -> assertEquals(6, BotDecisionMaker.foodWorkerCount(BotDifficulty.HARD, 9, true))
