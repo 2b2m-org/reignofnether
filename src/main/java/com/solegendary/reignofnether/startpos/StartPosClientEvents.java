@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.gamemode.GameMode;
 import com.solegendary.reignofnether.hud.Button;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.matchstart.MatchStartClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerServerboundPacket;
@@ -26,7 +27,9 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
@@ -41,35 +44,58 @@ public class StartPosClientEvents {
         return ClientGameModeHelper.gameMode == GameMode.CLASSIC && !startPoses.isEmpty();
     }
 
-    public static void setPlayerReady(String playerName, boolean ready) {
-        for (StartPos startPos : startPoses) {
-            if (startPos.playerName.equals(playerName)) {
-                if (startPos.ready != ready) {
-                    startPos.ready = ready;
-                    if (MC.player != null) {
-                        if (startPos.ready) {
-                            MC.player.sendSystemMessage(Component.translatable("startpos.reignofnether.player_ready",
-                                    playerName, getNumPlayersReady(), getNumEnabledPoses()));
-                        } else {
-                            MC.player.sendSystemMessage(Component.translatable("startpos.reignofnether.player_not_ready", playerName));
-                        }
-                    }
-                }
+    static void applySnapshot(List<StartPosClientboundPacket.PositionState> states,
+                              int countdownTicks, boolean announceReadyChanges) {
+        Map<BlockPos, StartPos> previous = new HashMap<>();
+        for (StartPos startPos : startPoses)
+            previous.put(startPos.pos, startPos);
+
+        ArrayList<StartPos> updated = new ArrayList<>(states.size());
+        for (StartPosClientboundPacket.PositionState state : states) {
+            StartPos startPos = new StartPos(state.pos(), state.faction(), state.playerName(), state.colorId());
+            startPos.enabled = state.enabled();
+            startPos.ready = state.ready();
+            updated.add(startPos);
+
+            StartPos old = previous.get(state.pos());
+            if (announceReadyChanges && old != null
+                    && old.playerName.equals(state.playerName())
+                    && !state.playerName().isBlank()
+                    && old.ready != state.ready()) {
+                announceReadyChange(state.playerName(), state.ready(), states);
             }
+        }
+
+        startPoses.clear();
+        startPoses.addAll(updated);
+        syncSelectedFaction();
+        MatchStartClientEvents.syncCountdown(countdownTicks);
+    }
+
+    private static void announceReadyChange(String playerName, boolean ready,
+                                            List<StartPosClientboundPacket.PositionState> states) {
+        if (MC.player == null)
+            return;
+        if (ready) {
+            int readyPlayers = 0;
+            int enabledPositions = 0;
+            for (StartPosClientboundPacket.PositionState state : states) {
+                if (state.enabled())
+                    enabledPositions++;
+                if (state.ready() && !state.playerName().isBlank() && state.faction() != Faction.NONE)
+                    readyPlayers++;
+            }
+            MC.player.sendSystemMessage(Component.translatable(
+                    "startpos.reignofnether.player_ready", playerName, readyPlayers, enabledPositions));
+        } else {
+            MC.player.sendSystemMessage(Component.translatable(
+                    "startpos.reignofnether.player_not_ready", playerName));
         }
     }
 
-    public static void setPosEnabled(BlockPos pos, boolean enable) {
-        for (StartPos startPos : startPoses) {
-            if (startPos.pos.equals(pos)) {
-                startPos.enabled = enable;
-                if (!startPos.enabled) {
-                    startPos.playerName = "";
-                    startPos.ready = false;
-                    startPos.faction = Faction.NONE;
-                }
-            }
-        }
+    private static void syncSelectedFaction() {
+        StartPos localPos = getPos();
+        selectedFaction = localPos == null ? Faction.NONE : localPos.faction;
     }
 
     public static boolean hasReservedPos() {
@@ -101,21 +127,6 @@ public class StartPosClientEvents {
                 null,
                 getReadyButtonTooltip()
         );
-    }
-
-    private static int getNumPlayersReady() {
-        int readyPlayers = 0;
-        for (StartPos startPose : startPoses)
-            if (startPose.faction != Faction.NONE && startPose.ready && !startPose.playerName.isBlank())
-                readyPlayers++;
-        return readyPlayers;
-    }
-    private static int getNumEnabledPoses() {
-        int enabledPoses = 0;
-        for (StartPos startPose : startPoses)
-            if (startPose.enabled)
-                enabledPoses++;
-        return enabledPoses;
     }
 
     private static List<FormattedCharSequence> getReadyButtonTooltip() {

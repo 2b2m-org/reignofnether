@@ -26,8 +26,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 // manages start block and readied start (startRTSEveryone) actions
 
@@ -46,6 +44,10 @@ public class StartPosServerEvents {
 
     public static boolean isStartingGame() {
         return startingGame;
+    }
+
+    static int getCountdownTicks() {
+        return startingGame ? ticksToStart : -1;
     }
 
     public static void reset(ServerLevel serverLevel) {
@@ -71,11 +73,9 @@ public class StartPosServerEvents {
             startGameCountdown();
         } else if (startingGame) {
             cancelStartGameCountdown(false);
+        } else {
+            StartPosClientboundPacket.syncAll(true);
         }
-        if (ready)
-            StartPosClientboundPacket.readyPlayer(playerName);
-        else
-            StartPosClientboundPacket.unreadyPlayer(playerName);
     }
 
     static boolean isReservableFaction(Faction faction) {
@@ -105,17 +105,12 @@ public class StartPosServerEvents {
         for (StartPos startPos : startPoses) {
             if (startPos.pos.equals(pos)) {
                 startPos.enabled = enable;
-                if (!startPos.enabled) {
-                    startPos.playerName = "";
-                    startPos.ready = false;
-                    startPos.faction = Faction.NONE;
-                }
+                if (!startPos.enabled)
+                    startPos.reset();
+                StartPosClientboundPacket.syncAll();
+                return;
             }
         }
-        if (enable)
-            StartPosClientboundPacket.enablePos(pos);
-        else
-            StartPosClientboundPacket.disablePos(pos);
     }
 
     @SubscribeEvent
@@ -131,7 +126,10 @@ public class StartPosServerEvents {
                             rtsStartBlock.defaultMapColor()).id
                 );
                 startPoses.add(newStartPos);
-                StartPosClientboundPacket.addPos(newStartPos);
+                if (startingGame)
+                    cancelStartGameCountdown(false);
+                else
+                    StartPosClientboundPacket.syncAll();
             } else {
                 evt.setCanceled(true);
                 for (Player player : PlayerServerEvents.players)
@@ -145,35 +143,26 @@ public class StartPosServerEvents {
 
     @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent evt) {
-        if (startPoses.removeIf(sp -> {
-            if (sp.pos.equals(evt.getPos())) {
-                StartPosClientboundPacket.removePos(evt.getPos());
-                return true;
-            }
-            return false;
-        }) && (evt.getLevel() instanceof ServerLevel serverLevel)) {
+        if (startPoses.removeIf(sp -> sp.pos.equals(evt.getPos()))
+                && (evt.getLevel() instanceof ServerLevel serverLevel)) {
+            if (startingGame)
+                cancelStartGameCountdown(false);
+            else
+                StartPosClientboundPacket.syncAll();
             savePositions(serverLevel);
         }
     }
 
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent evt) {
-        for (StartPos startPos : startPoses) {
-            if (startPos.enabled)
-                StartPosClientboundPacket.addPos(startPos);
-            else
-                StartPosClientboundPacket.addDisabledPos(startPos);
-        }
+        if (evt.getEntity() instanceof ServerPlayer player)
+            StartPosClientboundPacket.syncToPlayer(player);
     }
 
     private static void cullInvalidPoses(ServerLevel serverLevel) {
-        if (startPoses.removeIf(sp -> {
-            if (sp.isFromStartBlock && !(serverLevel.getBlockState(sp.pos).getBlock() instanceof RTSStartBlock)) {
-                StartPosClientboundPacket.removePos(sp.pos);
-                return true;
-            }
-            return false;
-        })) {
+        if (startPoses.removeIf(sp -> sp.isFromStartBlock
+                && !(serverLevel.getBlockState(sp.pos).getBlock() instanceof RTSStartBlock))) {
+            StartPosClientboundPacket.syncAll();
             savePositions(serverLevel);
         }
     }
@@ -182,7 +171,7 @@ public class StartPosServerEvents {
         if (!startingGame) {
             ticksToStart = TICKS_TO_START_MAX;
             startingGame = true;
-            StartPosClientboundPacket.startGameCountdown();
+            StartPosClientboundPacket.syncAll(true);
         }
     }
 
@@ -190,7 +179,7 @@ public class StartPosServerEvents {
         if (startingGame) {
             ticksToStart = TICKS_TO_START_MAX;
             startingGame = false;
-            StartPosClientboundPacket.cancelStartGameCountdown();
+            StartPosClientboundPacket.syncAll(true);
             if (!noMsg)
                 PlayerServerEvents.sendMessageToAllPlayers("startpos.reignofnether.cancelled_start_game", true);
         }
@@ -198,7 +187,7 @@ public class StartPosServerEvents {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post evt) {
-if (startingGame) {
+        if (startingGame) {
             if (ticksToStart % 20 == 0) {
                 int secondsLeft = ticksToStart / 20;
                 if (secondsLeft > 0) {
@@ -222,15 +211,15 @@ if (startingGame) {
                     }
                     AlliancesServerEvents.applyConfiguredAlliances(evt.getServer());
                     PlayerServerEvents.setRTSLock(true, true);
-                    StartPosServerEvents.reset(evt.getServer().getLevel(Level.OVERWORLD));
-                    StartPosClientboundPacket.reset();
+                    ticksToStart = TICKS_TO_START_MAX;
                     startingGame = false;
+                    StartPosServerEvents.reset(evt.getServer().getLevel(Level.OVERWORLD));
+                    StartPosClientboundPacket.syncAll();
                 }
             }
-            if (ticksToStart >= 0)
+            if (startingGame && ticksToStart >= 0)
                 ticksToStart -= 1;
-        }
-        else if (!(PlayerServerEvents.isGameActive())) {
+        } else if (!(PlayerServerEvents.isGameActive())) {
             cullTicks += 1;
             if (cullTicks >= cullTicksMax) {
                 cullTicks = 0;
@@ -272,7 +261,6 @@ if (startingGame) {
         if (!RTSMapInfoServerEvents.usingMapInfoStartPositions())
             return;
         int playerColorIndex = 0;
-        List<StartPos> oldStartPoses = new ArrayList<>(startPoses);
         startPoses.clear();
         for (List<BlockPos> teamStartPoses : RTSMapInfoServerEvents.rtsMapInfo.getTeams()) {
             for (BlockPos startBlockPos : teamStartPoses) {
@@ -284,29 +272,24 @@ if (startingGame) {
             if (playerColorIndex >= PlayerColors.colors.length)
                 playerColorIndex = 0;
         }
-        Set<BlockPos> newBlockPoses = startPoses.stream()
-                .map(sp -> sp.pos)
-                .collect(Collectors.toSet());
-        for (StartPos oldStartPos : oldStartPoses)
-            if (!newBlockPoses.contains(oldStartPos.pos))
-                StartPosClientboundPacket.removePos(oldStartPos.pos);
-        for (StartPos startPos : startPoses)
-            StartPosClientboundPacket.addPos(startPos);
+        StartPosClientboundPacket.syncAll();
     }
 
     @SubscribeEvent
     public static void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent evt) {
-        boolean shouldStopCountdown = false;
+        boolean removedReservation = false;
         for (StartPos startPos : startPoses) {
             if (evt.getEntity() instanceof ServerPlayer player &&
                     startPos.playerName.equals(player.getName().getString())) {
-                StartPosClientboundPacket.unreservePos(startPos.pos);
                 startPos.reset();
-                shouldStopCountdown = true;
+                removedReservation = true;
             }
         }
-        if (shouldStopCountdown && startingGame) {
+        if (!removedReservation)
+            return;
+        if (startingGame)
             cancelStartGameCountdown(false);
-        }
+        else
+            StartPosClientboundPacket.syncAll();
     }
 }

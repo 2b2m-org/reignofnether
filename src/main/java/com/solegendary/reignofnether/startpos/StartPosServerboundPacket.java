@@ -122,7 +122,7 @@ public class StartPosServerboundPacket implements CustomPacketPayload {
         requestedPos.reset();
         requestedPos.faction = faction;
         requestedPos.playerName = playerName;
-        StartPosClientboundPacket.reservePos(blockPos, faction, playerName);
+        StartPosClientboundPacket.syncAll();
     }
 
     private void unreserve(String playerName) {
@@ -132,7 +132,7 @@ public class StartPosServerboundPacket implements CustomPacketPayload {
         for (StartPos startPos : StartPosServerEvents.startPoses) {
             if (startPos.pos.equals(blockPos) && startPos.playerName.equals(playerName)) {
                 startPos.reset();
-                StartPosClientboundPacket.unreservePos(blockPos);
+                StartPosClientboundPacket.syncAll();
                 return;
             }
         }
