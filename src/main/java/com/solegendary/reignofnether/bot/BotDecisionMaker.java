@@ -49,7 +49,9 @@ public final class BotDecisionMaker {
 
     public static BotGoal chooseGoal(BotDifficulty difficulty, BotPersonality personality,
                                      BotDecisionContext context) {
-        if (!context.capitolPresent() || !context.capitolBuilt())
+        if (!context.capitolPresent())
+            return BotGoal.BUILD_CAPITOL;
+        if (!context.capitolBuilt())
             return BotGoal.WAIT_FOR_CAPITOL;
 
         int targetWorkers = targetWorkers(difficulty, personality);

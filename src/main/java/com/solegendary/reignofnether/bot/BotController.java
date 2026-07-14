@@ -176,6 +176,8 @@ public final class BotController {
     private void executeGoal(ServerLevel level, RTSPlayer player, BotStrategy strategy, BotDifficulty difficulty,
                              BotPersonality personality, BotGoal goal) {
         switch (goal) {
+            case BUILD_CAPITOL -> buildStructure(
+                    level, player, strategy.capitol(), null, false, difficulty);
             case WAIT_FOR_CAPITOL, WAIT_FOR_MILITARY -> {
             }
             case BUILD_SUPPLY -> {
@@ -619,7 +621,8 @@ public final class BotController {
     }
 
     private static boolean isConstructionGoal(BotGoal goal) {
-        return goal == BotGoal.BUILD_SUPPLY
+        return goal == BotGoal.BUILD_CAPITOL
+                || goal == BotGoal.BUILD_SUPPLY
                 || goal == BotGoal.BUILD_FARM
                 || goal == BotGoal.BUILD_MILITARY;
     }

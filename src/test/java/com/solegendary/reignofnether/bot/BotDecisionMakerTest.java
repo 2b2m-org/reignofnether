@@ -32,9 +32,9 @@ class BotDecisionMakerTest {
     }
 
     @Test
-    void waitsUntilCapitolExistsAndIsBuilt() {
+    void rebuildsAMissingCapitolAndWaitsForConstruction() {
         assertAll(
-                () -> assertEquals(BotGoal.WAIT_FOR_CAPITOL,
+                () -> assertEquals(BotGoal.BUILD_CAPITOL,
                         BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
                                 context(false, false))),
                 () -> assertEquals(BotGoal.WAIT_FOR_CAPITOL,

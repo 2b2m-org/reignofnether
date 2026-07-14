@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.bot;
 
 public enum BotGoal {
+    BUILD_CAPITOL,
     WAIT_FOR_CAPITOL,
     BUILD_SUPPLY,
     TRAIN_WORKER,
