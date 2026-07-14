@@ -256,6 +256,36 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void hardBotsPressOnlyClearObservedAdvantages() {
+        assertAll(
+                () -> assertTrue(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 36, 24)),
+                () -> assertFalse(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 35, 24)),
+                () -> assertTrue(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 36, 28)),
+                () -> assertFalse(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 36, 29)),
+                () -> assertTrue(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.HARD, BotPersonality.RUSHER, 32, 25)),
+                () -> assertFalse(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.HARD, BotPersonality.TURTLE, 39, 24)),
+                () -> assertTrue(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.HARD, BotPersonality.TURTLE, 40, 32)),
+                () -> assertFalse(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.MEDIUM, BotPersonality.STEADY, 48, 24)),
+                () -> assertFalse(BotDecisionMaker.shouldPressVisibleAdvantage(
+                        BotDifficulty.HARD, BotPersonality.STEADY, 48, 0)),
+                () -> assertEquals(BotDecisionMaker.ArmyOrder.DEFEND,
+                        BotDecisionMaker.chooseArmyOrder(
+                                BotDifficulty.HARD, BotPersonality.STEADY, 36, 24,
+                                BotDecisionMaker.shouldPressVisibleAdvantage(
+                                        BotDifficulty.HARD, BotPersonality.STEADY, 36, 24),
+                                true))
+        );
+    }
+
+    @Test
     void beaconOrdersCaptureOpenGroundAndWaitForACombatReadyContest() {
         for (BotDifficulty difficulty : BotDifficulty.values())
             for (BotPersonality personality : BotPersonality.values()) {

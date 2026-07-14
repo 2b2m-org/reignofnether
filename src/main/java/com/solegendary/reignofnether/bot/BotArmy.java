@@ -236,6 +236,19 @@ final class BotArmy {
         List<LivingEntity> tacticalEnemyArmy = tacticalEnemyArmy(
                 visibleEnemyCombatants, armyPos, player.aiHomePos);
         int tacticalEnemyPopulation = BotSelf.population(tacticalEnemyArmy);
+        int visibleEnemyArmyPopulation = BotSelf.population(visibleEnemyCombatants.stream()
+                .filter(enemy -> !(enemy instanceof WorkerUnit))
+                .toList());
+        boolean pressVisibleAdvantage = BotDecisionMaker.shouldPressVisibleAdvantage(
+                difficulty, personality, mainPopulation, visibleEnemyArmyPopulation);
+        if (pressVisibleAdvantage && objective == null) {
+            target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
+            if (target != null) {
+                startObjective(target, armyPos, tick, main.size());
+                if (teamAdvicePriority(teamAdviceTarget, target.centre()) != 0)
+                    shareTeamIntent(level, objective.anchor(), tick);
+            }
+        }
         boolean hasRangedResponder = main.stream().anyMatch(RangedAttackerUnit.class::isInstance);
 
         if (tick < regroupUntilTick) {
@@ -246,7 +259,7 @@ final class BotArmy {
 
         BotDecisionMaker.ArmyOrder armyOrder = BotDecisionMaker.chooseArmyOrder(
                 difficulty, personality, mainPopulation, tacticalEnemyPopulation,
-                attackReady, defenseThreat);
+                attackReady || pressVisibleAdvantage, defenseThreat);
         if (armyOrder != BotDecisionMaker.ArmyOrder.DEFEND)
             activeDefenseIntent = null;
         if (armyOrder == BotDecisionMaker.ArmyOrder.DEFEND) {

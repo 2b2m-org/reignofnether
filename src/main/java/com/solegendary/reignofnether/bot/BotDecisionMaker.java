@@ -158,6 +158,14 @@ public final class BotDecisionMaker {
         return ArmyOrder.HOLD;
     }
 
+    static boolean shouldPressVisibleAdvantage(BotDifficulty difficulty, BotPersonality personality,
+                                                int armyPopulation, int visibleEnemyPopulation) {
+        return difficulty == BotDifficulty.HARD
+                && visibleEnemyPopulation > 0
+                && armyPopulation >= targetArmyPopulation(difficulty, personality) - 12
+                && armyPopulation * 4 >= visibleEnemyPopulation * 5;
+    }
+
     public static BeaconOrder chooseBeaconOrder(BotDifficulty difficulty, BotPersonality personality,
                                                  int armyPopulation, int knownEnemyPopulationInRing,
                                                  BeaconControl control) {
