@@ -48,6 +48,7 @@ class BotDecisionMakerTest {
         BotDecisionContext context = new BotDecisionContext(
                 true, true,
                 5,
+                0,
                 8, 10,
                 false,
                 1, 3,
@@ -66,39 +67,78 @@ class BotDecisionMakerTest {
                 () -> assertEquals(BotGoal.TRAIN_WORKER,
                         BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                true, true, 4, 4, 20, false, 1, 3,
+                                true, true, 4, 0, 4, 20, false, 1, 3,
                                 false, false, false))),
                 () -> assertEquals(BotGoal.BUILD_FARM,
                         BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                true, true, 5, 5, 20, false, 1, 3,
+                                true, true, 5, 0, 5, 20, false, 1, 3,
                                 false, false, false))),
                 () -> assertEquals(BotGoal.BUILD_MILITARY,
                         BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                true, true, 5, 5, 20, false, 1, 3,
+                                true, true, 5, 0, 5, 20, false, 1, 3,
                                 true, false, false)))
         );
     }
 
     @Test
-    void hardEstablishesProductionBeforeFinishingItsEconomy() {
+    void hardFieldsAnOpeningArmyBeforeFinishingItsEconomy() {
         assertAll(
                 () -> assertEquals(BotGoal.BUILD_FARM,
                         BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                        true, true, 5, 5, 20, false, 1, 3,
+                                        true, true, 5, 0, 5, 20, false, 1, 3,
                                         false, false, false))),
                 () -> assertEquals(BotGoal.BUILD_MILITARY,
                         BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                        true, true, 5, 5, 20, false, 1, 3,
+                                        true, true, 5, 0, 5, 20, false, 1, 3,
                                         true, false, false))),
+                () -> assertEquals(BotGoal.WAIT_FOR_MILITARY,
+                        BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
+                                new BotDecisionContext(
+                                        true, true, 7, 0, 7, 40, false, 1, 3,
+                                        true, true, false))),
+                () -> assertEquals(BotGoal.TRAIN_ARMY,
+                        BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
+                                new BotDecisionContext(
+                                        true, true, 7, 11, 18, 40, false, 1, 3,
+                                        true, true, true))),
                 () -> assertEquals(BotGoal.TRAIN_WORKER,
                         BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                        true, true, 7, 7, 20, false, 1, 3,
+                                        true, true, 7, 12, 19, 40, false, 1, 3,
+                                        true, true, true))),
+                () -> assertEquals(BotGoal.TRAIN_WORKER,
+                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.TURTLE,
+                                new BotDecisionContext(
+                                        true, true, 5, 0, 5, 40, false, 1, 3,
+                                        true, true, false))),
+                () -> assertEquals(BotGoal.TRAIN_WORKER,
+                        BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.TURTLE,
+                                new BotDecisionContext(
+                                        true, true, 5, 0, 5, 40, false, 1, 3,
+                                        true, true, true))),
+                () -> assertEquals(BotGoal.TRAIN_ARMY,
+                        BotDecisionMaker.chooseGoal(BotDifficulty.HARD, BotPersonality.STEADY,
+                                new BotDecisionContext(
+                                        true, true, 9, 0, 9, 40, false, 1, 3,
                                         true, true, true)))
+        );
+    }
+
+    @Test
+    void hardOpeningArmySizeReflectsPersonality() {
+        assertAll(
+                () -> assertEquals(8, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.RUSHER)),
+                () -> assertEquals(12, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.STEADY)),
+                () -> assertEquals(16, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.HARD, BotPersonality.TURTLE)),
+                () -> assertEquals(0, BotDecisionMaker.openingArmyPopulation(
+                        BotDifficulty.MEDIUM, BotPersonality.TURTLE))
         );
     }
 
@@ -108,12 +148,12 @@ class BotDecisionMakerTest {
                 () -> assertEquals(BotGoal.WAIT_FOR_MILITARY,
                         BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                true, true, 5, 5, 20, false, 1, 3,
+                                true, true, 5, 0, 5, 20, false, 1, 3,
                                 true, true, false))),
                 () -> assertEquals(BotGoal.TRAIN_ARMY,
                         BotDecisionMaker.chooseGoal(BotDifficulty.MEDIUM, BotPersonality.STEADY,
                                 new BotDecisionContext(
-                                true, true, 5, 5, 20, false, 1, 3,
+                                true, true, 5, 0, 5, 20, false, 1, 3,
                                 true, true, true)))
         );
     }
@@ -396,7 +436,7 @@ class BotDecisionMakerTest {
     @Test
     void hardPlansSupplyFurtherAhead() {
         BotDecisionContext context = new BotDecisionContext(
-                true, true, 9, 13, 20, false, 1, 3,
+                true, true, 9, 0, 13, 20, false, 1, 3,
                 true, true, true
         );
 
@@ -638,7 +678,7 @@ class BotDecisionMakerTest {
     @Test
     void decisionsAreDeterministicAtEveryDifficulty() {
         BotDecisionContext context = new BotDecisionContext(
-                true, true, 7, 7, 20, false, 1, 3,
+                true, true, 7, 0, 7, 20, false, 1, 3,
                 true, true, true
         );
         for (BotDifficulty difficulty : BotDifficulty.values()) {
@@ -654,6 +694,7 @@ class BotDecisionMakerTest {
                 capitolPresent,
                 capitolBuilt,
                 3,
+                0,
                 3, 10,
                 false,
                 1, 3,

@@ -4,6 +4,7 @@ public record BotDecisionContext(
         boolean capitolPresent,
         boolean capitolBuilt,
         int workersAndQueued,
+        int armyAndQueuedPopulation,
         int population,
         int populationSupply,
         boolean supplyUnderConstruction,

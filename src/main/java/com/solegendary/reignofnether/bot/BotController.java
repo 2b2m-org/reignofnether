@@ -161,6 +161,7 @@ public final class BotController {
                 capitol != null,
                 capitol != null && capitol.isBuilt,
                 self.workers().size() + queuedWorkers,
+                armyAndQueuedPopulation(strategy),
                 UnitServerEvents.getCurrentPopulation(ownerName),
                 BuildingServerEvents.getTotalPopulationSupply(ownerName),
                 self.supplyUnderConstruction(strategy),
@@ -206,10 +207,17 @@ public final class BotController {
     private void continueProduction(BotStrategy strategy, BotDifficulty difficulty, BotPersonality personality,
                                     boolean meleeOnly) {
         int workersAndQueued = self.workers().size() + self.countQueued(strategy.worker());
-        if (workersAndQueued < BotDecisionMaker.targetWorkers(difficulty, personality)
+        if (BotDecisionMaker.shouldTrainWorker(difficulty, personality,
+                workersAndQueued, armyAndQueuedPopulation(strategy))
                 && trainAt(self.building(strategy.capitol()), strategy.worker(), "worker", difficulty))
             return;
         trainArmy(strategy, difficulty, personality, meleeOnly);
+    }
+
+    private int armyAndQueuedPopulation(BotStrategy strategy) {
+        return BotSelf.population(self.army())
+                + self.queuedPopulation(strategy.melee())
+                + self.queuedPopulation(strategy.ranged());
     }
 
     private boolean buildStructure(ServerLevel level, RTSPlayer player, Building building, ProductionItem transform,

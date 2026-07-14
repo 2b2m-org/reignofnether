@@ -73,12 +73,34 @@ public final class BotDecisionMaker {
         if (!context.militaryPresent())
             return BotGoal.BUILD_MILITARY;
         if (!context.militaryReady())
-            return context.workersAndQueued() < targetWorkers
+            return shouldTrainWorker(difficulty, personality,
+                    context.workersAndQueued(), context.armyAndQueuedPopulation())
                     ? BotGoal.TRAIN_WORKER
                     : BotGoal.WAIT_FOR_MILITARY;
-        if (context.workersAndQueued() < targetWorkers)
+        if (shouldTrainWorker(difficulty, personality,
+                context.workersAndQueued(), context.armyAndQueuedPopulation()))
             return BotGoal.TRAIN_WORKER;
         return BotGoal.TRAIN_ARMY;
+    }
+
+    static int openingArmyPopulation(BotDifficulty difficulty, BotPersonality personality) {
+        if (difficulty != BotDifficulty.HARD)
+            return 0;
+        return switch (personality) {
+            case RUSHER -> 8;
+            case STEADY -> 12;
+            case TURTLE -> 16;
+        };
+    }
+
+    static boolean shouldTrainWorker(BotDifficulty difficulty, BotPersonality personality,
+                                     int workersAndQueued, int armyAndQueuedPopulation) {
+        int targetWorkers = targetWorkers(difficulty, personality);
+        if (workersAndQueued >= targetWorkers)
+            return false;
+        int initialWorkers = Math.min(targetWorkers, 5);
+        return workersAndQueued < initialWorkers
+                || armyAndQueuedPopulation >= openingArmyPopulation(difficulty, personality);
     }
 
     public static int foodWorkerCount(BotDifficulty difficulty, BotPersonality personality,
