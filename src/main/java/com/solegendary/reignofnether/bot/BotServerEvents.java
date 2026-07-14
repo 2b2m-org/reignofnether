@@ -12,6 +12,7 @@ import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.gamemode.GameMode;
 import com.solegendary.reignofnether.gamemode.GameModeClientboundPacket;
+import com.solegendary.reignofnether.minimap.MapMarkerServerEvents;
 import com.solegendary.reignofnether.player.PlayerClientboundPacket;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
@@ -32,6 +33,7 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
@@ -194,6 +196,35 @@ public final class BotServerEvents {
     public static void onServerStopping(ServerStoppingEvent event) {
         CONTROLLERS.clear();
         survivalAlliancesReady = false;
+    }
+
+    public static void acceptHumanMarker(ServerPlayer sender, int x, int z) {
+        if (!PlayerServerEvents.isGameActive()
+                || !sender.level().dimension().equals(Level.OVERWORLD))
+            return;
+        String senderName = sender.getName().getString();
+        RTSPlayer senderPlayer = PlayerServerEvents.getRTSPlayer(senderName);
+        if (senderPlayer == null || senderPlayer.aiControlled)
+            return;
+        BlockPos markerPos = new BlockPos(x, sender.getBlockY(), z);
+        if (!sender.level().getWorldBorder().isWithinBounds(markerPos))
+            return;
+        int tick = sender.getServer().getTickCount();
+        for (Map.Entry<String, BotController> entry : CONTROLLERS.entrySet())
+            if (AlliancesServerEvents.isAllied(senderName, entry.getKey()))
+                entry.getValue().acceptHumanTeamAdvice(senderName, x, z, tick);
+    }
+
+    static void shareTeamIntent(ServerLevel level, String senderName, BlockPos position, int tick) {
+        if (!PlayerServerEvents.isGameActive())
+            return;
+        for (Map.Entry<String, BotController> entry : CONTROLLERS.entrySet())
+            if (!entry.getKey().equals(senderName)
+                    && AlliancesServerEvents.isAllied(senderName, entry.getKey()))
+                entry.getValue().acceptBotTeamAdvice(
+                        senderName, position.getX(), position.getZ(), tick);
+        MapMarkerServerEvents.sendToPlayerAndAllies(
+                level.getServer(), position.getX(), position.getZ(), senderName);
     }
 
     private static int addBot(CommandSourceStack source, String displayName, String factionName,

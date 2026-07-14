@@ -2,29 +2,20 @@ package com.solegendary.reignofnether.minimap;
 
 import static com.solegendary.reignofnether.ReignOfNether.payloadType;
 
+import com.solegendary.reignofnether.bot.BotServerEvents;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-
-import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
-import com.solegendary.reignofnether.sounds.SoundAction;
-import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.PlayerList;
-import net.neoforged.neoforge.network.PacketDistributor;
-
-import java.util.HashSet;
-import java.util.Set;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class MapMarkerServerboundPacket implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MapMarkerServerboundPacket> TYPE =
-        payloadType("map_marker_serverbound");
+            payloadType("map_marker_serverbound");
     public static final StreamCodec<FriendlyByteBuf, MapMarkerServerboundPacket> STREAM_CODEC =
-        StreamCodec.ofMember(MapMarkerServerboundPacket::encode, MapMarkerServerboundPacket::new);
+            StreamCodec.ofMember(MapMarkerServerboundPacket::encode, MapMarkerServerboundPacket::new);
 
     @Override
     public CustomPacketPayload.Type<MapMarkerServerboundPacket> type() {
@@ -32,8 +23,6 @@ public class MapMarkerServerboundPacket implements CustomPacketPayload {
     }
     private final int x;
     private final int z;
-
-
 
     public MapMarkerServerboundPacket(int x, int z) {
         this.x = x;
@@ -62,23 +51,9 @@ public class MapMarkerServerboundPacket implements CustomPacketPayload {
                 return;
             }
 
-            PlayerList playerList = server.getPlayerList();
-            Set<ServerPlayer> recipients = new HashSet<>();
-            recipients.add(player);
             String playerName = player.getName().getString();
-            for (String allyName : AlliancesServerEvents.getAllAllies(playerName)) {
-                ServerPlayer allyPlayer = playerList.getPlayerByName(allyName);
-                if (allyPlayer != null) {
-                    recipients.add(allyPlayer);
-                }
-            }
-
-            MapMarkerClientboundPacket markerPacket = new MapMarkerClientboundPacket(x, z, playerName);
-            for (ServerPlayer target : recipients) {
-                PacketDistributor.sendToPlayer(target, markerPacket);
-                PacketDistributor.sendToPlayer(target,
-                        new SoundClientboundPacket(SoundAction.ALLY, BlockPos.ZERO, "", 1.0f, -1));
-            }
+            MapMarkerServerEvents.sendToPlayerAndAllies(server, x, z, playerName);
+            BotServerEvents.acceptHumanMarker(player, x, z);
         });
     }
 }

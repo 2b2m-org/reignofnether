@@ -43,6 +43,10 @@ final class BotArmy {
     private static final int BEACON_GARRISON_MARGIN = 6;
     private static final int BEACON_RETRY_TICKS = 600;
     private static final int BEACON_INTEL_MEMORY_TICKS = 1200;
+    private static final int TEAM_ADVICE_TICKS = 600;
+    private static final int TEAM_ADVICE_DISTANCE = 64;
+    private static final int TEAM_INTENT_DEDUPE_DISTANCE = 16;
+    private static final int TEAM_INTENT_DEDUPE_TICKS = 600;
     private static final int[][] SCOUT_DIRECTIONS = {
             {1, 0}, {0, 1}, {-1, 0}, {0, -1},
             {1, 1}, {-1, 1}, {-1, -1}, {1, -1}
@@ -74,12 +78,26 @@ final class BotArmy {
     private int scoutLastProgressTick;
     private int scoutWaypointIndex;
     private int nextCommandTick;
+    private final Map<BlockPos, Integer> recentTeamIntents = new HashMap<>();
+    private BotTeamAdvice humanTeamAdvice;
+    private BotTeamAdvice botTeamAdvice;
+    private BlockPos scoutAdviceTarget;
+    private BlockPos activeDefenseIntent;
+    private boolean beaconIntentActive;
 
     BotArmy(String ownerName, String displayName, BotSelf self, BotWorldView worldView) {
         this.ownerName = ownerName;
         this.displayName = displayName;
         this.self = self;
         this.worldView = worldView;
+    }
+
+    void acceptHumanTeamAdvice(String senderName, int x, int z, int tick) {
+        humanTeamAdvice = new BotTeamAdvice(senderName, x, z, tick + TEAM_ADVICE_TICKS);
+    }
+
+    void acceptBotTeamAdvice(String senderName, int x, int z, int tick) {
+        botTeamAdvice = new BotTeamAdvice(senderName, x, z, tick + TEAM_ADVICE_TICKS);
     }
 
     void tick(ServerLevel level, RTSPlayer player, BotStrategy strategy,
@@ -97,6 +115,7 @@ final class BotArmy {
                          List<LivingEntity> visibleEnemyCombatants, int tick) {
         targetCooldowns.entrySet().removeIf(entry -> entry.getValue() <= tick);
         defenseThreats.entrySet().removeIf(entry -> entry.getValue() < tick);
+        BlockPos teamAdviceTarget = activeTeamAdviceTarget(player, tick);
 
         List<LivingEntity> fullArmy = self.army();
         if (fullArmy.isEmpty()) {
@@ -104,17 +123,25 @@ final class BotArmy {
             clearScout();
             beaconGuardIds.clear();
             clearBeaconAssault();
+            activeDefenseIntent = null;
+            beaconIntentActive = false;
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
 
         LivingEntity scout = reconcileScout(fullArmy);
-        if (scout != null)
-            commandScout(level, player, scout, tick);
+        if (scout != null) {
+            BlockPos scoutOrderTarget = isKnownTeamObjective(player, teamAdviceTarget, tick)
+                    ? null
+                    : teamAdviceTarget;
+            commandScout(level, player, scout, scoutOrderTarget, tick);
+        }
         List<LivingEntity> main = scout == null
                 ? fullArmy
                 : fullArmy.stream().filter(entity -> entity != scout).toList();
         if (main.isEmpty()) {
+            activeDefenseIntent = null;
+            beaconIntentActive = false;
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -134,6 +161,13 @@ final class BotArmy {
                 knownEnemyPopulationInBeaconRing,
                 beaconControl
         );
+        if (teamAdviceTarget != null
+                && beaconControl == BotDecisionMaker.BeaconControl.ALLIED
+                && isWithinHorizontalDistance(
+                        teamAdviceTarget,
+                        beaconCaptureCentre(beacon),
+                        beacon.getBuilding().captureRange))
+            beaconOrder = BotDecisionMaker.BeaconOrder.CONTEST;
         if (beaconOrder == BotDecisionMaker.BeaconOrder.GARRISON) {
             activateBeaconAura(beacon, personality);
             List<LivingEntity> guards = reconcileBeaconGuards(
@@ -153,24 +187,32 @@ final class BotArmy {
         }
         if (main.isEmpty()) {
             clearObjective();
+            activeDefenseIntent = null;
+            if (beaconOrder != BotDecisionMaker.BeaconOrder.NONE)
+                announceBeaconIntent(level, beacon, teamAdviceTarget, tick);
+            else
+                beaconIntentActive = false;
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
 
         BlockPos armyPos = armyCentroidRepresentative(main);
         beaconOrder = applyBeaconBackoff(beaconOrder, beaconControl, beacon, main, tick);
+        if (beaconOrder == BotDecisionMaker.BeaconOrder.NONE)
+            beaconIntentActive = false;
         int mainPopulation = BotSelf.population(main);
         BotWorldView.KnownEnemyBuilding target = resolveObjective(player);
         if (objective != null && target == null)
             clearObjective();
         if (survivalEnabled && objective == null
                 && mainPopulation >= BotDecisionMaker.attackPopulation(difficulty, personality))
-            target = selectEnemyBuilding(player, personality, armyPos);
+            target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
 
         boolean attackReady = objective != null || target != null
                 || beaconOrder != BotDecisionMaker.BeaconOrder.NONE;
         BuildingPlacement defenseTarget = selectDefenseTarget(
-                strategy, personality, player.aiHomePos, attackReady, survivalEnabled, tick);
+                strategy, personality, player.aiHomePos, teamAdviceTarget,
+                attackReady, survivalEnabled, tick);
         boolean defenseThreat = defenseTarget != null;
         List<LivingEntity> tacticalEnemyArmy = tacticalEnemyArmy(
                 visibleEnemyCombatants, armyPos, player.aiHomePos);
@@ -186,7 +228,10 @@ final class BotArmy {
         BotDecisionMaker.ArmyOrder armyOrder = BotDecisionMaker.chooseArmyOrder(
                 difficulty, personality, mainPopulation, tacticalEnemyPopulation,
                 attackReady, defenseThreat);
+        if (armyOrder != BotDecisionMaker.ArmyOrder.DEFEND)
+            activeDefenseIntent = null;
         if (armyOrder == BotDecisionMaker.ArmyOrder.DEFEND) {
+            announceDefenseIntent(level, defenseTarget, teamAdviceTarget, tick);
             if (objective != null)
                 objectiveLastProgressTick = tick;
             List<LivingEntity> defenseEnemies = defenseEnemies(
@@ -216,8 +261,10 @@ final class BotArmy {
         if (armyOrder == BotDecisionMaker.ArmyOrder.HOLD) {
             if (beaconOrder == BotDecisionMaker.BeaconOrder.NONE)
                 attackMoveArmy(main, player.aiHomePos.above());
-            else
+            else {
+                announceBeaconIntent(level, beacon, teamAdviceTarget, tick);
                 captureBeacon(main, beacon, armyPos);
+            }
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
         }
@@ -240,6 +287,7 @@ final class BotArmy {
         }
 
         if (beaconOrder != BotDecisionMaker.BeaconOrder.NONE) {
+            announceBeaconIntent(level, beacon, teamAdviceTarget, tick);
             captureBeacon(main, beacon, armyPos);
             nextCommandTick = tick + difficulty.attackRefreshTicks();
             return;
@@ -247,9 +295,12 @@ final class BotArmy {
 
         if (objective == null) {
             if (target == null)
-                target = selectEnemyBuilding(player, personality, armyPos);
-            if (target != null)
+                target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
+            if (target != null) {
                 startObjective(target, armyPos, tick, main.size());
+                if (teamAdvicePriority(teamAdviceTarget, target.centre()) != 0)
+                    shareTeamIntent(level, objective.anchor(), tick);
+            }
         }
 
         if (target == null) {
@@ -299,9 +350,90 @@ final class BotArmy {
                 .toList());
     }
 
+    private BlockPos activeTeamAdviceTarget(RTSPlayer player, int tick) {
+        humanTeamAdvice = validTeamAdvice(humanTeamAdvice, tick);
+        botTeamAdvice = validTeamAdvice(botTeamAdvice, tick);
+        BotTeamAdvice advice = humanTeamAdvice != null ? humanTeamAdvice : botTeamAdvice;
+        if (advice == null)
+            return null;
+        return new BlockPos(advice.x(), player.aiHomePos.getY() + 1, advice.z());
+    }
+
+    private BotTeamAdvice validTeamAdvice(BotTeamAdvice advice, int tick) {
+        if (advice == null)
+            return null;
+        RTSPlayer sender = PlayerServerEvents.getRTSPlayer(advice.senderName());
+        return advice.isActive(tick) && sender != null
+                && AlliancesServerEvents.isAllied(ownerName, sender.name)
+                ? advice
+                : null;
+    }
+
+    private boolean isKnownTeamObjective(RTSPlayer player, BlockPos target, int tick) {
+        if (target == null)
+            return true;
+        if (worldView.knownEnemyBuildings(player).stream()
+                .anyMatch(building -> teamAdvicePriority(target, building.centre()) == 0))
+            return true;
+        if (BuildingServerEvents.getBuildings().stream()
+                .filter(building -> AlliancesServerEvents.isAlliedOrOwned(
+                        ownerName, building.ownerName))
+                .filter(building -> defenseThreats.getOrDefault(building.originPos, -1) >= tick)
+                .anyMatch(building -> teamAdvicePriority(target, building.centrePos) == 0))
+            return true;
+        BeaconPlacement beacon = SurvivalServerEvents.isEnabled()
+                ? null
+                : worldView.capturableBeacon();
+        return beacon != null
+                && isWithinHorizontalDistance(
+                        target,
+                        beaconCaptureCentre(beacon),
+                        beacon.getBuilding().captureRange);
+    }
+
+    private static int teamAdvicePriority(BlockPos adviceTarget, BlockPos candidate) {
+        if (adviceTarget == null)
+            return 1;
+        return isWithinHorizontalDistance(adviceTarget, candidate, TEAM_ADVICE_DISTANCE) ? 0 : 1;
+    }
+
+    private static boolean isWithinHorizontalDistance(BlockPos first, BlockPos second, int range) {
+        long x = (long) second.getX() - first.getX();
+        long z = (long) second.getZ() - first.getZ();
+        return x * x + z * z <= (long) range * range;
+    }
+
     private void captureBeacon(List<LivingEntity> army, BeaconPlacement beacon, BlockPos armyPos) {
         clearObjective();
         attackMoveArmy(army, beacon.getClosestGroundPos(armyPos, 1));
+    }
+
+    private void announceDefenseIntent(ServerLevel level, BuildingPlacement target,
+                                       BlockPos teamAdviceTarget, int tick) {
+        if (target.originPos.equals(activeDefenseIntent))
+            return;
+        activeDefenseIntent = target.originPos;
+        if (teamAdvicePriority(teamAdviceTarget, target.centrePos) != 0)
+            shareTeamIntent(level, target.centrePos, tick);
+    }
+
+    private void announceBeaconIntent(ServerLevel level, BeaconPlacement beacon,
+                                      BlockPos teamAdviceTarget, int tick) {
+        if (beaconIntentActive)
+            return;
+        beaconIntentActive = true;
+        BlockPos target = beaconCaptureCentre(beacon);
+        if (teamAdvicePriority(teamAdviceTarget, target) != 0)
+            shareTeamIntent(level, target, tick);
+    }
+
+    private void shareTeamIntent(ServerLevel level, BlockPos target, int tick) {
+        recentTeamIntents.entrySet().removeIf(entry -> entry.getValue() <= tick);
+        if (recentTeamIntents.keySet().stream().anyMatch(position ->
+                isWithinHorizontalDistance(position, target, TEAM_INTENT_DEDUPE_DISTANCE)))
+            return;
+        recentTeamIntents.put(target, tick + TEAM_INTENT_DEDUPE_TICKS);
+        BotServerEvents.shareTeamIntent(level, ownerName, target, tick);
     }
 
     private BotDecisionMaker.BeaconOrder applyBeaconBackoff(
@@ -353,6 +485,7 @@ final class BotArmy {
         trackedBeacon = null;
         trackedBeaconOwner = "";
         beaconRetryAfterTick = 0;
+        beaconIntentActive = false;
         lastSeenBeaconEnemyPopulation = 0;
         lastSeenBeaconEnemyTick = -1;
         clearBeaconAssault();
@@ -484,11 +617,23 @@ final class BotArmy {
                 .orElseThrow();
         scoutUnitId = scout.getId();
         scoutTarget = null;
+        scoutAdviceTarget = null;
         return scout;
     }
 
-    private void commandScout(ServerLevel level, RTSPlayer player, LivingEntity scout, int tick) {
+    private void commandScout(ServerLevel level, RTSPlayer player, LivingEntity scout,
+                              BlockPos adviceTarget, int tick) {
         List<LivingEntity> scoutGroup = List.of(scout);
+        if (adviceTarget != null && !adviceTarget.equals(scoutAdviceTarget)) {
+            scoutAdviceTarget = adviceTarget;
+            scoutTarget = adviceTarget;
+            resetScoutProgress(scout, tick);
+            attackMoveArmy(scoutGroup, scoutTarget);
+            ReignOfNether.LOGGER.info("[Bot] {} scouting team marker at {}", displayName, scoutTarget);
+        } else if (adviceTarget == null && scoutAdviceTarget != null) {
+            scoutAdviceTarget = null;
+            scoutTarget = null;
+        }
         if (scoutTarget != null && worldView.isVisible(scoutTarget)
                 && BotBuildingPlanner.isChunkLoaded(level, scoutTarget)) {
             BlockPos ground = BotBuildingPlanner.groundAt(level, scoutTarget.getX(), scoutTarget.getZ());
@@ -621,7 +766,8 @@ final class BotArmy {
     }
 
     private BuildingPlacement selectDefenseTarget(BotStrategy strategy, BotPersonality personality,
-                                                    BlockPos home, boolean attackReady,
+                                                    BlockPos home, BlockPos teamAdviceTarget,
+                                                    boolean attackReady,
                                                     boolean survivalEnabled, int tick) {
         ProductionPlacement military = self.militaryBuilding(strategy);
         return BuildingServerEvents.getBuildings().stream()
@@ -634,11 +780,14 @@ final class BotArmy {
                         building.ownerName.equals(ownerName),
                         building.isCapitol || building == military
                 ))
-                .min(Comparator.comparingInt((BuildingPlacement building) ->
+                .min(Comparator
+                        .comparingInt((BuildingPlacement building) ->
                                 BotDecisionMaker.defensePriority(
                                         survivalEnabled,
                                         building.ownerName.equals(ownerName),
                                         building.isCapitol || building == military))
+                        .thenComparingInt(building ->
+                                teamAdvicePriority(teamAdviceTarget, building.centrePos))
                         .thenComparingDouble(building -> building.centrePos.distSqr(home))
                         .thenComparingInt(building -> building.originPos.getX())
                         .thenComparingInt(building -> building.originPos.getY())
@@ -646,13 +795,16 @@ final class BotArmy {
                 .orElse(null);
     }
 
-    private BotWorldView.KnownEnemyBuilding selectEnemyBuilding(RTSPlayer player, BotPersonality personality,
-                                                                 BlockPos armyPos) {
+    private BotWorldView.KnownEnemyBuilding selectEnemyBuilding(
+            RTSPlayer player, BotPersonality personality, BlockPos armyPos,
+            BlockPos teamAdviceTarget) {
         return worldView.knownEnemyBuildings(player).stream()
                 .filter(building -> !building.invulnerable())
                 .filter(building -> !targetCooldowns.containsKey(building.origin()))
                 .min(Comparator
                         .comparingInt((BotWorldView.KnownEnemyBuilding building) ->
+                                teamAdvicePriority(teamAdviceTarget, building.centre()))
+                        .thenComparingInt(building ->
                                 BotDecisionMaker.targetPriority(
                                         personality, building.capitol(), building.production()))
                         .thenComparingDouble(building -> building.centre().distSqr(armyPos))
@@ -784,6 +936,7 @@ final class BotArmy {
     private void clearScout() {
         scoutUnitId = -1;
         scoutTarget = null;
+        scoutAdviceTarget = null;
         scoutBestDistance = 0;
         scoutLastProgressTick = 0;
     }
@@ -882,5 +1035,11 @@ final class BotArmy {
     }
 
     private record AttackObjective(BlockPos origin, BlockPos anchor, String targetOwner) {
+    }
+
+    private record BotTeamAdvice(String senderName, int x, int z, int expiresAtTick) {
+        boolean isActive(int tick) {
+            return tick < expiresAtTick;
+        }
     }
 }

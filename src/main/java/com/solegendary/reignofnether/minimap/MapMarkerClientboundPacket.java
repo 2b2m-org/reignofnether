@@ -50,4 +50,3 @@ public class MapMarkerClientboundPacket implements CustomPacketPayload {
         });
     }
 }
-

@@ -65,6 +65,14 @@ public final class BotController {
         return displayName;
     }
 
+    void acceptHumanTeamAdvice(String senderName, int x, int z, int tick) {
+        army.acceptHumanTeamAdvice(senderName, x, z, tick);
+    }
+
+    void acceptBotTeamAdvice(String senderName, int x, int z, int tick) {
+        army.acceptBotTeamAdvice(senderName, x, z, tick);
+    }
+
     public void tick(ServerLevel level) {
         RTSPlayer player = PlayerServerEvents.getRTSPlayer(ownerName);
         if (player == null || !player.aiControlled || player.aiHomePos == null)
