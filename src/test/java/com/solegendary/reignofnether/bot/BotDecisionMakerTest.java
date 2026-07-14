@@ -230,13 +230,22 @@ class BotDecisionMakerTest {
 
     @Test
     void attackGatesRemainReachableWithAFogScoutReserved() {
-        for (BotDifficulty difficulty : BotDifficulty.values()) {
-            for (BotPersonality personality : BotPersonality.values()) {
-                int target = BotDecisionMaker.targetArmyPopulation(difficulty, personality);
-                assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
-                        BotDecisionMaker.chooseArmyOrder(difficulty, personality, target - 3,
-                                0, false, false),
-                        () -> difficulty + "/" + personality + " gate must be reachable with a scout reserved");
+        for (int unitPopulation : new int[]{1, 2, 3}) {
+            for (BotDifficulty difficulty : BotDifficulty.values()) {
+                for (BotPersonality personality : BotPersonality.values()) {
+                    int threshold = BotDecisionMaker.attackPopulation(difficulty, personality);
+                    int fullArmy = (threshold + unitPopulation - 1) / unitPopulation * unitPopulation;
+                    int activeArmy = fullArmy - unitPopulation;
+                    boolean ready = BotDecisionMaker.shouldLaunchWithReservedUnits(
+                            difficulty, personality, activeArmy, unitPopulation);
+
+                    assertTrue(ready,
+                            () -> difficulty + "/" + personality + " must count a reserved "
+                                    + unitPopulation + "-population scout at its attack gate");
+                    assertEquals(BotDecisionMaker.ArmyOrder.ATTACK_MOVE,
+                            BotDecisionMaker.chooseArmyOrder(
+                                    difficulty, personality, activeArmy, 0, ready, false));
+                }
             }
         }
     }

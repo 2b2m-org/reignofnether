@@ -241,13 +241,13 @@ final class BotArmy {
                 && mainPopulation >= BotDecisionMaker.attackPopulation(difficulty, personality))
             target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
 
-        boolean garrisonAttackReady = beaconControl == BotDecisionMaker.BeaconControl.OWNED
+        int reservedPopulation = fullArmyPopulation - mainPopulation;
+        boolean reservedAttackReady = reservedPopulation > 0
                 && BotDecisionMaker.shouldLaunchWithReservedUnits(
-                        difficulty, personality, mainPopulation,
-                        fullArmyPopulation - mainPopulation);
+                        difficulty, personality, mainPopulation, reservedPopulation);
         boolean attackReady = objective != null || target != null
                 || beaconOrder != BotDecisionMaker.BeaconOrder.NONE
-                || garrisonAttackReady;
+                || reservedAttackReady;
         BuildingPlacement defenseTarget = selectDefenseTarget(
                 strategy, personality, player.aiHomePos, teamAdviceTarget,
                 attackReady, survivalEnabled, tick);
