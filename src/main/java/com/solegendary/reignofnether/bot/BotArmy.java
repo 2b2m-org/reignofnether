@@ -202,9 +202,11 @@ final class BotArmy {
             beaconIntentActive = false;
         int mainPopulation = BotSelf.population(main);
         BotWorldView.KnownEnemyBuilding target = resolveObjective(player);
-        if (objective != null && target == null)
+        if (objective != null && target == null) {
             clearObjective();
-        if (survivalEnabled && objective == null
+            target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
+        }
+        if (survivalEnabled && objective == null && target == null
                 && mainPopulation >= BotDecisionMaker.attackPopulation(difficulty, personality))
             target = selectEnemyBuilding(player, personality, armyPos, teamAdviceTarget);
 
