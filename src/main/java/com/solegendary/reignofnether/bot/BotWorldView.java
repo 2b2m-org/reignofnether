@@ -10,11 +10,14 @@ import com.solegendary.reignofnether.building.buildings.placements.ProductionPla
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
+import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.survival.SurvivalServerEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
 
@@ -119,6 +122,30 @@ final class BotWorldView {
         }
         result.sort(java.util.Comparator.comparingInt(LivingEntity::getId));
         return result;
+    }
+
+    List<LivingEntity> visibleWorkerThreats(ServerLevel level, RTSPlayer viewer) {
+        boolean neutralAggro = level.getGameRules().getRule(GameRuleRegistrar.NEUTRAL_AGGRO).get();
+        List<LivingEntity> result = new ArrayList<>();
+        for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
+            if (!entity.isAlive() || entity.level() != level || !(entity instanceof Unit unit)
+                    || !(entity instanceof AttackerUnit attacker)
+                    || GarrisonableBuildingAddon.getGarrison(unit) != null)
+                continue;
+            boolean playerThreat = !(entity instanceof WorkerUnit)
+                    && isPotentialEnemy(viewer, unit.getOwnerName());
+            boolean neutralThreat = isAggressiveNeutralThreat(
+                    neutralAggro, unit.getOwnerName(), attacker.getAggressiveWhenIdle());
+            if ((playerThreat || neutralThreat) && isVisible(entity.blockPosition()))
+                result.add(entity);
+        }
+        result.sort(java.util.Comparator.comparingInt(LivingEntity::getId));
+        return result;
+    }
+
+    static boolean isAggressiveNeutralThreat(boolean neutralAggro, String ownerName,
+                                               boolean aggressiveWhenIdle) {
+        return neutralAggro && ownerName.isBlank() && aggressiveWhenIdle;
     }
 
     BeaconPlacement capturableBeacon() {

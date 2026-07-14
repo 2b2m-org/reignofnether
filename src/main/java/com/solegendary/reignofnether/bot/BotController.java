@@ -371,7 +371,7 @@ public final class BotController {
             livingWorkerIds.add(worker.getId());
         fleeingWorkerUntilTicks.keySet().retainAll(livingWorkerIds);
 
-        List<LivingEntity> combatants = visibleMilitaryEnemies(player);
+        List<LivingEntity> combatants = worldView.visibleWorkerThreats(level, player);
         BuildingPlacement capitol = self.building(strategy.capitol());
         int newlyFleeing = 0;
         int resumedWorkers = 0;
@@ -422,12 +422,6 @@ public final class BotController {
             ReignOfNether.LOGGER.info("[Bot] {} evacuating {} worker(s)", displayName, newlyFleeing);
         if (resumedWorkers > 0)
             ReignOfNether.LOGGER.info("[Bot] {} resuming {} worker(s)", displayName, resumedWorkers);
-    }
-
-    private List<LivingEntity> visibleMilitaryEnemies(RTSPlayer player) {
-        return worldView.visibleEnemyCombatants(player).stream()
-                .filter(entity -> !(entity instanceof WorkerUnit))
-                .toList();
     }
 
     private static BlockPos workerRetreatTarget(ServerLevel level, RTSPlayer player, BuildingPlacement capitol,
