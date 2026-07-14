@@ -121,10 +121,10 @@ final class BotArmy {
         observeFriendlyBuildingThreats(visibleEnemyCombatants, tick);
         if (shelteringFromSun) {
             clearPursuit();
+            clearScout();
             shelterMonsterArmy(level, player, self.army());
             objectiveLastProgressTick = tick;
             beaconAssaultLastProgressTick = tick;
-            scoutLastProgressTick = tick;
             return;
         }
         if (tick < nextCommandTick)
@@ -251,11 +251,18 @@ final class BotArmy {
         List<LivingEntity> visibleEnemyArmy = visibleEnemyCombatants.stream()
                 .filter(enemy -> !(enemy instanceof WorkerUnit))
                 .toList();
-        List<LivingEntity> tacticalGroundEnemyMilitary = tacticalEnemyArmy.stream()
-                .filter(enemy -> !(enemy instanceof WorkerUnit) && !isFlying(enemy))
+        List<LivingEntity> tacticalEnemyMilitary = tacticalEnemyArmy.stream()
+                .filter(enemy -> !(enemy instanceof WorkerUnit))
+                .toList();
+        List<LivingEntity> tacticalGroundEnemyMilitary = tacticalEnemyMilitary.stream()
+                .filter(enemy -> !isFlying(enemy))
                 .toList();
         int visibleEnemyArmyPopulation = BotSelf.population(visibleEnemyArmy);
-        int tacticalGroundEnemyPopulation = BotSelf.population(tacticalGroundEnemyMilitary);
+        int tacticalEnemyMilitaryPopulation = BotSelf.population(tacticalEnemyMilitary);
+        int homeEnemyPopulation = BotSelf.population(tacticalGroundEnemyMilitary.stream()
+                .filter(enemy -> enemy.blockPosition().distSqr(player.aiHomePos)
+                        <= DEFENSE_DISTANCE_SQR)
+                .toList());
         if (pursuitTarget != null && tacticalGroundEnemyMilitary.isEmpty()
                 && armyPos.distSqr(pursuitTarget) <= SCOUT_REACHED_DISTANCE_SQR)
             clearPursuit();
@@ -271,15 +278,16 @@ final class BotArmy {
                     shareTeamIntent(level, objective.anchor(), tick);
             }
         }
-        boolean enemyThreatensHome = tacticalGroundEnemyMilitary.stream().anyMatch(enemy ->
-                enemy.blockPosition().distSqr(player.aiHomePos) <= DEFENSE_DISTANCE_SQR);
-        if (pursuitTarget != null && tacticalGroundEnemyPopulation >= mainPopulation)
+        boolean pressHomeAdvantage = pressVisibleAdvantage
+                && BotDecisionMaker.shouldPressVisibleAdvantage(
+                        difficulty, personality, mainPopulation, homeEnemyPopulation);
+        if (pursuitTarget != null && tacticalEnemyMilitaryPopulation >= mainPopulation)
             clearPursuit();
         boolean continuePursuit = pursuitTarget != null
-                && tacticalGroundEnemyPopulation < mainPopulation;
+                && tacticalEnemyMilitaryPopulation < mainPopulation;
         if (!survivalEnabled && beaconOrder == BotDecisionMaker.BeaconOrder.NONE
                 && objective == null && target == null && !tacticalGroundEnemyMilitary.isEmpty()
-                && ((pressVisibleAdvantage && enemyThreatensHome) || continuePursuit)) {
+                && (pressHomeAdvantage || continuePursuit)) {
             boolean startingPursuit = pursuitTarget == null;
             pursuitTarget = armyCentroidRepresentative(tacticalGroundEnemyMilitary);
             pursuitUntilTick = tick + PURSUIT_TICKS;
