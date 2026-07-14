@@ -171,7 +171,9 @@ public class MatchStartScreen extends Screen {
             renderGamerulesPopover(g, mouseX, mouseY);
         }
 
-        super.render(g, mouseX, mouseY, partialTick);
+        if (chatInput != null && !chatMinimised) {
+            chatInput.render(g, mouseX, mouseY, partialTick);
+        }
 
         for (Button b : hudButtons) {
             if (b.isMouseOver(mouseX, mouseY) &&

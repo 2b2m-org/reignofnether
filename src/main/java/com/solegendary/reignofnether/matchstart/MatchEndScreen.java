@@ -61,6 +61,7 @@ public class MatchEndScreen extends Screen {
 
     private final List<Team> teams = new ArrayList<>();
     private int panelL, panelT, panelW, panelH;
+    private Button closeButton;
 
     public MatchEndScreen() {
         super(Component.translatable("matchend.reignofnether.title"));
@@ -95,7 +96,7 @@ public class MatchEndScreen extends Screen {
         panelT = (this.height - panelH) / 2;
 
         // [X] close button, top-right corner of the panel
-        addRenderableWidget(Button.builder(Component.literal("✕"), b -> onClose())
+        closeButton = addRenderableWidget(Button.builder(Component.literal("✕"), b -> onClose())
                 .bounds(panelL + panelW - 26, panelT + 5, 20, 20).build());
     }
 
@@ -169,7 +170,9 @@ public class MatchEndScreen extends Screen {
             y += LINE_H + TEAM_GAP;
         }
 
-        super.render(g, mouseX, mouseY, partialTick); // renders the [X] button
+        if (closeButton != null) {
+            closeButton.render(g, mouseX, mouseY, partialTick);
+        }
     }
 
     private void drawNum(GuiGraphics g, long value, int rightX, int y, int color) {
