@@ -61,7 +61,8 @@ public class RTSMapInfoServerEvents {
             if (modesStr.length() > 0) {
                 modesStr.setLength(modesStr.length() - 2);
                 evt.getEntity().sendSystemMessage(Component.literal(""));
-                evt.getEntity().sendSystemMessage(Component.translatable("message.reignofnether.rts_map_info_modes", modesStr));
+                evt.getEntity().sendSystemMessage(Component.translatable(
+                        "message.reignofnether.rts_map_info_modes", modesStr.toString()));
             }
             RTSMapInfoClientboundPacket.sendValue(RTSMapInfoAction.SET_MAP_NAME, rtsMapInfo.getName());
             for (String author : rtsMapInfo.getAuthor())
