@@ -582,6 +582,24 @@ class BotDecisionMakerTest {
     }
 
     @Test
+    void armySpendingCannotDelayPendingInfrastructure() {
+        ResourceCost ranged = ResourceCost.Unit(90, 60, 0, 1, 2);
+        ResourceCost melee = ResourceCost.Unit(120, 0, 0, 1, 2);
+        ResourceCost infrastructure = ResourceCost.Research(0, 75, 0, 1);
+
+        assertAll(
+                () -> assertFalse(BotDecisionMaker.canSpendWithoutDelaying(
+                        new Resources("bot", 300, 134, 0), ranged, infrastructure)),
+                () -> assertTrue(BotDecisionMaker.canSpendWithoutDelaying(
+                        new Resources("bot", 300, 135, 0), ranged, infrastructure)),
+                () -> assertTrue(BotDecisionMaker.canSpendWithoutDelaying(
+                        new Resources("bot", 300, 74, 0), melee, infrastructure)),
+                () -> assertFalse(BotDecisionMaker.canSpendWithoutDelaying(
+                        null, melee, infrastructure))
+        );
+    }
+
+    @Test
     void workerFleeDistanceUsesHysteresisAtExactBoundaries() {
         assertAll(
                 () -> assertTrue(BotDecisionMaker.shouldFleeWorker(false, 23 * 23)),

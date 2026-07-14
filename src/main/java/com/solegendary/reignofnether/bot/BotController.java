@@ -298,12 +298,17 @@ public final class BotController {
 
         Resources resources = self.resources();
         ResourceCost workerCost = strategy.worker().getCost(false, ownerName);
+        ResourceCost portalTransformCost = self.pendingPortalTransformCost(strategy);
         ResourceCost meleeCost = strategy.melee().getCost(false, ownerName);
         ResourceCost rangedCost = strategy.ranged().getCost(false, ownerName);
         boolean canAffordMelee = strategy.melee().canAfford(building)
-                && BotDecisionMaker.canSpendAndPreserveReserve(resources, meleeCost, workerCost);
+                && BotDecisionMaker.canSpendAndPreserveReserve(resources, meleeCost, workerCost)
+                && (portalTransformCost == null || BotDecisionMaker.canSpendWithoutDelaying(
+                        resources, meleeCost, portalTransformCost));
         boolean canAffordRanged = !meleeOnly && strategy.ranged().canAfford(building)
-                && BotDecisionMaker.canSpendAndPreserveReserve(resources, rangedCost, workerCost);
+                && BotDecisionMaker.canSpendAndPreserveReserve(resources, rangedCost, workerCost)
+                && (portalTransformCost == null || BotDecisionMaker.canSpendWithoutDelaying(
+                        resources, rangedCost, portalTransformCost));
         int meleePopulationCost = Math.max(1, meleeCost.population);
         int rangedPopulationCost = Math.max(1, rangedCost.population);
         BotDecisionMaker.ArmyUnitChoice choice = BotDecisionMaker.chooseArmyUnit(

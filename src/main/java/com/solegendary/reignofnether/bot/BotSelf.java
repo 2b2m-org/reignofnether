@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.building.production.ProductionItem;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
+import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
@@ -143,6 +144,20 @@ final class BotSelf {
                 || portal.getPortalType() == PortalPlacement.PortalType.BASIC);
     }
 
+    ResourceCost pendingPortalTransformCost(BotStrategy strategy) {
+        if (!strategy.usesTransformingPortals())
+            return null;
+
+        PortalPlacement military = portalAt(militaryPortalOrigin);
+        if (needsTransform(military))
+            return strategy.militaryTransform().getCost(false, ownerName);
+
+        PortalPlacement supply = portalAt(supplyPortalOrigin);
+        if (needsTransform(supply))
+            return strategy.supplyTransform().getCost(false, ownerName);
+        return null;
+    }
+
     int countQueued(ProductionItem item) {
         int count = 0;
         for (BuildingPlacement placement : BuildingServerEvents.getBuildings())
@@ -263,6 +278,12 @@ final class BotSelf {
             if (active.item == item)
                 return true;
         return false;
+    }
+
+    private static boolean needsTransform(PortalPlacement portal) {
+        return portal != null
+                && portal.getPortalType() == PortalPlacement.PortalType.BASIC
+                && portal.productionQueue.isEmpty();
     }
 
     private static ProductionPlacement asProduction(BuildingPlacement placement) {

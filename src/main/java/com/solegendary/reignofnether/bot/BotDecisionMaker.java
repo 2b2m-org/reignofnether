@@ -130,6 +130,13 @@ public final class BotDecisionMaker {
                 && resources.ore >= purchase.ore + reserve.ore;
     }
 
+    static boolean canSpendWithoutDelaying(Resources resources, ResourceCost purchase, ResourceCost reserve) {
+        return resources != null
+                && (purchase.food == 0 || resources.food >= purchase.food + reserve.food)
+                && (purchase.wood == 0 || resources.wood >= purchase.wood + reserve.wood)
+                && (purchase.ore == 0 || resources.ore >= purchase.ore + reserve.ore);
+    }
+
     static boolean shouldFleeWorker(boolean alreadyFleeing, double threatDistanceSqr) {
         int threshold = alreadyFleeing ? WORKER_FLEE_DISTANCE_SQR : WORKER_DANGER_DISTANCE_SQR;
         return threatDistanceSqr <= threshold;
