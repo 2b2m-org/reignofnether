@@ -1,8 +1,13 @@
 package com.solegendary.reignofnether.bot;
 
+import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.resources.Resources;
+
 public final class BotDecisionMaker {
     private static final double SCOUT_PROGRESS_BLOCKS = 4;
     private static final int SCOUT_STALL_TICKS = 600;
+    private static final int WORKER_DANGER_DISTANCE_SQR = 24 * 24;
+    private static final int WORKER_FLEE_DISTANCE_SQR = 32 * 32;
 
     public enum ArmyUnitChoice {
         NONE,
@@ -69,6 +74,18 @@ public final class BotDecisionMaker {
 
     static boolean fitsArmyPopulation(int armyPopulation, int unitPopulation, int targetPopulation) {
         return armyPopulation + unitPopulation <= targetPopulation;
+    }
+
+    static boolean canSpendAndPreserveReserve(Resources resources, ResourceCost purchase, ResourceCost reserve) {
+        return resources != null
+                && resources.food >= purchase.food + reserve.food
+                && resources.wood >= purchase.wood + reserve.wood
+                && resources.ore >= purchase.ore + reserve.ore;
+    }
+
+    static boolean shouldFleeWorker(boolean alreadyFleeing, double threatDistanceSqr) {
+        int threshold = alreadyFleeing ? WORKER_FLEE_DISTANCE_SQR : WORKER_DANGER_DISTANCE_SQR;
+        return threatDistanceSqr <= threshold;
     }
 
     public static ArmyUnitChoice chooseArmyUnit(BotPersonality personality, int meleePopulation,

@@ -10,6 +10,7 @@ import com.solegendary.reignofnether.building.buildings.placements.ProductionPla
 import com.solegendary.reignofnether.building.production.ProductionItem;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
+import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.resources.ResourceSource;
 import com.solegendary.reignofnether.resources.ResourceSources;
@@ -19,23 +20,34 @@ import com.solegendary.reignofnether.unit.goals.GatherResourcesGoal;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Rotation;
 
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public final class BotController {
     private static final int REPAIR_THREAT_DISTANCE_SQR = 64 * 64;
+    private static final int WORKER_SAFETY_INTERVAL_TICKS = 10;
+    private static final int WORKER_FLEE_MEMORY_TICKS = 100;
+    private static final int WORKER_FLEE_TARGET_CHANGE_DISTANCE_SQR = 8 * 8;
+    private static final int WORKER_FLEE_ARRIVAL_DISTANCE_SQR = 4 * 4;
 
     private final String ownerName;
     private final String displayName;
     private final BotSelf self;
     private final BotWorldView worldView;
     private final BotArmy army;
+    private final Map<Integer, Integer> fleeingWorkerUntilTicks = new HashMap<>();
     private BotGoal currentGoal = BotGoal.WAIT_FOR_CAPITOL;
     private int nextDecisionTick;
+    private int nextWorkerSafetyTick;
     private int nextWorkerReconcileTick;
     private int repairWoodReserve;
     private boolean repairAssigned;
@@ -61,14 +73,18 @@ public final class BotController {
         int tick = level.getServer().getTickCount();
         BotDifficulty difficulty = player.aiDifficulty;
         BotPersonality personality = player.aiPersonality;
+        BotStrategy strategy = BotStrategy.forFaction(player.faction);
+        if (tick >= nextWorkerSafetyTick) {
+            worldView.observe(player);
+            maintainWorkerSafety(level, player, strategy, tick);
+            nextWorkerSafetyTick = tick + WORKER_SAFETY_INTERVAL_TICKS;
+        }
         if (repairAssigned && stopRepairsAtWoodReserve())
             nextWorkerReconcileTick = 0;
         if (tick < nextDecisionTick)
             return;
         nextDecisionTick = tick + difficulty.decisionIntervalTicks();
-        worldView.observe(player);
 
-        BotStrategy strategy = BotStrategy.forFaction(player.faction);
         self.reconcilePortalRoles(strategy);
         if (strategy.usesTransformingPortals())
             maintainPortalTransforms(strategy, difficulty);
@@ -77,16 +93,23 @@ public final class BotController {
         BotGoal nextGoal = BotDecisionMaker.chooseGoal(difficulty, personality, context);
         repairWoodReserve = repairWoodReserve(strategy);
         List<LivingEntity> workers = self.workers();
-        boolean orphanedConstruction = hasOrphanedConstruction(workers);
+        List<LivingEntity> availableWorkers = workers.stream()
+                .filter(worker -> !isFleeingWorker(worker))
+                .toList();
+        List<LivingEntity> visibleEnemies = worldView.visibleEnemyCombatants(player);
+        List<LivingEntity> visibleMilitaryEnemies = visibleEnemies.stream()
+                .filter(entity -> !(entity instanceof WorkerUnit))
+                .toList();
+        boolean orphanedConstruction = hasOrphanedConstruction(availableWorkers, visibleMilitaryEnemies);
         if (orphanedConstruction)
             nextWorkerReconcileTick = 0;
-        if (maintainRepairs(player, workers,
+        if (maintainRepairs(availableWorkers, visibleEnemies,
                 isConstructionGoal(nextGoal) || orphanedConstruction))
             nextWorkerReconcileTick = 0;
         if (tick >= nextWorkerReconcileTick) {
             boolean economyComplete = context.workersAndQueued()
                     >= BotDecisionMaker.targetWorkers(difficulty, personality);
-            assignWorkerJobs(strategy, difficulty, economyComplete, workers);
+            assignWorkerJobs(strategy, difficulty, economyComplete, availableWorkers, visibleMilitaryEnemies);
             nextWorkerReconcileTick = tick + difficulty.workerReconcileTicks();
         }
 
@@ -183,7 +206,7 @@ public final class BotController {
             return false;
 
         LivingEntity builder = self.workers().stream()
-                .filter(BotController::isAvailableBuilder)
+                .filter(this::isAvailableBuilder)
                 .findFirst()
                 .orElse(null);
         if (builder == null)
@@ -236,18 +259,26 @@ public final class BotController {
                 || building.productionQueue.size() >= difficulty.maxProductionQueue())
             return;
 
-        int meleeCost = Math.max(1, strategy.melee().getCost(false, ownerName).population);
-        int rangedCost = Math.max(1, strategy.ranged().getCost(false, ownerName).population);
+        Resources resources = self.resources();
+        ResourceCost workerCost = strategy.worker().getCost(false, ownerName);
+        ResourceCost meleeCost = strategy.melee().getCost(false, ownerName);
+        ResourceCost rangedCost = strategy.ranged().getCost(false, ownerName);
+        boolean canAffordMelee = strategy.melee().canAfford(building)
+                && BotDecisionMaker.canSpendAndPreserveReserve(resources, meleeCost, workerCost);
+        boolean canAffordRanged = !meleeOnly && strategy.ranged().canAfford(building)
+                && BotDecisionMaker.canSpendAndPreserveReserve(resources, rangedCost, workerCost);
+        int meleePopulationCost = Math.max(1, meleeCost.population);
+        int rangedPopulationCost = Math.max(1, rangedCost.population);
         BotDecisionMaker.ArmyUnitChoice choice = BotDecisionMaker.chooseArmyUnit(
                 personality,
                 meleePopulation,
                 rangedPopulation,
-                strategy.melee().canAfford(building)
+                canAffordMelee
                         && BotDecisionMaker.fitsArmyPopulation(
-                        armyAndQueuedPopulation, meleeCost, targetPopulation),
-                !meleeOnly && strategy.ranged().canAfford(building)
+                        armyAndQueuedPopulation, meleePopulationCost, targetPopulation),
+                canAffordRanged
                         && BotDecisionMaker.fitsArmyPopulation(
-                        armyAndQueuedPopulation, rangedCost, targetPopulation)
+                        armyAndQueuedPopulation, rangedPopulationCost, targetPopulation)
         );
         ProductionItem item = switch (choice) {
             case MELEE -> strategy.melee();
@@ -291,13 +322,143 @@ public final class BotController {
             startProduction(portal, strategy.supplyTransform(), "civilian portal", difficulty);
     }
 
+    private void maintainWorkerSafety(ServerLevel level, RTSPlayer player, BotStrategy strategy, int tick) {
+        List<LivingEntity> workers = self.workers();
+        Set<Integer> livingWorkerIds = new HashSet<>();
+        for (LivingEntity worker : workers)
+            livingWorkerIds.add(worker.getId());
+        fleeingWorkerUntilTicks.keySet().retainAll(livingWorkerIds);
+
+        List<LivingEntity> combatants = visibleMilitaryEnemies(player);
+        BuildingPlacement capitol = self.building(strategy.capitol());
+        int newlyFleeing = 0;
+        int resumedWorkers = 0;
+        boolean stateChanged = false;
+
+        for (LivingEntity worker : workers) {
+            Integer fleeUntil = fleeingWorkerUntilTicks.get(worker.getId());
+            boolean fleeing = fleeUntil != null && tick < fleeUntil;
+            List<LivingEntity> nearbyThreats = combatants.stream()
+                    .filter(enemy -> BotDecisionMaker.shouldFleeWorker(fleeing,
+                            worker.blockPosition().distSqr(enemy.blockPosition())))
+                    .toList();
+
+            if (nearbyThreats.isEmpty()) {
+                if (fleeUntil != null && tick >= fleeUntil) {
+                    fleeingWorkerUntilTicks.remove(worker.getId());
+                    Unit unit = (Unit) worker;
+                    if (Resources.getTotalResourcesFromItems(unit.getItems()).getTotalValue() > 0) {
+                        Unit.fullResetBehaviours(unit);
+                        unit.getReturnResourcesGoal().returnToClosestBuilding();
+                    }
+                    resumedWorkers++;
+                    stateChanged = true;
+                }
+                continue;
+            }
+
+            fleeingWorkerUntilTicks.put(worker.getId(), tick + WORKER_FLEE_MEMORY_TICKS);
+            BlockPos retreatTarget = workerRetreatTarget(level, player, capitol, worker, nearbyThreats);
+            Unit unit = (Unit) worker;
+            BlockPos currentTarget = unit.getMoveGoal().getMoveTarget();
+            boolean needsNewTarget = currentTarget == null
+                    ? worker.blockPosition().distSqr(retreatTarget) > WORKER_FLEE_ARRIVAL_DISTANCE_SQR
+                    : currentTarget.distSqr(retreatTarget) > WORKER_FLEE_TARGET_CHANGE_DISTANCE_SQR;
+            if (!fleeing || needsNewTarget) {
+                Unit.fullResetBehaviours(unit);
+                unit.setMoveTarget(retreatTarget);
+            }
+            if (!fleeing) {
+                newlyFleeing++;
+                stateChanged = true;
+            }
+        }
+
+        if (stateChanged)
+            nextWorkerReconcileTick = 0;
+        if (newlyFleeing > 0)
+            ReignOfNether.LOGGER.info("[Bot] {} evacuating {} worker(s)", displayName, newlyFleeing);
+        if (resumedWorkers > 0)
+            ReignOfNether.LOGGER.info("[Bot] {} resuming {} worker(s)", displayName, resumedWorkers);
+    }
+
+    private List<LivingEntity> visibleMilitaryEnemies(RTSPlayer player) {
+        return worldView.visibleEnemyCombatants(player).stream()
+                .filter(entity -> !(entity instanceof WorkerUnit))
+                .toList();
+    }
+
+    private static BlockPos workerRetreatTarget(ServerLevel level, RTSPlayer player, BuildingPlacement capitol,
+                                                LivingEntity worker, List<LivingEntity> threats) {
+        double threatX = 0;
+        double threatZ = 0;
+        for (LivingEntity threat : threats) {
+            threatX += threat.getX();
+            threatZ += threat.getZ();
+        }
+        threatX /= threats.size();
+        threatZ /= threats.size();
+
+        BlockPos anchor = capitol == null ? player.aiHomePos : capitol.centrePos;
+        double awayX = anchor.getX() - threatX;
+        double awayZ = anchor.getZ() - threatZ;
+        double length = Math.hypot(awayX, awayZ);
+        if (length < 0.001) {
+            awayX = worker.getX() - threatX;
+            awayZ = worker.getZ() - threatZ;
+            length = Math.hypot(awayX, awayZ);
+        }
+        if (length < 0.001) {
+            double angle = Math.floorMod(worker.getId(), 8) * Math.PI / 4;
+            awayX = Math.cos(angle);
+            awayZ = Math.sin(angle);
+            length = 1;
+        }
+
+        BlockPos rear = BlockPos.containing(
+                anchor.getX() + awayX / length * 32,
+                anchor.getY(),
+                anchor.getZ() + awayZ / length * 32
+        );
+        if (capitol != null) {
+            BlockPos perimeter = capitol.getClosestGroundPos(rear, 3);
+            double towardThreatX = threatX - worker.getX();
+            double towardThreatZ = threatZ - worker.getZ();
+            double towardPerimeterX = perimeter.getX() - worker.getX();
+            double towardPerimeterZ = perimeter.getZ() - worker.getZ();
+            if (towardThreatX * towardPerimeterX + towardThreatZ * towardPerimeterZ <= 0)
+                return perimeter;
+        }
+
+        awayX = worker.getX() - threatX;
+        awayZ = worker.getZ() - threatZ;
+        length = Math.hypot(awayX, awayZ);
+        if (length < 0.001) {
+            double angle = Math.floorMod(worker.getId(), 8) * Math.PI / 4;
+            awayX = Math.cos(angle);
+            awayZ = Math.sin(angle);
+            length = 1;
+        }
+        rear = BlockPos.containing(
+                worker.getX() + awayX / length * 24,
+                worker.getY(),
+                worker.getZ() + awayZ / length * 24
+        );
+        return BotBuildingPlanner.groundAt(level, rear.getX(), rear.getZ()).above();
+    }
+
+    private boolean isFleeingWorker(LivingEntity worker) {
+        return fleeingWorkerUntilTicks.containsKey(worker.getId());
+    }
+
     private void assignWorkerJobs(BotStrategy strategy, BotDifficulty difficulty,
-                                  boolean economyComplete, List<LivingEntity> workers) {
+                                  boolean economyComplete, List<LivingEntity> workers,
+                                  List<LivingEntity> visibleEnemies) {
         BuildingPlacement farm = self.building(strategy.farm());
         if (farm != null && (!farm.isBuilt || !hasHarvestableFood(farm)))
             farm = null;
 
-        reassignOrphanedBuilders(workers);
+        reassignOrphanedBuilders(workers, visibleEnemies);
         int foodWorkers = BotDecisionMaker.foodWorkerCount(difficulty, workers.size(), economyComplete);
         int workerIndex = 0;
         for (LivingEntity entity : workers) {
@@ -319,7 +480,7 @@ public final class BotController {
         }
     }
 
-    private boolean maintainRepairs(RTSPlayer player, List<LivingEntity> workers,
+    private boolean maintainRepairs(List<LivingEntity> workers, List<LivingEntity> visibleEnemies,
                                     boolean constructionPending) {
         Resources resources = self.resources();
         if (resources == null)
@@ -384,7 +545,6 @@ public final class BotController {
         if (currentRepairer == null && repairCandidates.isEmpty())
             return stoppedRepair;
 
-        List<LivingEntity> visibleEnemies = worldView.visibleEnemyCombatants(player);
         if (currentRepairer != null) {
             BuildingPlacement target = ((WorkerUnit) currentRepairer)
                     .getBuildRepairGoal().getBuildingTarget();
@@ -403,7 +563,7 @@ public final class BotController {
             return stoppedRepair;
 
         LivingEntity repairer = workers.stream()
-                .filter(BotController::isAvailableBuilder)
+                .filter(this::isAvailableBuilder)
                 .min(Comparator.comparingDouble(entity -> entity.blockPosition().distSqr(target.centrePos)))
                 .orElse(null);
         if (repairer == null)
@@ -456,9 +616,10 @@ public final class BotController {
                 || goal == BotGoal.BUILD_MILITARY;
     }
 
-    private boolean hasOrphanedConstruction(List<LivingEntity> workers) {
+    private boolean hasOrphanedConstruction(List<LivingEntity> workers, List<LivingEntity> visibleEnemies) {
         return BuildingServerEvents.getBuildings().stream()
                 .filter(building -> building.ownerName.equals(ownerName) && !building.isBuilt)
+                .filter(building -> !hasVisibleThreatNear(building, visibleEnemies))
                 .anyMatch(building -> workers.stream()
                         .map(entity -> (WorkerUnit) entity)
                         .noneMatch(worker -> isAssignedTo(worker, building)));
@@ -478,9 +639,10 @@ public final class BotController {
         );
     }
 
-    private static boolean isAvailableBuilder(LivingEntity entity) {
+    private boolean isAvailableBuilder(LivingEntity entity) {
         WorkerUnit worker = (WorkerUnit) entity;
-        return worker.getBuildRepairGoal().getBuildingTarget() == null
+        return !isFleeingWorker(entity)
+                && worker.getBuildRepairGoal().getBuildingTarget() == null
                 && worker.getBuildRepairGoal().queuedBuildings.isEmpty()
                 && ((Unit) entity).getReturnResourcesGoal().getBuildingTarget() == null;
     }
@@ -501,9 +663,10 @@ public final class BotController {
         return false;
     }
 
-    private void reassignOrphanedBuilders(List<LivingEntity> workers) {
+    private void reassignOrphanedBuilders(List<LivingEntity> workers, List<LivingEntity> visibleEnemies) {
         for (BuildingPlacement building : BuildingServerEvents.getBuildings()) {
-            if (!building.ownerName.equals(ownerName) || building.isBuilt)
+            if (!building.ownerName.equals(ownerName) || building.isBuilt
+                    || hasVisibleThreatNear(building, visibleEnemies))
                 continue;
             boolean hasAssignedBuilder = workers.stream()
                     .map(entity -> (WorkerUnit) entity)
@@ -512,7 +675,7 @@ public final class BotController {
                 continue;
 
             LivingEntity replacement = workers.stream()
-                    .filter(BotController::isAvailableBuilder)
+                    .filter(this::isAvailableBuilder)
                     .findFirst()
                     .orElse(null);
             if (replacement == null)

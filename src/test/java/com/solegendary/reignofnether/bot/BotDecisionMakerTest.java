@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.bot;
 
+import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.resources.Resources;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -258,6 +260,37 @@ class BotDecisionMakerTest {
         assertAll(
                 () -> assertTrue(BotDecisionMaker.fitsArmyPopulation(33, 3, 36)),
                 () -> assertFalse(BotDecisionMaker.fitsArmyPopulation(34, 3, 36))
+        );
+    }
+
+    @Test
+    void armySpendingPreservesOneExactWorkerReplacement() {
+        ResourceCost army = ResourceCost.Unit(50, 20, 10, 1, 1);
+        ResourceCost worker = ResourceCost.Unit(50, 10, 5, 1, 1);
+
+        assertAll(
+                () -> assertTrue(BotDecisionMaker.canSpendAndPreserveReserve(
+                        new Resources("bot", 100, 30, 15), army, worker)),
+                () -> assertFalse(BotDecisionMaker.canSpendAndPreserveReserve(
+                        new Resources("bot", 99, 30, 15), army, worker)),
+                () -> assertFalse(BotDecisionMaker.canSpendAndPreserveReserve(
+                        new Resources("bot", 100, 29, 15), army, worker)),
+                () -> assertFalse(BotDecisionMaker.canSpendAndPreserveReserve(
+                        new Resources("bot", 100, 30, 14), army, worker)),
+                () -> assertFalse(BotDecisionMaker.canSpendAndPreserveReserve(null, army, worker))
+        );
+    }
+
+    @Test
+    void workerFleeDistanceUsesHysteresisAtExactBoundaries() {
+        assertAll(
+                () -> assertTrue(BotDecisionMaker.shouldFleeWorker(false, 23 * 23)),
+                () -> assertTrue(BotDecisionMaker.shouldFleeWorker(false, 24 * 24)),
+                () -> assertFalse(BotDecisionMaker.shouldFleeWorker(false, 25 * 25)),
+                () -> assertTrue(BotDecisionMaker.shouldFleeWorker(true, 26 * 26)),
+                () -> assertTrue(BotDecisionMaker.shouldFleeWorker(true, 32 * 32)),
+                () -> assertFalse(BotDecisionMaker.shouldFleeWorker(true, 33 * 33)),
+                () -> assertFalse(BotDecisionMaker.shouldFleeWorker(true, Double.POSITIVE_INFINITY))
         );
     }
 
